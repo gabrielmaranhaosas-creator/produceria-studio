@@ -21,3 +21,15 @@ Tipos completos em `src/lib/tipos.ts`.
 
 Arquivos publicados junto da página: `vencedores.bin.wasm` (contratos públicos, gzip), `mercado.json`
 (movimentos de conta curados), `jobs/*`.
+
+## Backup
+
+Toda segunda às 07:30 a tarefa local "Studio · backup semanal do banco" exporta todas as coleções, gera
+`studio-backup-AAAA-MM-DD.json.gz` com `jobs/backup/empacotar.py`, confere que ele restaura
+(`jobs/backup/restaurar.py`) e copia para a pasta "PRODUCERia Studio - backups" do Google Drive (12 semanas
+guardadas). O status fica em `cerebro/backup`; uma falha vira aviso em `notificacoes`.
+
+O backup tem dados da equipe (leads, contatos): **nunca vai para o repositório**, que é público. A pasta local
+`backups/` fica fora do git (`.git/info/exclude`). Para restaurar: `python3 jobs/backup/restaurar.py ARQUIVO SAIDA`
+gera os lotes de escrita, que alguém revisa e envia pelo ArtifactData `batch`. O mesmo arquivo serve para a
+migração para um banco próprio.

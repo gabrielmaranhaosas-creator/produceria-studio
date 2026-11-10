@@ -1,0 +1,245 @@
+<title>Studio · rumo próprio</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Sans+Condensed:wght@600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: relatório de uma coluna, legível, com faixas de prova de cor (CMYK) como marca de produção gráfica */
+:root{
+  --bg:#f7f8f9; --surface:#ffffff; --fg:#1b2127; --muted:#5d6873; --line:#dde2e7;
+  --accent:#0a7fa8; --accent-soft:#e3f2f8;
+  --ok:#2f7d4f; --ok-soft:#e5f3ea; --warn:#a2650a; --warn-soft:#fbf0dc; --crit:#b23a3a; --crit-soft:#f9e6e6;
+  --c:#00a3d9; --m:#d6337f; --y:#e8c12a; --k:#2a2f35;
+  --display:"IBM Plex Sans Condensed","Arial Narrow",Arial,sans-serif;
+  --body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#12161a; --surface:#1a2026; --fg:#e6eaee; --muted:#9aa6b1; --line:#2c343c;
+  --accent:#4cc3ea; --accent-soft:#16303b;
+  --ok:#6cc48f; --ok-soft:#173226; --warn:#e3a94b; --warn-soft:#3a2c14; --crit:#ec7d7d; --crit-soft:#3a1d1d;
+  --k:#cfd6dc; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#12161a; --surface:#1a2026; --fg:#e6eaee; --muted:#9aa6b1; --line:#2c343c;
+  --accent:#4cc3ea; --accent-soft:#16303b;
+  --ok:#6cc48f; --ok-soft:#173226; --warn:#e3a94b; --warn-soft:#3a2c14; --crit:#ec7d7d; --crit-soft:#3a1d1d;
+  --k:#cfd6dc; color-scheme:dark}
+body{background:var(--bg);color:var(--fg);font:15px/1.6 var(--body)}
+.wrap{max-width:980px;margin:0 auto;padding-block:32px 64px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));display:flex;flex-direction:column;gap:40px}
+.prova{display:flex;height:6px;border-radius:2px;overflow:hidden;width:120px}
+.prova i{flex:1}.prova i:nth-child(1){background:var(--c)}.prova i:nth-child(2){background:var(--m)}.prova i:nth-child(3){background:var(--y)}.prova i:nth-child(4){background:var(--k)}
+header{display:flex;flex-direction:column;gap:12px}
+h1{font:700 clamp(28px,5vw,40px)/1.1 var(--display);margin:0;text-wrap:balance;letter-spacing:-.01em}
+h2{font:700 24px/1.2 var(--display);margin:0;text-wrap:balance}
+h3{font:600 16px/1.3 var(--body);margin:0}
+p{margin:0;max-width:68ch}
+.meta{font:12px var(--mono);color:var(--muted);letter-spacing:.04em;text-transform:uppercase}
+.lead{font-size:17px;max-width:70ch}
+section{display:flex;flex-direction:column;gap:16px}
+.sub{color:var(--muted);max-width:70ch}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px}
+.kpi{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:14px 16px;display:flex;flex-direction:column;gap:2px}
+.kpi b{font:700 26px/1.1 var(--display);font-variant-numeric:tabular-nums}
+.kpi span{color:var(--muted);font-size:13px}
+.tbl{overflow-x:auto;border:1px solid var(--line);border-radius:8px;background:var(--surface)}
+table{border-collapse:collapse;width:100%;min-width:620px;font-size:14px}
+th,td{text-align:left;padding:10px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font:600 12px var(--body);color:var(--muted);text-transform:uppercase;letter-spacing:.05em;background:var(--bg)}
+tr:last-child td{border-bottom:0}
+td.n,th.n{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.mono{font-family:var(--mono);font-size:13px}
+.pill{display:inline-block;padding:1px 8px;border-radius:999px;font-size:12px;font-weight:500;white-space:nowrap}
+.ok{background:var(--ok-soft);color:var(--ok)}.warn{background:var(--warn-soft);color:var(--warn)}.crit{background:var(--crit-soft);color:var(--crit)}.info{background:var(--accent-soft);color:var(--accent)}
+ul,ol{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:6px;max-width:72ch}
+.cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px}
+.box{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:16px;display:flex;flex-direction:column;gap:10px;min-width:0}
+.note{border-left:3px solid var(--warn);background:var(--warn-soft);padding:12px 14px;border-radius:0 6px 6px 0;max-width:76ch}
+/* cronograma */
+.gantt{overflow-x:auto;border:1px solid var(--line);border-radius:8px;background:var(--surface)}
+.g{display:grid;grid-template-columns:210px repeat(18,minmax(30px,1fr));min-width:820px;font-size:13px}
+.g>div{padding:6px 4px;border-bottom:1px solid var(--line)}
+.g .lab{padding-left:12px;font-weight:500;display:flex;flex-direction:column;justify-content:center}
+.g .lab small{color:var(--muted);font-weight:400}
+.g .wk{font:11px var(--mono);color:var(--muted);text-align:center;border-left:1px solid var(--line)}
+.g .mo{font:600 11px var(--body);text-transform:uppercase;letter-spacing:.05em;color:var(--muted);border-left:1px solid var(--line)}
+.bar{border-radius:4px;margin:4px 0;align-self:center;height:22px;display:flex;align-items:center;padding:0 8px;font-size:12px;color:#fff;white-space:nowrap;overflow:hidden;border-bottom:0!important}
+.b1{background:var(--crit)}.b2{background:var(--accent)}.b3{background:var(--m)}.b4{background:var(--k);color:var(--bg)}.b5{background:var(--ok)}.b6{background:var(--warn)}
+.pause{background:repeating-linear-gradient(45deg,var(--line) 0 6px,transparent 6px 12px);border-radius:4px;margin:4px 0;align-self:center;height:22px;border-bottom:0!important}
+.legend{display:flex;flex-wrap:wrap;gap:14px;font-size:13px;color:var(--muted)}
+.prog{height:10px;border-radius:5px;background:var(--line);overflow:hidden;max-width:520px}
+.prog i{display:block;height:100%;background:var(--accent)}
+footer{color:var(--muted);font-size:13px;border-top:1px solid var(--line);padding-top:16px}
+a{color:var(--accent)}
+a:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+</style>
+
+<div class="wrap">
+<header>
+  <div class="prova" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+  <span class="meta">PRODUCERia Studio · relatório de 10/11/2026</span>
+  <h1>Diagnóstico, saída do claude.ai e cronograma</h1>
+  <p class="lead">O Studio já tem código próprio, testes e publicação controlada, mas só 4 das cerca de 20 telas saíram do pacote antigo. Dá para tirar o sistema do claude.ai em cerca de 18 semanas de trabalho, com término previsto para meados de março de 2027. O passo mais urgente é fazer um backup do banco, que hoje só existe dentro do Studio.</p>
+</header>
+
+<div class="kpis">
+  <div class="kpi"><b>4 / ~20</b><span>telas com código próprio</span></div>
+  <div class="kpi"><b>~11%</b><span>do plano até a saída concluído</span></div>
+  <div class="kpi"><b>485 → ~89</b><span>licitações visíveis no radar</span></div>
+  <div class="kpi"><b>15.318 → 7.978</b><span>contratos no mapa de vencedores</span></div>
+</div>
+
+<section>
+  <h2>1. O que já foi feito</h2>
+  <p class="sub">Tudo foi para o GitHub (gabrielmaranhaosas-creator/produceria-studio) e publicado no Studio. Os itens mais novos estão no topo.</p>
+  <div class="tbl"><table>
+    <thead><tr><th>Quando</th><th>O que mudou</th><th>Resultado</th></tr></thead>
+    <tbody>
+      <tr><td class="mono">10/11</td><td>Comunicação visual e mídia exterior voltam ao radar (perfil 2026-11-10e). Gráfica em massa continua fora.</td><td>+50 licitações visíveis, nenhuma perdida</td></tr>
+      <tr><td class="mono">10/11</td><td>Mapa de vencedores limpo com o escopo novo. Eventos e ruído saíram; gráfica, comunicação visual e OOH ficaram.</td><td>15.318 → 7.978 contratos; 37 contratos novos fora do escopo apagados</td></tr>
+      <tr><td class="mono">10/11</td><td>Gráfica, comunicação visual e mídia exterior de volta ao cadastro manual de Licitações (correção sua).</td><td>Núcleo da PRODUCERIA registrado na memória do assistente</td></tr>
+      <tr><td class="mono">10/11</td><td>Critério novo do radar: o objeto da licitação tem de citar o serviço; aderência por CNAE; notas por porte e distância de SP (perfis 10c e 10d).</td><td>Visíveis: 485 → 39. Antes, só ~1 em 8 era trabalho do HUB</td></tr>
+      <tr><td class="mono">10/11</td><td>Pesquisa sobre o que deve entrar no radar, feita com os 1.117 registros reais.</td><td>Ruído mapeado por tipo: placas, gráfica em massa, shows, obras, Natal, cursos</td></tr>
+      <tr><td class="mono">10/11</td><td>Eventos fora do escopo (perfis 10a e 10b), com estande e stand tratados com cuidado.</td><td>119 licitações de eventos zeradas</td></tr>
+      <tr><td class="mono">10/11</td><td>Fase 1: as 4 páginas migradas viraram TypeScript (PR nº 1, aprovado por você).</td><td>Central, Agenda, Casos e Mapa de contas tipados</td></tr>
+      <tr><td class="mono">antes</td><td>Fundação: repositório, Vite + TypeScript, testes, CI, montador do legado e regras de negócio em <span class="mono">src/lib</span>.</td><td>Publicação reproduzível a partir do código</td></tr>
+    </tbody>
+  </table></div>
+  <p class="sub">Testes que rodam em toda mudança: 3 suítes de TypeScript (nomes, prioridade, cadência) e 18 testes Python (cérebro de licitações e mapa de vencedores).</p>
+</section>
+
+<section>
+  <h2>2. Como está o código</h2>
+  <p class="sub">O Studio tem duas partes. A parte nova tem cerca de 2.900 linhas de código-fonte, com testes. A parte antiga é um pacote de 1,1 MB já montado e sem fonte. Ela continua funcionando como reserva e sai tela por tela.</p>
+  <div class="tbl"><table>
+    <thead><tr><th>Área</th><th>Telas</th><th>Situação</th></tr></thead>
+    <tbody>
+      <tr><td>Central e relacionamento</td><td>Central de notícias, Agenda, Casos, Mapa de contas</td><td><span class="pill ok">código próprio</span></td></tr>
+      <tr><td>Comercial · Licitações</td><td>Radar, Carteira, Habilitação do hub, Vias de contratação</td><td><span class="pill warn">pacote antigo</span> regras e rotina já no código</td></tr>
+      <tr><td>Comercial · Captação</td><td>Alvos, Achar novos, Atração, triagem e abordagem</td><td><span class="pill warn">pacote antigo</span> nota da triagem no código</td></tr>
+      <tr><td>Comercial · Vencedores</td><td>Mapa de vencedores</td><td><span class="pill warn">pacote antigo</span> dados e regras no código</td></tr>
+      <tr><td>Comercial · mercado e estratégia</td><td>Contas e agências, Mercado, Estratégia, Frentes, Diversificação, Funil</td><td><span class="pill warn">pacote antigo</span></td></tr>
+      <tr><td>Oficina</td><td>Bancada (briefing, orçamento, execução, entrega), Gráfica, ferramentas (desdobramento de KV, revisão de texto, pré-checagem de peça, cotação), Plugins, Agentes, Biblioteca, Rotinas, Tabela de serviços, Equipe</td><td><span class="pill warn">pacote antigo</span></td></tr>
+      <tr><td>Casca</td><td>Navegação, busca, avisos, tema, Ajustes</td><td><span class="pill warn">pacote antigo</span></td></tr>
+      <tr><td>Produção</td><td>Projetos e peças</td><td><span class="pill info">desativado</span> dados guardados</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section>
+  <h2>3. O que falta para tirar o sistema do claude.ai</h2>
+  <p class="sub">Hoje o Studio depende do claude.ai para oito coisas. Cada uma tem um substituto conhecido. A estratégia mais segura é criar uma camada que imita as funções do claude.ai sobre um servidor próprio. Com ela, até o pacote antigo roda fora, e a saída não precisa esperar todas as telas serem reescritas.</p>
+  <div class="tbl"><table>
+    <thead><tr><th>Hoje no claude.ai</th><th>Para que serve</th><th>Substituto</th><th>Esforço</th></tr></thead>
+    <tbody>
+      <tr><td>Página publicada (Artifact)</td><td>Onde o Studio abre</td><td>Hospedagem de site estático (Cloudflare Pages, Vercel ou Render)</td><td><span class="pill ok">baixo</span></td></tr>
+      <tr><td>Banco do artifact</td><td>Todas as coleções: alvos, b2g, notícias, contas…</td><td>Postgres gerenciado (Neon ou Supabase) e uma API pequena com versões e atualização ao vivo</td><td><span class="pill warn">médio</span></td></tr>
+      <tr><td>Quem está usando</td><td>Identidade de cada pessoa da equipe</td><td>Login com Google, já que as contas da equipe são Google</td><td><span class="pill warn">médio</span></td></tr>
+      <tr><td>Pedir texto ao Claude dentro da página</td><td>Assistente, revisão de texto, desdobramento de KV, pré-checagem</td><td>API da Anthropic chamada pelo servidor, com a chave guardada lá; o custo é por uso</td><td><span class="pill warn">médio</span></td></tr>
+      <tr><td>Conectores (Gmail e Claude Code Remote)</td><td>E-mails de abordagem e tarefas</td><td>API do Gmail com autorização Google; rever se o Claude Code Remote ainda faz falta</td><td><span class="pill warn">médio</span></td></tr>
+      <tr><td>Arquivos da Biblioteca</td><td>Arquivos de cliente e fichas</td><td>Armazenamento de arquivos (Cloudflare R2 ou Supabase Storage)</td><td><span class="pill ok">baixo</span></td></tr>
+      <tr><td>Downloads</td><td>Exportar CSV</td><td>Download comum do navegador, que fica mais simples fora</td><td><span class="pill ok">baixo</span></td></tr>
+      <tr><td>9 rotinas agendadas (6 ativas)</td><td>Notícias, varredura do PNCP, triagens, vencedores</td><td>Os scripts Python já prontos rodam em agendador próprio (GitHub Actions ou Render) e gravam no Postgres. Coleta de notícias e triagens, que exigem julgamento, usam a API do Claude</td><td><span class="pill crit">alto</span></td></tr>
+    </tbody>
+  </table></div>
+  <div class="note"><p><b>Antes de tudo:</b> exportar as coleções do banco para um arquivo fora do Studio, toda semana. Hoje não há cópia: se o artifact for apagado ou recriado, o banco vai junto. Essa mesma exportação vira a migração de dados quando chegar a hora.</p></div>
+</section>
+
+<section>
+  <h2>4. O que mais podemos fazer</h2>
+  <p class="sub">Itens em ordem de prioridade. Os três primeiros cabem na próxima semana.</p>
+  <div class="tbl"><table>
+    <thead><tr><th>#</th><th>Melhoria</th><th>Por quê</th><th>Prazo</th></tr></thead>
+    <tbody>
+      <tr><td class="n">1</td><td>Backup semanal do banco</td><td>Proteção dos dados, que hoje não têm cópia nenhuma</td><td>1 dia</td></tr>
+      <tr><td class="n">2</td><td>Conferir quem tem acesso ao Studio</td><td>A publicação aparece como "somente o dono". Se a equipe usa, o compartilhamento tem de estar ativo</td><td>minutos</td></tr>
+      <tr><td class="n">3</td><td>Guardar no repositório o texto das 9 rotinas, com conferência automática</td><td>Hoje os textos só existem no claude.ai. O da Central ainda descreve o hub com escopo antigo</td><td>2 dias</td></tr>
+      <tr><td class="n">4</td><td>Registro de retorno da equipe: botões rápidos de Disputar, Monitorar e Descartar, com lembrete semanal</td><td>Só 5 de 1.117 licitações têm decisão registrada. Sem esse retorno, o radar não aprende</td><td>3 dias</td></tr>
+      <tr><td class="n">5</td><td>Aviso quando uma rotina falhar ou não rodar</td><td>Hoje uma falha passa despercebida</td><td>1 dia</td></tr>
+      <tr><td class="n">6</td><td>Habilitação por empresa: CNAE, atestados e certidões com validade e alerta de vencimento</td><td>Divergência de CNAE leva à inabilitação, e é um risco recorrente</td><td>1 semana</td></tr>
+      <tr><td class="n">7</td><td>Resumo do edital com IA e alerta de prazo de proposta</td><td>Poupa a leitura de edital inteiro para decidir se vale disputar</td><td>1 semana</td></tr>
+      <tr><td class="n">8</td><td>Ligar o Vencedores à Captação: transformar em alvos, com um clique, os generalistas que subcontratam craft</td><td>Fonte direta de clientes no modelo de subcontratação</td><td>3 dias</td></tr>
+      <tr><td class="n">9</td><td>Acompanhar o Plano de Contratações Anual (PCA) dos órgãos no PNCP</td><td>Antecipa a demanda do ano seguinte, antes de o edital sair</td><td>1 semana</td></tr>
+      <tr><td class="n">10</td><td>Recolher os 2 anos do PNCP com o escopo novo</td><td>Deixa exatos os totais de empresas, órgãos e preços do mapa, que hoje são ajustados</td><td>1 dia de máquina</td></tr>
+      <tr><td class="n">11</td><td>Testes de tela (Playwright) e publicação automática a partir da <span class="mono">main</span></td><td>Menos risco a cada mudança. A publicação automática só é possível fora do claude.ai</td><td>na Fase 4</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section>
+  <h2>5. Cronograma</h2>
+  <p class="sub">São 18 semanas a partir de 11/11/2026, em ritmo de meio período, com 2 semanas de pausa no fim de ano. A saída do claude.ai corre em paralelo com a migração do Comercial, graças à camada que imita o claude.ai.</p>
+  <div class="gantt" role="img" aria-label="Cronograma de 18 semanas, de novembro de 2026 a março de 2027">
+    <div class="g">
+      <div></div>
+      <div class="mo" style="grid-column:span 3">nov</div><div class="mo" style="grid-column:span 4">dez</div><div class="mo" style="grid-column:span 5">jan</div><div class="mo" style="grid-column:span 4">fev</div><div class="mo" style="grid-column:span 2">mar</div>
+      <div></div>
+      <div class="wk">11</div><div class="wk">18</div><div class="wk">25</div><div class="wk">2</div><div class="wk">9</div><div class="wk">16</div><div class="wk">23</div><div class="wk">30</div><div class="wk">6</div><div class="wk">13</div><div class="wk">20</div><div class="wk">27</div><div class="wk">3</div><div class="wk">10</div><div class="wk">17</div><div class="wk">24</div><div class="wk">3</div><div class="wk">10</div>
+
+      <div class="lab">Urgente<small>backup, acesso, rotinas, avisos</small></div>
+      <div class="bar b1" style="grid-column:2 / span 1">1 sem</div><div style="grid-column:3 / -1"></div>
+
+      <div class="lab">Fase 1 · terminar<small>componentes e testes de tela</small></div>
+      <div style="grid-column:2 / span 1"></div><div class="bar b2" style="grid-column:3 / span 2">2 sem</div><div style="grid-column:5 / -1"></div>
+
+      <div class="lab">Fase 2 · Comercial<small>Licitações, Captação, Vencedores, Contas</small></div>
+      <div style="grid-column:2 / span 3"></div><div class="bar b3" style="grid-column:5 / span 3">3 sem</div><div class="pause" style="grid-column:8 / span 2"></div><div class="bar b3" style="grid-column:10 / span 3">+3 sem</div><div style="grid-column:13 / -1"></div>
+
+      <div class="lab">Saída do claude.ai<small>servidor, login, dados, IA, rotinas</small></div>
+      <div style="grid-column:2 / span 5"></div><div class="bar b4" style="grid-column:7 / span 1">base</div><div class="pause" style="grid-column:8 / span 2"></div><div class="bar b4" style="grid-column:10 / span 7">camada, migração, IA, Gmail, rotinas e virada</div><div style="grid-column:17 / -1"></div>
+
+      <div class="lab">Fase 3 · Oficina e casca<small>Bancada, Gráfica, Biblioteca, navegação</small></div>
+      <div style="grid-column:2 / span 11"></div><div class="bar b5" style="grid-column:13 / span 6">6 sem</div><div style="grid-column:19 / -1"></div>
+
+      <div class="lab">Fase 4 · operação<small>publicação automática, monitoramento</small></div>
+      <div style="grid-column:2 / span 17"></div><div class="bar b6" style="grid-column:19 / span 1">1</div>
+    </div>
+  </div>
+  <div class="legend"><span>Faixa listrada: pausa de fim de ano (23/12 a 5/1).</span><span>Semanas começam na data indicada.</span></div>
+
+  <div class="cols">
+    <div class="box">
+      <h3>Quanto falta</h3>
+      <div class="prog" aria-label="11% concluído"><i style="width:11%"></i></div>
+      <p>Foram feitas cerca de 2 das 20 semanas do plano total: a fundação e boa parte da Fase 1. Faltam cerca de 18 semanas. Das telas, 4 de cerca de 20 já têm código próprio.</p>
+    </div>
+    <div class="box">
+      <h3>Marcos</h3>
+      <ul>
+        <li><b>17/11</b> · backup e acesso resolvidos</li>
+        <li><b>1/12</b> · Fase 1 concluída</li>
+        <li><b>23/1</b> · Comercial inteiro em código próprio</li>
+        <li><b>20/2</b> · Studio rodando fora do claude.ai</li>
+        <li><b>13/3</b> · pacote antigo desligado</li>
+      </ul>
+    </div>
+  </div>
+  <p class="sub">As estimativas consideram 2 a 3 sessões de trabalho por semana com o assistente, mais a sua revisão. Se o ritmo dobrar, o prazo cai para cerca de 10 semanas.</p>
+</section>
+
+<section>
+  <h2>6. Decisões que dependem de você e riscos</h2>
+  <div class="cols">
+    <div class="box">
+      <h3>Decisões</h3>
+      <ol>
+        <li>Sair 100% do claude.ai, ou manter as rotinas de notícias e triagem no Claude apontando para o banco novo?</li>
+        <li>Fornecedor do servidor: Supabase (banco, login e arquivos num lugar só) ou Neon com Render. Os dois já estão conectados nesta sessão.</li>
+        <li>Quem da equipe acessa o Studio, e com que papel?</li>
+        <li>Teto de custo mensal. Hospedagem e banco pequeno custam pouco; a IA é cobrada por uso.</li>
+        <li>Prioridade depois do Comercial: Oficina primeiro, ou a saída do claude.ai primeiro?</li>
+      </ol>
+    </div>
+    <div class="box">
+      <h3>Riscos</h3>
+      <ul>
+        <li><span class="pill crit">alto</span> Banco sem backup fora do Studio.</li>
+        <li><span class="pill crit">alto</span> Rotinas dependem do claude.ai; uma mudança na plataforma pode pará-las.</li>
+        <li><span class="pill warn">médio</span> O pacote antigo não tem fonte: cada tela tem de ser reescrita, sem atalho.</li>
+        <li><span class="pill warn">médio</span> A equipe quase não registra decisões no radar, então a calibragem fica no escuro.</li>
+        <li><span class="pill info">baixo</span> O escopo mudou várias vezes num dia. Os perfis são versionados, mas convém fixar o escopo por escrito.</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<footer>Fontes: o repositório gabrielmaranhaosas-creator/produceria-studio (commits até 6a73682), o banco do Studio e as rotinas agendadas consultadas em 10/11/2026. Prazos e esforços são estimativas.</footer>
+</div>
