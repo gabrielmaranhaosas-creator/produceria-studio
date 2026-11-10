@@ -3,6 +3,7 @@ import {nomeLegivel,chave,slug,mesmaEmpresa} from '../lib/nomes';
 import {banco,lerArquivo,type Colecao} from '../lib/db';
 import type {Alvo,ContratoPublico,Movimento} from '../lib/tipos';
 import {seletor,elDe,mensagem,comId,type Dialogo} from './dom';
+import {confirmarNoBotao,kpis,numero} from '../componentes';
 
 type TipoConta='publica'|'privada';
 /** Conta como entra no mapa (cadastro, importação ou bases publicadas). */
@@ -93,10 +94,11 @@ function render(){persist();
  const S=[...L].sort((a,b)=>{const k=sort.k;const x0=(a as unknown as Record<string,unknown>)[k],y0=(b as unknown as Record<string,unknown>)[k];if(k==='valor'){const x=(x0 as number|null)??-1,y=(y0 as number|null)??-1;return (x>y?1:x<y?-1:0)*sort.d}return String(x0??'').localeCompare(String(y0??''),'pt-BR')*sort.d});
  const cols: [string,string][]=[['empresa','Empresa'],['cliente','Cliente / órgão'],['servico','Serviço'],['tipo','Tipo'],['valor','Valor'],['fim','Vigência até']];
  o.innerHTML=`<section class="kpis" aria-label="Resumo da seleção">
-  <div class="k"><span class="kl">Contas encontradas</span><b>${int(L.length)}</b><span class="kn">${L.length===rows.length?'todas as bases':'de '+int(rows.length)+' no total'}</span></div>
-  <div class="k"><span class="kl">Valor somado</span>${cv.length?`<b title="${brl(tot)}">${brk(tot)}</b>`:'<b class="nd">Não divulgado</b>'}<span class="kn">${cv.length?`${int(cv.length)} com valor${sv?` · ${int(sv)} sem valor, fora da soma`:''}`:'nenhuma conta da seleção divulga valor'}</span></div>
-  <div class="k"><span class="kl">Empresas detentoras</span><b>${int(emp)}</b><span class="kn">${tot&&emp>10?`as 10 maiores somam ${Math.round(top/tot*100)}% do valor`:cv.length?'concentração baixa':'por número de contas'}</span></div>
-  <div class="k"><span class="kl">Vencem em 90 dias</span><b>${int(v90)}</b><span class="kn">${v90&&F.v!=='90'?'<button type="button" class="lnk" data-v90>Ver só estas</button>':F.v==='90'?'filtro ativo':'nenhum vencimento próximo'}</span></div>
+${kpis([
+  {rotulo:'Contas encontradas',valor:numero(int(L.length)),nota:L.length===rows.length?'todas as bases':'de '+int(rows.length)+' no total'},
+  {rotulo:'Valor somado',valor:cv.length?numero(brk(tot),brl(tot)):'<b class="nd">Não divulgado</b>',nota:cv.length?`${int(cv.length)} com valor${sv?` · ${int(sv)} sem valor, fora da soma`:''}`:'nenhuma conta da seleção divulga valor'},
+  {rotulo:'Empresas detentoras',valor:numero(int(emp)),nota:tot&&emp>10?`as 10 maiores somam ${Math.round(top/tot*100)}% do valor`:cv.length?'concentração baixa':'por número de contas'},
+  {rotulo:'Vencem em 90 dias',valor:numero(int(v90)),nota:v90&&F.v!=='90'?'<button type="button" class="lnk" data-v90>Ver só estas</button>':F.v==='90'?'filtro ativo':'nenhum vencimento próximo'}])}
  </section>
  <div class="medir" role="group" aria-labelledby="lMed"><span class="lab" id="lMed">Ordenar gráficos por</span><div class="seg sm" id="sMed">${[['auto','Automático'],['valor','Valor'],['n','Nº de contas']].map(([v,t])=>`<button type="button" data-m="${v}" aria-pressed="${metric===v}">${t}</button>`).join('')}</div>${metric==='auto'&&!cv.length?'<span class="note">Sem valores divulgados nesta seleção: os gráficos contam contas.</span>':''}</div>
  <div class="grid">${chart('emp','Empresas detentoras',L,'empresa',by)}${chart('cli','Clientes e órgãos',L,'cliente',by)}${chart('srv','Serviços',L,'servico',by)}
@@ -116,7 +118,7 @@ function det(id: string,from?: HTMLElement|null){const i=cur.findIndex(x=>x.id==
  if($('#xAlvo'))$('#xAlvo').onclick=()=>virarAlvo(r,$<HTMLButtonElement>('#xAlvo'));
  $('#xEmp').onclick=()=>{F.q=r.empresa;lim=50;syncInputs();render();d.close()};$('#xCli').onclick=()=>{F.c=r.cliente;lim=50;syncInputs();render();d.close()};
  if($('#xPrev'))$('#xPrev').onclick=()=>i>0&&det(cur[i-1].id);if($('#xNext'))$('#xNext').onclick=()=>i<cur.length-1&&det(cur[i+1].id);
- if($('#xDel'))$('#xDel').onclick=async()=>{if(!confirm('Excluir esta conta do mapa?'))return;if(col){await col.doc(id).delete().catch(()=>{})}else man=man.filter(x=>x.id!==id);setRows();d.close()};
+ if($('#xDel'))confirmarNoBotao($<HTMLButtonElement>('#xDel'),'Confirmar exclusão',async()=>{if(col){await col.doc(id).delete().catch(()=>{})}else man=man.filter(x=>x.id!==id);setRows();d.close()});
  d.onkeydown=e=>{if(elDe(e).matches('input,textarea,select'))return;if(e.key==='ArrowLeft'&&i>0){e.preventDefault();det(cur[i-1].id)}if(e.key==='ArrowRight'&&i>=0&&i<cur.length-1){e.preventDefault();det(cur[i+1].id)}};
  (d.querySelector<HTMLElement>('#xNext:not([disabled])')||$<HTMLElement>('#xX')).focus()}
 $('#dl').addEventListener('close',()=>{const d=$<Dialogo>('#dl');d.onkeydown=null;if(d._ret&&d._ret.isConnected)d._ret.focus();else{const b=root.querySelector<HTMLElement>('[data-open="'+(d._id||'')+'"]');b&&b.focus()}d._ret=null});

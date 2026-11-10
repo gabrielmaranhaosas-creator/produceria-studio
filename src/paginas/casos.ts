@@ -4,6 +4,7 @@ import {chave} from '../lib/nomes';
 import {banco,type Colecao} from '../lib/db';
 import type {Caso} from '../lib/tipos';
 import {seletor,comId,type Dialogo} from './dom';
+import {vazio,etiqueta,confirmarNoBotao} from '../componentes';
 
 /** Caso como gravado pela página (além do modelo base). */
 type CasoDoc = Caso & { em?: string; origem?: string };
@@ -17,7 +18,7 @@ root.innerHTML=`<div class="wrap">
  <p class="sr" id="csLive" aria-live="polite"></p><div id="csO"></div></div><dialog id="csD" aria-labelledby="csDT"></dialog>`;
 const $=seletor(root);let C: CasoDoc[]=[],col: Colecao<CasoDoc>|null=null,off: (()=>void)|null=null;const F={q:'',s:'',p:''};
 function render(){const q=chave(F.q);const L=C.filter(c=>(!F.s||(c.servicos||[]).includes(F.s))&&(!F.p||(c.perfis||[]).includes(F.p))&&(!q||chave([c.titulo,c.cliente,c.agencia,c.resumo,c.resultado].join(' ')).includes(q))).sort((a,b)=>String(b.ano||'').localeCompare(String(a.ano||'')));
- $('#csO').innerHTML=L.length?`<ul class="cs-l">${L.map(c=>`<li class="cs-it"><div class="cs-h"><h3 class="cn-t">${esc(c.titulo)}</h3><span class="note">${esc([c.cliente,c.agencia,c.ano].filter(Boolean).join(' · '))}</span></div>${c.resumo?`<p class="cn-r ab">${esc(c.resumo)}</p>`:''}${c.resultado?`<p class="cs-res"><span class="lab">Resultado / prova</span> ${esc(c.resultado)}</p>`:''}<div class="cn-emp">${(c.servicos||[]).map(s=>`<span class="tag">${esc(s)}</span>`).join('')}${(c.perfis||[]).map(p=>`<span class="tag w">${esc((PERF.find(x=>x[0]===p)||[p,p])[1])}</span>`).join('')}</div><div class="cn-acts"><button type="button" class="ghost sm" data-ed="${esc(c.id)}">Editar</button>${c.url?`<a class="cn-f" href="${esc(c.url)}" target="_blank" rel="noopener">ver ↗<span class="sr"> (abre em nova aba)</span></a>`:''}</div></li>`).join('')}</ul>`:`<div class="empty"><h2 class="d d-sub">${C.length?'Nenhum caso com esses filtros':'Nenhum caso ainda'}</h2><p class="note">Cadastre os trabalhos que provam o craft da casa: o que foi feito, para quem e o resultado. Só entra o que a equipe pode afirmar.</p></div>`;
+ $('#csO').innerHTML=L.length?`<ul class="cs-l">${L.map(c=>`<li class="cs-it"><div class="cs-h"><h3 class="cn-t">${esc(c.titulo)}</h3><span class="note">${esc([c.cliente,c.agencia,c.ano].filter(Boolean).join(' · '))}</span></div>${c.resumo?`<p class="cn-r ab">${esc(c.resumo)}</p>`:''}${c.resultado?`<p class="cs-res"><span class="lab">Resultado / prova</span> ${esc(c.resultado)}</p>`:''}<div class="cn-emp">${(c.servicos||[]).map(s=>etiqueta(s)).join('')}${(c.perfis||[]).map(p=>etiqueta((PERF.find(x=>x[0]===p)||[p,p])[1],true)).join('')}</div><div class="cn-acts"><button type="button" class="ghost sm" data-ed="${esc(c.id)}">Editar</button>${c.url?`<a class="cn-f" href="${esc(c.url)}" target="_blank" rel="noopener">ver ↗<span class="sr"> (abre em nova aba)</span></a>`:''}</div></li>`).join('')}</ul>`:vazio({titulo:C.length?'Nenhum caso com esses filtros':'Nenhum caso ainda',texto:'Cadastre os trabalhos que provam o craft da casa: o que foi feito, para quem e o resultado. Só entra o que a equipe pode afirmar.'});
  $('#csLive').textContent=`${L.length} casos.`}
 function form(c: CasoDoc|null|undefined,btn: HTMLElement){const d=$<Dialogo>('#csD'),x: Partial<CasoDoc>&{servicos:string[];perfis:string[]}=c||{servicos:[],perfis:[]};
  d.innerHTML=`<div class="dh"><h2 class="d d-sub" id="csDT">${c?'Editar caso':'Novo caso'}</h2><button type="button" class="x" id="csX" aria-label="Fechar">×</button></div><form id="csF" class="det fm" novalidate>
@@ -29,8 +30,8 @@ function form(c: CasoDoc|null|undefined,btn: HTMLElement){const d=$<Dialogo>('#c
  <fieldset class="f full rs"><legend class="lab">Serve de prova para</legend>${PERF.map(([v,t])=>`<label class="rad"><input type="checkbox" name="c_pf" value="${v}" ${x.perfis.includes(v)?'checked':''}> ${t}</label>`).join('')}</fieldset>
  <p class="erro full" id="c_e" role="alert"></p><div class="dacts fim full">${c?'<button type="button" class="ghost perigo" id="c_del">Excluir</button>':''}<button type="button" class="ghost" id="c_x">Cancelar</button><button type="submit">Salvar caso</button></div></form>`;
  d._ret=btn;d.showModal();$('#c_t').focus();$('#csX').onclick=$('#c_x').onclick=()=>d.close();
- const del=root.querySelector<HTMLElement>('#c_del');
- if(c&&del)del.onclick=async()=>{if(!confirm('Excluir este caso?'))return;if(col)await col.doc(c.id).delete().catch(()=>{});else C=C.filter(y=>y.id!==c.id);render();d.close()};
+ const del=root.querySelector<HTMLButtonElement>('#c_del');
+ if(c&&del)confirmarNoBotao(del,'Confirmar exclusão',async()=>{if(col)await col.doc(c.id).delete().catch(()=>{});else C=C.filter(y=>y.id!==c.id);render();d.close();$('#csLive').textContent='Caso excluído.'});
  $<HTMLFormElement>('#csF').onsubmit=async e=>{e.preventDefault();const g=(i: string)=>$<HTMLInputElement>('#c_'+i).value.trim();const falta=[['t','título'],['r','o que fizemos']].filter(([k])=>!g(k));d.querySelectorAll('[aria-invalid]').forEach(y=>y.removeAttribute('aria-invalid'));if(falta.length){falta.forEach(([k])=>$('#c_'+k).setAttribute('aria-invalid','true'));$('#c_e').textContent='Preencha: '+falta.map(f=>f[1]).join(', ')+'.';$('#c_'+falta[0][0]).focus();return}
   const id=c?c.id:'cs-'+chave(g('t')).replace(/\s+/g,'-').slice(0,50)+'-'+Date.now().toString(36).slice(-4);
   const marcados=(n: string)=>[...d.querySelectorAll<HTMLInputElement>(`[name=${n}]:checked`)].map(y=>y.value);

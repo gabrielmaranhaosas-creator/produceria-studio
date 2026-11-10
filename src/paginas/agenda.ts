@@ -6,6 +6,7 @@ import {CANAIS,RESULTADOS,passoAtual,sugerirProximo,registrarContato,type Result
 import {banco,type Colecao} from '../lib/db';
 import type {Alvo} from '../lib/tipos';
 import {seletor,elDe,mensagem,comId,type Dialogo} from './dom';
+import {kpis,numero} from '../componentes';
 
 type Aba = 'hoje'|'semana'|'todos'|'conv';
 interface ItemFila { a: Alvo; d: string; p: { nota: number; motivo: string } }
@@ -45,7 +46,11 @@ function tempos(): string{const dif: [string,number][]=[];for(const a of A){cons
  return `<ul class="cn-fun">${Object.entries(m).map(([k,v])=>`<li><span>Dias até ${k}</span><b>${Math.round(v.reduce((s,x)=>s+x,0)/v.length)}</b></li>`).join('')}</ul>`}
 function render(){try{localStorage.setItem('ag.aba',aba)}catch(e){}
  const F=fila(),h=hoje(),fim=addDias(h,7),atras=F.filter(x=>x.d&&x.d<h),hj=F.filter(x=>x.d===h),sem=F.filter(x=>x.d>h&&x.d<=fim),semd=F.filter(x=>!x.d);
- $('#agK').innerHTML=`<div class="k"><span class="kl">Para hoje</span><b>${int(atras.length+hj.length)}</b><span class="kn">${int(atras.length)} atrasado${atras.length===1?'':'s'}</span></div><div class="k"><span class="kl">Próximos 7 dias</span><b>${int(sem.length)}</b><span class="kn">toques agendados</span></div><div class="k"><span class="kl">Alvos ativos</span><b>${int(F.length)}</b><span class="kn">${int(semd.length)} sem data de próximo passo</span></div><div class="k"><span class="kl">Contatos registrados · 30 dias</span><b>${int(A.reduce((s,a)=>s+(a.toques||[]).filter(t=>String(t.em).slice(0,10)>=addDias(h,-30)).length,0))}</b><span class="kn">pela agenda</span></div>`;
+ $('#agK').innerHTML=kpis([
+  {rotulo:'Para hoje',valor:numero(int(atras.length+hj.length)),nota:`${int(atras.length)} atrasado${atras.length===1?'':'s'}`},
+  {rotulo:'Próximos 7 dias',valor:numero(int(sem.length)),nota:'toques agendados'},
+  {rotulo:'Alvos ativos',valor:numero(int(F.length)),nota:`${int(semd.length)} sem data de próximo passo`},
+  {rotulo:'Contatos registrados · 30 dias',valor:numero(int(A.reduce((s,a)=>s+(a.toques||[]).filter(t=>String(t.em).slice(0,10)>=addDias(h,-30)).length,0))),nota:'pela agenda'}]);
  const tabs: [Aba,string][]=[['hoje',`Hoje (${atras.length+hj.length})`],['semana',`Semana (${sem.length})`],['todos',`Todos os ativos (${F.length})`],['conv','Conversão']];
  $('#agT').innerHTML=tabs.map(([v,t])=>`<button type="button" role="tab" id="tab-${v}" aria-selected="${aba===v}" aria-pressed="${aba===v}" aria-controls="agO" data-aba="${v}">${t}</button>`).join('');
  const L=aba==='hoje'?[...atras,...hj]:aba==='semana'?sem:F;

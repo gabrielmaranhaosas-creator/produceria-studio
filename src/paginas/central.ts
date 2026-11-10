@@ -6,6 +6,7 @@ import {calibrar,prioridade} from '../lib/prioridade';
 import {banco,lerArquivo,type Banco,type Colecao,type Consulta} from '../lib/db';
 import type {Alvo,ContratoPublico,Licitacao,Movimento,Noticia,Perfil} from '../lib/tipos';
 import {seletor,elDe,mensagem,comId} from './dom';
+import {kpis,numero} from '../componentes';
 
 type TipoItem='conta'|'negocio'|'venceu'|'aberta'|'renova';
 interface Lead { nome: string; perfil: Perfil|string; gatilho: string; fonte: string }
@@ -81,10 +82,11 @@ function render(){persist();
  const cnQ=$<HTMLInputElement>('#cnQ');cnQ.value!==F.q&&document.activeElement!==cnQ&&(cnQ.value=F.q);$<HTMLSelectElement>('#cnP').value=F.p;$<HTMLSelectElement>('#cnE').value=F.e;
  const all=itens(),L=filt(all),d7=desde(7);
  const novos7=all.filter(i=>i.tipo!=='renova'&&i.data>=d7&&i.data<=hoje&&est(i.k)?.estado!=='arquivado'),sug=sugeridos(all),ativos=S.alvos.filter(a=>a.status&&a.status!=='Cliente'),fortes=all.filter(i=>i.tipo==='aberta');
- $('#cnK').innerHTML=`<div class="k"><span class="kl">Novidades · 7 dias</span><b>${int(novos7.length)}</b><span class="kn">${(['conta','negocio','venceu','aberta'] as const).map(t=>int(novos7.filter(i=>i.tipo===t).length)+' '+{conta:'de conta',negocio:'de negócio',venceu:'contratos',aberta:'licitações'}[t]).join(' · ')}</span></div>
- <div class="k"><span class="kl">Leads sugeridos</span><b>${int(sug.length)}</b><span class="kn">sinais dos últimos 90 dias, fora da Captação</span></div>
- <div class="k"><span class="kl">Alvos em andamento</span><b>${int(ativos.length)}</b><span class="kn"><a class="lnk" href="#captacao">abrir Captação</a></span></div>
- <div class="k"><span class="kl">Licitações abertas fortes</span><b>${int(fortes.length)}</b><span class="kn">nota 60+ e prazo aberto · ${int(renov.filter(c=>c.fim<=addDias(hoje,90)).length)} contratos vencem em 90 dias</span></div>`;
+ $('#cnK').innerHTML=kpis([
+  {rotulo:'Novidades · 7 dias',valor:numero(int(novos7.length)),nota:(['conta','negocio','venceu','aberta'] as const).map(t=>int(novos7.filter(i=>i.tipo===t).length)+' '+{conta:'de conta',negocio:'de negócio',venceu:'contratos',aberta:'licitações'}[t]).join(' · ')},
+  {rotulo:'Leads sugeridos',valor:numero(int(sug.length)),nota:'sinais dos últimos 90 dias, fora da Captação'},
+  {rotulo:'Alvos em andamento',valor:numero(int(ativos.length)),nota:'<a class="lnk" href="#captacao">abrir Captação</a>'},
+  {rotulo:'Licitações abertas fortes',valor:numero(int(fortes.length)),nota:`nota 60+ e prazo aberto · ${int(renov.filter(c=>c.fim<=addDias(hoje,90)).length)} contratos vencem em 90 dias`}]);
  const ch: [keyof Filtros,string][]=[];if(F.t)ch.push(['t',TL[F.t]]);if(F.q)ch.push(['q','Busca: '+F.q]);if(F.e)ch.push(['e',F.e==='salvo'?'Só salvas':'Arquivadas']);
  $('#cnC').innerHTML=`<span class="lab">${int(L.length)} ite${L.length===1?'m':'ns'}</span>`+ch.map(([k,t])=>`<button type="button" class="chip" data-r="${k}" aria-label="Remover filtro: ${esc(t)}">${esc(t)} <span aria-hidden="true">×</span></button>`).join('')+(ch.length?'<button type="button" class="ghost sm" data-r="*">Limpar</button>':'');
  let html='',ult=null;const V=L.slice(0,lim);
