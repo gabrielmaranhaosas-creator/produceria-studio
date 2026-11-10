@@ -16,6 +16,15 @@ for (const [fn, nome] of Object.entries(montagens)) {
   html = html.replace(antes, `(window.__studio&&window.__studio.montar(${JSON.stringify(nome)},r.current)||${antes})`);
 }
 
+// Frentes de eventos saíram do escopo (perfil do cérebro 2026-11-10a): tira-as também da lista de
+// frentes das Licitações do legado (cadastro manual, leitura de edital).
+const frentesEventos = ['"Produção e organização de eventos",', '"Infraestrutura, cenografia e locações para eventos",'];
+for (const f of frentesEventos) {
+  const n = html.split(f).length - 1;
+  if (n !== 1) throw new Error(`Esperava 1 ocorrência de ${f} no legado, achei ${n}.`);
+  html = html.replace(f, '');
+}
+
 const marca = '<script type="module">';
 if (html.split(marca).length - 1 !== 1) throw new Error('Esperava exatamente um script module no legado.');
 html = html.replace(marca, `<script type="module" data-studio="modulos">${modulos}</script>\n${marca}`);

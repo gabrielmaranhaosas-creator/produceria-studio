@@ -1,5 +1,5 @@
 {
-  "versao": "2026-11-09a",
+  "versao": "2026-11-10a",
   "manifesto": "A PRODUCERIA disputa onde o craft decide: filme, fotografia, direção de arte, cenografia, som, conteúdo e campanhas. Impressão e placa entram só quando abrem porta ou geram atestado. O cérebro prioriza o estúdio, não o volume.",
   "modalidades": {
     "6": "Pregão - Eletrônico",
@@ -176,24 +176,6 @@
       ]
     },
     {
-      "nome": "Produção e organização de eventos",
-      "craft": 0.6,
-      "entidades": [
-        "eventos",
-        "producoes"
-      ],
-      "termos": [
-        "organização de eventos",
-        "organizacao de eventos",
-        "produção de eventos",
-        "producao de eventos",
-        "estande",
-        "stand",
-        "montagem de evento",
-        "cerimonial"
-      ]
-    },
-    {
       "nome": "Comunicação visual e sinalização",
       "craft": 0.35,
       "entidades": [
@@ -349,6 +331,25 @@
       ],
       "fator": 0.0,
       "motivo": "fora do escopo do hub (frota, seguro, obra, informática, saúde, alimentação)"
+    },
+    {
+      "termos": [
+        "organização de eventos",
+        "organizacao de eventos",
+        "produção de eventos",
+        "producao de eventos",
+        "realização de eventos",
+        "realizacao de eventos",
+        "gestão de eventos",
+        "gestao de eventos",
+        "montagem de evento",
+        "estande",
+        "stand",
+        "stands",
+        "cerimonial"
+      ],
+      "fator": 0.0,
+      "motivo": "eventos fora do escopo: a PRODUCERIA não trabalha com produção e organização de eventos"
     }
   ]
 }

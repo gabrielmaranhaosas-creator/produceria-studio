@@ -33,6 +33,15 @@ tudo de uma vez tiraria o Studio do ar e arriscaria o banco. Então:
 - `db.ts`: acesso tipado ao banco, assinatura com timeout de 10 s e leitura de arquivos publicados
   (inclusive gzip).
 
+## Escopo do radar de licitações
+
+O perfil do cérebro (`jobs/cerebro/perfil.json`) define as frentes que entram no radar `b2g`. Produção e
+organização de eventos está **fora do escopo** desde o perfil `2026-11-10a`: a frente saiu e os termos de
+eventos (organização, produção, estandes, cerimonial) viraram penalidade zero, o que também zera as
+licitações de eventos já gravadas quando o cérebro roda com `--repontuar`. Foto, transmissão e
+cenografia **de** eventos continuam, pelas próprias frentes. `scripts/montar.mjs` tira as duas frentes de
+eventos da lista de Licitações do legado.
+
 ## Publicação
 
 `npm run build` gera `dist/index.html`. Publicar = Artifact `publish` com esse arquivo na URL do Studio,

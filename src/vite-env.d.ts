@@ -1,2 +1,1 @@
 declare module '*.css?inline' { const css: string; export default css; }
-declare module './paginas/*.js' { export function montar(raiz: HTMLElement): (() => void) | void; }
