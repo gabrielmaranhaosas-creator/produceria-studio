@@ -20,7 +20,11 @@
 - ~~Licitações (radar, carteira, habilitação, vias)~~ Feito em 10/11/2026: `src/paginas/licitacoes.ts`, com
   Disputar / Monitorar / Descartar com motivo, descartes revisáveis (e desfazíveis), carteira por etapa com análise
   go/no-go por IA, habilitação por empresa e leitura de edital por IA. O componente antigo fica de reserva.
-- Captação (alvos, triagem, abordagem, proposta), Vencedores, Contas e agências, Estratégia e funil.
+- ~~Captação (alvos, triagem, abordagem, proposta)~~ Feito em 10/11/2026: `src/paginas/captacao.ts`, com quadro
+  por etapa, triagem (abordar, monitorar, descartar com motivo), sinais do radar de licitações, extração de alvos de
+  texto colado e abordagem por IA, atração levada ao funil e proposta com a tabela de serviços (`src/lib/servicos.ts`,
+  709 serviços, cálculo em centavos) e download em .md. O componente antigo fica de reserva.
+- Vencedores, Contas e agências, Estratégia e funil.
 - Uma página por entrega, sempre com o legado como reserva.
 
 ## Fase 3 · Oficina e casca

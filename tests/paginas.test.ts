@@ -176,3 +176,77 @@ describe('Licitações', () => {
     expect((db.dados.habilitacao.cria as any).req.fgts.validade).toBe('2099-12-31'); // não perde os outros
   });
 });
+
+describe('Captação', () => {
+  const inicial = () => ({
+    alvos: {
+      'al-1': { nome: 'Agência Um', perfil: 'independente', status: 'Mapeado', proximoPasso: 'Pesquisar', prazo: '2000-01-01', criadoEm: '2026-01-01' },
+      'al-2': { nome: 'Agência Dois', perfil: 'publica', status: 'Conversa', criadoEm: '2026-01-02' },
+      'al-3': { nome: 'Fora', perfil: 'rede', status: 'Descartado', criadoEm: '2026-01-03' },
+    },
+    b2g: { 'pncp-1': { orgao: 'Prefeitura X', uf: 'SP', objeto: 'Contratação de agência de publicidade e propaganda', score: 60 } },
+    config: { descontos: { valores: { '1': 10 } } },
+  });
+  beforeEach(() => { try { localStorage.clear(); } catch { /* */ } });
+
+  it('mostra o quadro por etapa, sem os descartados, e marca o vencido', async () => {
+    const { raiz } = await montar('captacao', bancoFalso(inicial()));
+    expect(raiz.querySelector('#cp-tab-alvos')?.textContent).toBe('Alvos (2)');
+    const cols = raiz.querySelectorAll('.lc-col');
+    expect(cols.length).toBe(6);
+    expect(cols[0].textContent).toContain('Agência Um');
+    expect(cols[3].textContent).toContain('Agência Dois');
+    expect(raiz.textContent).not.toContain('Fora');
+    expect(raiz.querySelector('.cp-venc')?.textContent).toContain('Vencido');
+  });
+
+  it('cria um alvo pelo formulário e avança de etapa com aviso à equipe', async () => {
+    const db = bancoFalso(inicial());
+    const { raiz } = await montar('captacao', db);
+    raiz.querySelector<HTMLButtonElement>('#cpN')!.click();
+    raiz.querySelector<HTMLInputElement>('#n_nome')!.value = 'Agência Nova';
+    raiz.querySelector<HTMLFormElement>('#cpNovo')!.dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }));
+    await espera();
+    const novo = Object.values(db.dados.alvos).find((a) => a.nome === 'Agência Nova')!;
+    expect(novo.status).toBe('Mapeado');
+    expect(novo.proximoPasso).toBe('Pesquisar quem decide produção');
+    raiz.querySelector<HTMLButtonElement>('[data-mv="al-2"][data-para="Proposta"]')!.click();
+    await espera();
+    expect(db.dados.alvos['al-2'].status).toBe('Proposta');
+    expect(Object.values(db.dados.notificacoes || {})[0]?.titulo).toBe('Proposta para Agência Dois');
+  });
+
+  it('sinal de licitação de publicidade vira alvo de conta pública', async () => {
+    const db = bancoFalso(inicial());
+    const { raiz } = await montar('captacao', db);
+    raiz.querySelector<HTMLButtonElement>('[data-aba="achar"]')!.click();
+    expect(raiz.querySelectorAll('.cp-sinal').length).toBe(1);
+    raiz.querySelector<HTMLButtonElement>('[data-sinal="0"]')!.click();
+    await espera();
+    const a = Object.values(db.dados.alvos).find((x) => x.nome === 'Prefeitura X · agência vencedora')!;
+    expect(a.perfil).toBe('publica');
+    expect(raiz.querySelectorAll('.cp-sinal').length).toBe(0);
+  });
+
+  it('triagem descarta com motivo e a proposta soma com o desconto da tabela', async () => {
+    const db = bancoFalso(inicial());
+    const { raiz } = await montar('captacao', db);
+    raiz.querySelector<HTMLButtonElement>('[data-abre="al-1"]')!.click();
+    const d = document.querySelector('#cpD')!;
+    const q = d.querySelector<HTMLInputElement>('#pp_q')!;
+    q.value = 'anuncio jornal criacao';
+    q.dispatchEvent(new Event('input'));
+    d.querySelector<HTMLButtonElement>('[data-add]')!.click();
+    expect(d.querySelectorAll('.cp-itens tbody tr').length).toBe(1);
+    d.querySelector<HTMLButtonElement>('#pp_salva')!.click();
+    await espera();
+    const pr = db.dados.alvos['al-1'].proposta as { itens: { unit: number }[] };
+    expect(pr.itens.length).toBe(1);
+    expect(pr.itens[0].unit).toBeGreaterThan(0);
+    const sel = d.querySelector<HTMLSelectElement>('#t_desc')!;
+    sel.value = 'Momento errado';
+    sel.dispatchEvent(new Event('change'));
+    await espera();
+    expect(db.dados.alvos['al-1']).toMatchObject({ status: 'Descartado', triagem: 'Descartar', motivoDescarte: 'Momento errado' });
+  });
+});
