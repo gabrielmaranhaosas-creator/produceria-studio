@@ -36,3 +36,11 @@ describe('orçamento de projeto', () => {
     expect(orcamentoVigente([])).toBeUndefined();
   });
 });
+
+import { mesclarDescontos, pctDe } from '../src/paginas/tabela';
+describe('descontos da tabela', () => {
+  it('arredonda, limita e tira os zerados', () => {
+    expect(mesclarDescontos({ a: 5, b: 7 }, { a: 0, c: 12.345, d: 150 })).toEqual({ b: 7, c: 12.35, d: 100 });
+    expect(pctDe('12,5')).toBe(12.5); expect(pctDe('abc')).toBe(0); expect(pctDe('-3')).toBe(0);
+  });
+});

@@ -1,0 +1,13 @@
+.mc .tb{display:flex;flex-direction:column;gap:18px}
+.mc .tb .page-head{margin-bottom:8px}
+.mc .tb-filtros{border-top:0;padding-top:0}
+.mc .tb-lote{display:flex;flex-direction:row;flex-wrap:wrap;gap:12px;align-items:flex-end}
+.mc .tb-lote .f{width:160px}
+.mc .tb-lote .chip[aria-pressed=true]{background:var(--ink);color:var(--surface-000,#fff);border-color:var(--ink)}
+.mc .tb-esp{flex:1}
+.mc .tb-pag-l{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+.mc .tb-pag-l .acts{display:flex;flex-wrap:wrap;gap:6px}
+.mc .tb-t{min-width:1180px}
+.mc .tb-t td{vertical-align:middle}
+.mc .tb-in{width:80px;text-align:right;min-height:32px;padding:2px 6px}
+.mc .tb-in.com,.mc .tb-com{font-weight:600}

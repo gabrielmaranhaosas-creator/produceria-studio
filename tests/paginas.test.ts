@@ -455,3 +455,28 @@ describe('SWOT e frentes', () => {
     expect(JSON.stringify(db.dados.swot)).not.toMatch(/eventos/i);
   });
 });
+
+describe('Tabela de serviços', () => {
+  it('filtra, salva desconto por linha e aplica em lote', async () => {
+    const db = bancoFalso({ config: { descontos: { valores: { '1': 10 } } } });
+    const { raiz } = await montar('tabela', db);
+    expect(raiz.querySelectorAll('#tbB tr').length).toBe(100);
+    expect(raiz.querySelector('#tbN')?.textContent).toBe('709 serviço(s) · página 1 de 8');
+    expect(raiz.querySelector('#tbK .k:nth-child(2) b')?.textContent).toBe('1');
+    const q = raiz.querySelector<HTMLInputElement>('#tbQ')!;
+    q.value = 'anuncio jornal criacao'; q.dispatchEvent(new Event('input', { bubbles: true }));
+    const n = raiz.querySelectorAll('#tbB tr').length;
+    expect(n).toBeGreaterThan(0); expect(n).toBeLessThan(10);
+    const inp = raiz.querySelector<HTMLInputElement>('#tbB [data-desc]')!;
+    inp.value = '12,5'; inp.dispatchEvent(new FocusEvent('focusout', { bubbles: true }));
+    await espera();
+    expect((db.dados.config.descontos.valores as Record<string, number>)[inp.dataset.desc!]).toBe(12.5);
+    const l = raiz.querySelector<HTMLInputElement>('#tbL')!;
+    l.value = '20'; l.dispatchEvent(new Event('input', { bubbles: true }));
+    raiz.querySelector<HTMLButtonElement>('#tbAplicar')!.click();
+    await espera();
+    const v = db.dados.config.descontos.valores as Record<string, number>;
+    expect(Object.values(v).filter((x) => x === 20).length).toBe(n);
+    expect(v['1']).toBe(10);
+  });
+});

@@ -37,7 +37,9 @@
 - Uma página por entrega, sempre com o legado como reserva.
 
 ## Fase 3 · Oficina e casca
-- Bancada, Gráfica, Plugins, Agentes, Biblioteca, Rotinas, Tabela de serviços, Ajustes.
+- ~~Tabela de serviços~~ Feito em 10/11/2026: `src/paginas/tabela.ts`, com filtros, desconto por linha e em lote
+  (zerar pede confirmação), situação frente ao SINAPRO e CSV. O componente antigo fica de reserva.
+- Bancada, Gráfica, Plugins, Agentes, Biblioteca, Rotinas, Ajustes.
 - Shell próprio (navegação, busca Ctrl K, avisos, tema). O legado sai.
 
 ## Fase 4 · operação
