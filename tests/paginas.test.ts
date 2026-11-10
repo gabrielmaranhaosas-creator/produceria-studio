@@ -359,3 +359,99 @@ describe('Contas e agências', () => {
     expect(Object.values(db.dados.alvos)[0]).toMatchObject({ nome: 'Agência Nova', perfil: 'independente', origem: 'Contas e agências', proximoPasso: 'Escrever para a produção oferecendo uma frente da primeira campanha' });
   });
 });
+
+describe('Funil e receita', () => {
+  const inicial = () => ({
+    pipeline: {
+      'fn-1': { eixo: 'Privado', titulo: 'Fee Vivo', estagio: 'Contato', proximoPasso: 'Ligar', valor: 50000 },
+      'fn-2': { eixo: 'Público', titulo: 'Ata SP', estagio: 'Perdida', proximoPasso: 'x' },
+    },
+    linhas: { 'ln-1': { nome: 'Audiovisual', grupo: 'Atual', receita12m: 600, meta12m: 500, ordem: 1 }, 'ln-2': { nome: 'Comunicação visual', grupo: 'Nova', receita12m: 400, meta12m: 500, ordem: 2 } },
+    projetos: { p1: { cliente: 'Cliente A', canal: 'Privado', orcamentos: [{ status: 'Aprovado internamente', itens: [{ qtd: 1, unit: 100000 }] }] } },
+  });
+
+  it('mostra receita por canal, funil e HHI das linhas', async () => {
+    const { raiz } = await montar('funil', bancoFalso(inicial()));
+    const k = raiz.querySelectorAll('#fnK .k');
+    expect(k[0].querySelector('b')?.textContent).toBe('100%');
+    expect(k[3].textContent).toContain('Cliente A');
+    expect(k[4].querySelector('b')?.textContent).toBe('1');
+    expect(raiz.querySelectorAll('.fn-quadro .lc-col').length).toBe(5);
+    expect(raiz.querySelector('.fn-perdidas summary')?.textContent).toBe('Perdidas (1)');
+    // HHI hoje: 60² + 40² = 5200; na meta: 50² + 50² = 5000
+    const m = raiz.querySelectorAll('#fnMK .k b');
+    expect(m[2].textContent).toBe('5.200');
+    expect(m[3].textContent).toBe('5.000');
+  });
+
+  it('cria oportunidade, move de etapa, leva estratégia ao funil e salva valor da linha', async () => {
+    const db = bancoFalso(inicial());
+    const { raiz } = await montar('funil', db);
+    raiz.querySelector<HTMLButtonElement>('#fnNova')!.click();
+    raiz.querySelector<HTMLInputElement>('#fo_tit')!.value = 'Nova ata';
+    raiz.querySelector<HTMLInputElement>('#fo_passo')!.value = 'Ler edital';
+    raiz.querySelector<HTMLInputElement>('#fo_val')!.value = '1.234,50';
+    raiz.querySelector('#fnF')!.dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }));
+    await espera();
+    expect(Object.values(db.dados.pipeline).find((o) => o.titulo === 'Nova ata')).toMatchObject({ estagio: 'Identificada', valor: 1234.5 });
+    raiz.querySelector<HTMLButtonElement>('[data-mv="fn-1"][data-para="Proposta"]')!.click();
+    await espera();
+    expect(db.dados.pipeline['fn-1'].estagio).toBe('Proposta');
+    raiz.querySelector<HTMLButtonElement>('[data-ac="0"]')!.click();
+    await espera();
+    expect(Object.values(db.dados.pipeline).some((o) => o.titulo === 'Pacote Reuse/Remaster' && o.origem === 'Estratégia')).toBe(true);
+    const inp = raiz.querySelector<HTMLInputElement>('[data-ln="ln-1"][data-campo="meta12m"]')!;
+    inp.value = '900'; inp.dispatchEvent(new FocusEvent('focusout', { bubbles: true }));
+    await espera();
+    expect(db.dados.linhas['ln-1'].meta12m).toBe(900);
+  });
+});
+
+describe('SWOT e frentes', () => {
+  const inicial = () => ({
+    swot: {
+      's-a': { id: 's-a', q: 'S', texto: 'Ouro em Cannes', evidencia: 'diretório', fonte: '', certeza: 'Fonte pública', peso: 3, origem: 'Pesquisa', em: '2026-01-01' },
+      's-b': { id: 's-b', q: 'S', texto: 'Núcleos especializados', evidencia: '', fonte: '', certeza: 'Hipótese', peso: 2, origem: 'Equipe', em: '2026-01-02' },
+      'o-a': { id: 'o-a', q: 'O', texto: 'Mais formatos', evidencia: '', fonte: '', certeza: 'Hipótese', peso: 2, origem: 'Equipe', em: '2026-01-01' },
+    },
+    tows: { 't-1': { id: 't-1', tipo: 'SO', titulo: 'Craft em dólar', texto: 'x', liga: ['s-a', 'o-a'], passo: 'Reel', origem: 'Pesquisa', em: '2026-01-01' } },
+    frentes: {
+      'f-1': { nome: 'Frente baixa', tese: 't', tipo: 'Projeto', potencial: 1, esforco: 5, aderencia: 1, status: 'Hipótese' },
+      'f-2': { nome: 'Frente alta', tese: 't', tipo: 'Recorrente', potencial: 5, esforco: 1, aderencia: 5, status: 'Hipótese' },
+    },
+    b2g: { o1: { score: 70, carteira: true }, o2: { score: 10 } },
+  });
+
+  it('monta a matriz com códigos por peso, o sinal do radar e frentes por nota', async () => {
+    const { raiz } = await montar('estrategia', bancoFalso(inicial()));
+    const cods = [...raiz.querySelectorAll('.q-S .es-cod')].map((x) => x.textContent);
+    expect(cods).toEqual(['S1', 'S2']);
+    expect(raiz.querySelector('.q-S .es-item')?.textContent).toContain('Ouro em Cannes');
+    expect(raiz.querySelector('.es-tw .num')?.textContent).toBe('S1 + O1');
+    expect(raiz.querySelector('#esS')?.textContent).toContain('1 oportunidades públicas com nota 60+');
+    const frs = [...raiz.querySelectorAll('.es-fr-h b')].map((x) => x.textContent);
+    expect(frs).toEqual(['Frente alta', 'Frente baixa']);
+    expect(raiz.querySelector('.es-fr-h .es-nota')?.textContent).toBe('100');
+  });
+
+  it('adiciona item, leva sinal, vira frente e carrega a base da pesquisa', async () => {
+    const db = bancoFalso(inicial());
+    const { raiz } = await montar('estrategia', db);
+    const f = raiz.querySelector<HTMLFormElement>('.es-add[data-q="T"]')!;
+    f.querySelector('input')!.value = 'Automação de formatos';
+    f.dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }));
+    await espera();
+    expect(Object.values(db.dados.swot).some((i) => i.q === 'T' && i.texto === 'Automação de formatos' && i.certeza === 'Hipótese')).toBe(true);
+    raiz.querySelector<HTMLButtonElement>('[data-sinal="0"]')!.click();
+    await espera();
+    expect(Object.values(db.dados.swot).some((i) => i.certeza === 'Dado do Studio' && i.origem === 'Studio')).toBe(true);
+    raiz.querySelector<HTMLButtonElement>('[data-frente="t-1"]')!.click();
+    await espera();
+    expect(Object.values(db.dados.frentes).find((x) => x.nome === 'Craft em dólar')).toMatchObject({ tipo: 'Projeto', tows: 'SO', ativos: 'S1 + O1', origem: 'SWOT' });
+    expect(db.dados.tows['t-1'].frenteId).toBeTruthy();
+    raiz.querySelector<HTMLButtonElement>('#esBase')!.click();
+    await espera(60);
+    expect(db.dados.swot['sw-s3'].texto).toContain('três empresas');
+    expect(JSON.stringify(db.dados.swot)).not.toMatch(/eventos/i);
+  });
+});

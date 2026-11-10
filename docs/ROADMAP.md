@@ -30,7 +30,10 @@
 - ~~Contas e agências~~ Feito em 10/11/2026: `src/paginas/mercado.ts`, com movimentações de conta (período, só
   criação, CSV), agências por prioridade, maiores anunciantes, guias de abordagem (ofertas no escopo atual) e virar
   alvo na Captação. As movimentações da Captação semanal entram sozinhas.
-- Estratégia e funil.
+- ~~Estratégia e funil~~ Feito em 10/11/2026: `src/paginas/funil.ts` (receita orçada por canal, funil de
+  oportunidades, estratégias anticíclicas, mapa de receitas com HHI e diagnóstico por IA) e `src/paginas/estrategia.ts`
+  (matriz SWOT com evidência, sinais dos dados, revisar e cruzar por IA, TOWS, frentes priorizadas, ofertas de IA
+  aplicada). A base da pesquisa foi revista para o escopo atual (três empresas, sem eventos). Fase 2 concluída.
 - Uma página por entrega, sempre com o legado como reserva.
 
 ## Fase 3 · Oficina e casca

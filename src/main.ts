@@ -13,6 +13,8 @@ import licitacoes from './estilos/licitacoes.css?inline';
 import captacao from './estilos/captacao.css?inline';
 import vencedores from './estilos/vencedores.css?inline';
 import mercado from './estilos/mercado.css?inline';
+import funil from './estilos/funil.css?inline';
+import estrategia from './estilos/estrategia.css?inline';
 import * as pCentral from './paginas/central';
 import * as pAgenda from './paginas/agenda';
 import * as pCasos from './paginas/casos';
@@ -21,6 +23,8 @@ import * as pLicitacoes from './paginas/licitacoes';
 import * as pCaptacao from './paginas/captacao';
 import * as pVencedores from './paginas/vencedores';
 import * as pMercado from './paginas/mercado';
+import * as pFunil from './paginas/funil';
+import * as pEstrategia from './paginas/estrategia';
 
 import type { Montar } from './paginas/dom';
 
@@ -33,13 +37,15 @@ const paginas: Record<string, Montar> = {
   captacao: pCaptacao.montar,
   vencedores: pVencedores.montar,
   mercado: pMercado.montar,
+  funil: pFunil.montar,
+  estrategia: pEstrategia.montar,
 };
 
 function estilos() {
   if (document.getElementById('studio-src-css')) return;
   const el = document.createElement('style');
   el.id = 'studio-src-css';
-  el.textContent = base + central + agenda + licitacoes + captacao + vencedores + mercado;
+  el.textContent = base + central + agenda + licitacoes + captacao + vencedores + mercado + funil + estrategia;
   document.head.appendChild(el);
 }
 

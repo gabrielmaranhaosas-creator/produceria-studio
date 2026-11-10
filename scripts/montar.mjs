@@ -29,6 +29,28 @@ for (const [fn, nome] of Object.entries(montagens)) {
   html = html.replace(uso, '(0,l.jsx)(window.__studio&&window.__studio.paginas.includes("licitacoes")?LC:te,{opps:a})');
   const mc = 'function MC(){';
   if (html.split(mc).length - 1 !== 1) throw new Error('Esperava 1 definição de MC no legado.');
+  // Funil e receita (Fase 2): o fragmento inteiro da aba (tD + mapa de receitas a8) vira a página nova; o antigo fica de reserva.
+  {
+    const ini = '"funil"===n&&';
+    const p0 = html.indexOf(ini) + ini.length;
+    const fim = '(0,l.jsx)(a8,{})]})]})';
+    const p1 = html.indexOf(fim, p0) + fim.length;
+    const frag = html.slice(p0, p1);
+    if (!frag.startsWith('(0,l.jsxs)(l.Fragment,{children:[(0,l.jsx)(tD,{projetos:s})') || p1 - p0 > 2000) throw new Error('Fragmento do funil não reconhecido no legado.');
+    html = html.slice(0, p0) + `(window.__studio&&window.__studio.paginas.includes("funil")?(0,l.jsx)(FN,{}):${frag})` + html.slice(p1);
+    html = html.replace(mc, 'function FN(){let r=(0,c.useRef)(null);(0,c.useEffect)(()=>{r.current.dataset.th=document.documentElement.getAttribute("data-theme")||"";return window.__studio.montar("funil",r.current)||void 0},[]);return(0,l.jsx)("div",{ref:r,className:"mc cn"})}' + mc);
+  }
+  // SWOT e frentes (Fase 2): o fragmento da aba (tj + ofertas td) vira a página nova; o antigo fica de reserva.
+  {
+    const ini = '"estrategia"===n&&';
+    const p0 = html.indexOf(ini) + ini.length;
+    const fim = '(0,l.jsx)(td,{})]})]})';
+    const p1 = html.indexOf(fim, p0) + fim.length;
+    const frag = html.slice(p0, p1);
+    if (!frag.startsWith('(0,l.jsxs)(l.Fragment,{children:[(0,l.jsx)(tj,{frentes:t,projetos:s,opps:a})') || p1 - p0 > 2000) throw new Error('Fragmento da estratégia não reconhecido no legado.');
+    html = html.slice(0, p0) + `(window.__studio&&window.__studio.paginas.includes("estrategia")?(0,l.jsx)(ES,{}):${frag})` + html.slice(p1);
+    html = html.replace(mc, 'function ES(){let r=(0,c.useRef)(null);(0,c.useEffect)(()=>{r.current.dataset.th=document.documentElement.getAttribute("data-theme")||"";return window.__studio.montar("estrategia",r.current)||void 0},[]);return(0,l.jsx)("div",{ref:r,className:"mc cn"})}' + mc);
+  }
   // Contas e agências (Fase 2): mesma troca, com o componente antigo `t9` de reserva.
   const usoMK = '"mercado"===n&&(0,l.jsx)(t9,{})';
   if (html.split(usoMK).length - 1 !== 1) throw new Error(`Esperava 1 uso de ${usoMK} no legado.`);

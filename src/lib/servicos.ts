@@ -47,3 +47,28 @@ export function calcular(itens: ItemProposta[]): { bruto: number; desconto: numb
 export function itemDe(s: Servico, descontos: Record<string, number>, id: string): ItemProposta {
   return { id, descricao: rotulo(s), qtd: 1, unit: Math.round(100 * s.ref), desconto: descontos[String(s.id)] || 0, fonte: `${FONTE_TABELA} · ID ${s.id}`, servico: s.id, etapa: s.etapa };
 }
+
+/** Parâmetros gerais de um orçamento de projeto (percentuais). */
+export interface ParamsOrcamento { desconto?: number; fee?: number; reserva?: number; tributo?: number }
+export interface Orcamento { status?: string; itens: { qtd: number; unit: number; desconto?: number }[]; params?: ParamsOrcamento }
+
+/**
+ * Total de um orçamento de projeto em centavos, como no legado: itens com desconto, desconto geral,
+ * fee e reserva sobre o líquido, tributo sobre a base.
+ */
+export function totalOrcamento(o: Orcamento): number {
+  const p = o.params || {};
+  const linhas = o.itens.map((i) => {
+    const t = (Math.round(1000 * i.qtd) * i.unit) / 1000;
+    const totalC = Math.sign(t) * Math.floor(Math.abs(t) + 0.5);
+    return { totalC, descC: pct(totalC, i.desconto || 0) };
+  });
+  const bruto = linhas.reduce((s, l) => s + l.totalC, 0);
+  const descItens = linhas.reduce((s, l) => s + l.descC, 0);
+  const liquido = bruto - descItens - pct(bruto - descItens, p.desconto || 0);
+  const base = liquido + pct(liquido, p.fee || 0) + pct(liquido, p.reserva || 0);
+  return base + pct(base, p.tributo || 0);
+}
+
+/** Versão que conta para a receita: a última aprovada internamente, ou a última salva. */
+export const orcamentoVigente = (lista?: Orcamento[]) => (lista?.length ? [...lista].reverse().find((o) => o.status === 'Aprovado internamente') || lista[lista.length - 1] : undefined);
