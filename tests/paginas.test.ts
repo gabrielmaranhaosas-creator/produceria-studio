@@ -313,3 +313,49 @@ describe('Vencedores', () => {
     expect(raiz.querySelectorAll('.vc-mes').length).toBe(1);
   });
 });
+
+describe('Contas e agências', () => {
+  const dias = (n: number) => new Date(Date.now() - n * 864e5).toISOString().slice(0, 10);
+  const mercado = {
+    meta: { atualizado: '2026-11-06', movimentos: 2, agencias: 2, mudancas2025: 280, fonteMudancas2025: 'https://x', fontes: { 'Fonte A': 'https://a' } },
+    agencias: [
+      { nome: 'Agência Nova', cenp: 3, uf: 'SP', fonteRanking: 'https://r', contas: [{ data: dias(10), anunciante: 'Marca X', escopo: 'Conta digital', fonte: 'https://f1', tipo: 'conquista', anterior: '' }], perdeu: [], ultima: dias(10), tipo: 'Criação / full service', rede: false, prioridade: 90 },
+      { nome: 'Agência de PR', cenp: null, uf: 'RJ', fonteRanking: '', contas: [{ data: dias(300), anunciante: 'Marca Y', escopo: 'PR', fonte: 'https://f2', tipo: 'conquista', anterior: '' }], perdeu: [], ultima: dias(300), tipo: 'Relações públicas', rede: false, prioridade: 30 },
+    ],
+    movimentos: [
+      { data: dias(10), anunciante: 'Marca X', agencia: 'Agência Nova', anterior: '', escopo: 'Conta digital', fonte: 'https://f1', tipo: 'conquista' },
+      { data: dias(300), anunciante: 'Marca Y', agencia: 'Agência de PR', anterior: '', escopo: 'PR', fonte: 'https://f2', tipo: 'conquista' },
+    ],
+    anunciantes: [{ pos: 1, pos2024: 3, nome: 'Genomma', valor2025: 1352312, valor2024: 1213400, variacao: 11, agencias: [], fonte: 'https://m' }],
+  };
+  beforeEach(() => {
+    try { localStorage.clear(); } catch { /* */ }
+    vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify(mercado), { status: 200 })));
+  });
+
+  it('movimentações filtram por período e tipo de agência, e somam as da Captação semanal', async () => {
+    const db = bancoFalso({ movimentos: { m1: { data: dias(5), anunciante: 'Marca Z', agencia: 'Agência Recém', fonte: 'https://f3' }, m2: { data: dias(5), anunciante: 'Sem fonte', agencia: 'Ag' } } });
+    const { raiz } = await montar('mercado', db);
+    expect(raiz.querySelectorAll('.mk-mv').length).toBe(2);
+    expect(raiz.querySelector('.mk-mv')?.textContent).toContain('Marca Z');
+    const p = raiz.querySelector<HTMLSelectElement>('#mkP')!;
+    p.value = 'todos'; p.dispatchEvent(new Event('change', { bubbles: true }));
+    expect(raiz.querySelectorAll('.mk-mv').length).toBe(2);
+    const c = raiz.querySelector<HTMLInputElement>('#mkC')!;
+    c.checked = false; c.dispatchEvent(new Event('change', { bubbles: true }));
+    expect(raiz.querySelectorAll('.mk-mv').length).toBe(3);
+  });
+
+  it('agência abre com a situação certa e vira alvo na Captação', async () => {
+    const db = bancoFalso({});
+    const { raiz } = await montar('mercado', db);
+    raiz.querySelector<HTMLButtonElement>('[data-visao="agencias"]')!.click();
+    expect(raiz.querySelectorAll('.vc-linha').length).toBe(1);
+    raiz.querySelector<HTMLButtonElement>('[data-ag="Agência Nova"]')!.click();
+    const d = document.querySelector('#mkD')!;
+    expect(d.textContent).toContain('acabou de ganhar uma conta');
+    d.querySelector<HTMLButtonElement>('#mkAlvo')!.click();
+    await espera();
+    expect(Object.values(db.dados.alvos)[0]).toMatchObject({ nome: 'Agência Nova', perfil: 'independente', origem: 'Contas e agências', proximoPasso: 'Escrever para a produção oferecendo uma frente da primeira campanha' });
+  });
+});

@@ -27,7 +27,10 @@
 - ~~Vencedores de licitações~~ Feito em 10/11/2026: `src/paginas/vencedores.ts`, com quem abordar por segmento
   (guias revistos: comunicação visual, OOH e gráfica como núcleo; eventos só na parte de craft), órgãos e recompra,
   preços e calendário, contratos, CSV de cada lista, virar alvo na Captação e levar recompra ao funil.
-- Contas e agências, Estratégia e funil.
+- ~~Contas e agências~~ Feito em 10/11/2026: `src/paginas/mercado.ts`, com movimentações de conta (período, só
+  criação, CSV), agências por prioridade, maiores anunciantes, guias de abordagem (ofertas no escopo atual) e virar
+  alvo na Captação. As movimentações da Captação semanal entram sozinhas.
+- Estratégia e funil.
 - Uma página por entrega, sempre com o legado como reserva.
 
 ## Fase 3 · Oficina e casca

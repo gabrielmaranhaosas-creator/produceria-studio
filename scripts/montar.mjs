@@ -29,6 +29,11 @@ for (const [fn, nome] of Object.entries(montagens)) {
   html = html.replace(uso, '(0,l.jsx)(window.__studio&&window.__studio.paginas.includes("licitacoes")?LC:te,{opps:a})');
   const mc = 'function MC(){';
   if (html.split(mc).length - 1 !== 1) throw new Error('Esperava 1 definição de MC no legado.');
+  // Contas e agências (Fase 2): mesma troca, com o componente antigo `t9` de reserva.
+  const usoMK = '"mercado"===n&&(0,l.jsx)(t9,{})';
+  if (html.split(usoMK).length - 1 !== 1) throw new Error(`Esperava 1 uso de ${usoMK} no legado.`);
+  html = html.replace(usoMK, '"mercado"===n&&(0,l.jsx)(window.__studio&&window.__studio.paginas.includes("mercado")?MK:t9,{})');
+  html = html.replace(mc, 'function MK(){let r=(0,c.useRef)(null);(0,c.useEffect)(()=>{r.current.dataset.th=document.documentElement.getAttribute("data-theme")||"";return window.__studio.montar("mercado",r.current)||void 0},[]);return(0,l.jsx)("div",{ref:r,className:"mc cn"})}' + mc);
   // Vencedores (Fase 2): mesma troca, com o componente antigo `t4` de reserva.
   const usoVC = '"vencedores"===n&&(0,l.jsx)(t4,{})';
   if (html.split(usoVC).length - 1 !== 1) throw new Error(`Esperava 1 uso de ${usoVC} no legado.`);

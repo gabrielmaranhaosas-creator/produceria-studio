@@ -1,0 +1,10 @@
+.mc .mk-mv,.mc .mk-ct{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:16px;align-items:start;padding:12px 4px}
+.mc .mk-ct{grid-template-columns:minmax(0,1fr) auto}
+.mc .mk-data{min-width:84px;padding-top:2px}
+.mc .mk-mv .lnk{font-size:inherit;padding:0;min-height:0}
+.mc .mk-ag{display:block}
+.mc .mk-aviso{max-width:80ch}
+.mc .mk-guias{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px;align-items:start}
+.mc .mk-fontes{display:flex;flex-direction:column;gap:6px;border-top:1px solid var(--line);padding-top:16px}
+.mc .mk-fontes ul{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:4px;font-size:13px}
+@media (max-width:640px){.mc .mk-mv{grid-template-columns:minmax(0,1fr)}.mc .mk-mv .vc-num{align-items:flex-start;text-align:left}}
