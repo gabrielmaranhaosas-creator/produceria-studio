@@ -18,8 +18,15 @@ for (const [fn, nome] of Object.entries(montagens)) {
 
 // Frentes de eventos saíram do escopo (perfil do cérebro 2026-11-10a): tira-as também da lista de
 // frentes das Licitações do legado (cadastro manual, leitura de edital).
-const frentesEventos = ['"Produção e organização de eventos",', '"Infraestrutura, cenografia e locações para eventos",'];
-for (const f of frentesEventos) {
+// frentes fora do escopo do hub (eventos desde o perfil 2026-11-10a; gráfica, placas e mídia exterior desde o 2026-11-10c)
+const frentesFora = [
+  '"Produção e organização de eventos",',
+  '"Infraestrutura, cenografia e locações para eventos",',
+  '"Arte-finalização e produção gráfica",',
+  '"Comunicação visual e sinalização",',
+  '"Mídia exterior OOH/DOOH",',
+];
+for (const f of frentesFora) {
   const n = html.split(f).length - 1;
   if (n !== 1) throw new Error(`Esperava 1 ocorrência de ${f} no legado, achei ${n}.`);
   html = html.replace(f, '');

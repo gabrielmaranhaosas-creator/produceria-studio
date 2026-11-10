@@ -41,8 +41,8 @@ eventos (organização, produção, estandes, cerimonial) viraram penalidade zer
 licitações de eventos já gravadas quando o cérebro roda com `--repontuar`. Desde o `2026-11-10b`, estande e
 stand só contam em expressões de feira ("montagem de estande", "cota de estande", "stand de feira"…):
 sozinhos casavam com "stand by", "stand alone" e "estande de tiro". Foto, transmissão e
-cenografia **de** eventos continuam, pelas próprias frentes. `scripts/montar.mjs` tira as duas frentes de
-eventos da lista de Licitações do legado.
+cenografia **de** eventos continuam, pelas próprias frentes. `scripts/montar.mjs` tira as frentes fora do
+escopo da lista de Licitações do legado.
 
 Desde o `2026-11-10c` o critério é este (pesquisa no radar de 10/11/2026: só ~1 em 8 visíveis era trabalho
 do hub):
@@ -59,7 +59,14 @@ do hub):
    gráfica) cedem só quando um serviço forte (audiovisual, fotografia, transmissão) aparece antes delas no
    objeto; nesse caso a nota leva redutor de 0,85 e um aviso.
 5. **Nota:** valor ideal entre R$ 20 mil e R$ 1,5 mi (acima, alerta de porte), e redutor para serviço
-   presencial pequeno longe de São Paulo. Os testes ficam em `jobs/cerebro/test_cerebro.py`.
+   presencial pequeno longe de São Paulo. Desde o `2026-11-10d`, valor abaixo de R$ 5 mil (×0,7) e acima de
+   R$ 10 mi (×0,7) ficam no radar, mas abaixo da linha de triagem (60). Os testes ficam em
+   `jobs/cerebro/test_cerebro.py`.
+
+A varredura diária (rotina "Cérebro de licitações · varredura diária", 06:17) lê `cerebro/perfil.json` e
+`cerebro/cerebro.py` publicados no Studio: publicar o Studio com esses arquivos já muda o critério da rotina.
+`scripts/montar.mjs` também tira da lista de frentes do Licitações (cadastro manual) eventos, gráfica,
+comunicação visual e mídia exterior.
 
 No `--repontuar`, o que não passa vai a nota 0, exceto licitações em que a equipe já mexeu (carteira, etapa
 ou decisão).

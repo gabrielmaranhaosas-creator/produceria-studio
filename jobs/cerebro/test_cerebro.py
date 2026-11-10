@@ -42,6 +42,7 @@ class Exclusoes(unittest.TestCase):
         self.fora("Contratação de assinatura da ferramenta de edição de vídeos (CAPCUT) por 12 meses", "software")
         self.fora("Inscrição de servidor no curso Redes Sociais Aplicadas ao Poder Público: produção de conteúdo, vídeos e fotos", "curso")
         self.fora("Contratação de agência de propaganda para serviços de publicidade e comunicação institucional", "agência")
+        self.fora("Contratação de ferramentas gráficas e audiovisuais para otimizar a produção de conteúdo multimídia", "software")
         self.fora("Prestação de serviços de buffet, coffee break e serviços de fotografia profissional", "fora do ramo")
 
     def test_rigida_so_vale_no_assunto_principal(self):
@@ -73,6 +74,11 @@ class Nota(unittest.TestCase):
         n = nota(self.OBJ, 20000000)
         self.assertIn("acima do porte", n["motivo"])
         self.assertLess(n["score"], nota(self.OBJ, 300000)["score"])
+
+    def test_extremos_de_valor_ficam_abaixo_da_triagem(self):
+        self.assertLess(nota(self.OBJ, 1000)["score"], 60)
+        self.assertLess(nota("Contratação de empresa de comunicação digital e produção de conteúdo", 80000000)["score"], 60)
+        self.assertGreaterEqual(nota(self.OBJ, 300000)["score"], 60)
 
     def test_frente_sem_cnae_e_condicionada(self):
         n = nota("Concepção artística e direção criativa da expografia do museu municipal")

@@ -1,5 +1,5 @@
 {
-  "versao": "2026-11-10c",
+  "versao": "2026-11-10d",
   "manifesto": "A PRODUCERIA disputa onde o craft decide: filme, fotografia, transmissão, som, conteúdo e direção de arte. Entra no radar só o que o próprio objeto da licitação pede e o CNAE de uma empresa do hub cobre. Impressão, placas, mídia exterior, agência de publicidade, shows, decoração e eventos ficam fora.",
   "modalidades": {
     "6": "Pregão - Eletrônico",
@@ -228,7 +228,9 @@
         "solucao em nuvem",
         "sistemas? (aplicativos?|de informatica|informatizad|de gestao)",
         "suporte (tecnico )?(dos|de|aos) sistemas",
-        "\\binformatica"
+        "\\binformatica",
+        "contratacao de ferramentas",
+        "ferramentas (graficas|digitais|de edicao)"
       ]
     },
     {

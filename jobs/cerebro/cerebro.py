@@ -105,7 +105,8 @@ class Cerebro:
        (audiovisual, fotografia, transmissão) só
        quando aparece antes dela no objeto, isto é, quando o serviço é o assunto principal;
     4. nota: craft, aderência pelo CNAE das empresas do hub, faixa de valor, prazo e recorrência, com redutores
-       para objeto misto (serviço + item excluído) e para serviço presencial pequeno longe de São Paulo."""
+       para objeto misto (serviço + item excluído), serviço presencial pequeno longe de São Paulo, valor abaixo
+       de R$ 5 mil e contrato acima de R$ 10 mi."""
 
     def __init__(self, perfil: dict):
         self.p = perfil
@@ -204,6 +205,11 @@ class Cerebro:
         fator, alerta_log = self.fator_logistica(frente, uf, valor)
         if branda:
             fator *= 0.85
+        pt = self.p.get("porte", {})
+        if valor and valor < pt.get("pequena", 5e3):
+            fator *= 0.7  # serviço muito pequeno: fica no radar, mas abaixo da linha de triagem
+        if valor and valor > pt.get("teto", 1e7):
+            fator *= 0.7  # contrato muito acima do porte de uma ME
         mod = norm(modalidade)
         rec = 1.0 if (srp or any(k in mod for k in ("credenciamento", "chamada publica", "inexigibilidade"))) else 0.3
         ader = 1.0 if frente["entidades"] else 0.4
