@@ -13,8 +13,8 @@ export interface Consulta<T = Record<string, unknown>> {
 }
 export interface Colecao<T = Record<string, unknown>> extends Consulta<T> {
   doc(id: string): {
-    set(d: Record<string, unknown>): Promise<void>;
-    update(d: Record<string, unknown>): Promise<void>;
+    set(d: object): Promise<void>;
+    update(d: object): Promise<void>;
     delete(): Promise<void>;
   };
 }

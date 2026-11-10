@@ -6,7 +6,8 @@
 - Central, Agenda, Casos e Mapa de contas servidos a partir do código-fonte, com o legado como reserva.
 
 ## Fase 1 · tipar e componentizar as páginas migradas
-- Converter `src/paginas/*.js` para TypeScript.
+- ~~Converter `src/paginas/*.js` para TypeScript.~~ Feito: as quatro páginas em `.ts`, com `src/paginas/dom.ts`
+  (busca tipada, diálogo com retorno de foco, documento com id).
 - Kit de componentes compartilhados: barra de filtros, pílulas, indicadores, lista de barras,
   tabela ordenável, diálogo, etiquetas de filtro, estado vazio.
 - Testes de interface (Playwright) com banco simulado para Central, Agenda e Mapa.

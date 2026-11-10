@@ -9,12 +9,12 @@
 import base from './estilos/base.css?inline';
 import central from './estilos/central.css?inline';
 import agenda from './estilos/agenda.css?inline';
-import * as pCentral from './paginas/central.js';
-import * as pAgenda from './paginas/agenda.js';
-import * as pCasos from './paginas/casos.js';
-import * as pContas from './paginas/mapa-contas.js';
+import * as pCentral from './paginas/central';
+import * as pAgenda from './paginas/agenda';
+import * as pCasos from './paginas/casos';
+import * as pContas from './paginas/mapa-contas';
 
-type Montar = (raiz: HTMLElement) => (() => void) | void;
+import type { Montar } from './paginas/dom';
 
 const paginas: Record<string, Montar> = {
   central: pCentral.montar,
