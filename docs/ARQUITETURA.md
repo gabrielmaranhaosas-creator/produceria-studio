@@ -77,6 +77,13 @@ palco e som, veiculação em jornal/rádio/site, assessoria de imprensa). Rádio
 saem. `jobs/vencedores/limpar.py` aplica isso ao `vencedores.json` publicado e regrava o `.bin.wasm`; a rotina mensal
 usa o mesmo `classes.py` publicado em `vencedores/`. Limpeza de 10/11/2026: 15.318 → 7.978 contratos no arquivo.
 
+Desde o `2026-11-10e`, comunicação visual e sinalização (letreiros, totens, fachadas em ACM, placas de
+identificação e inauguração, adesivação, sinalização interna e turística) e mídia exterior OOH/DOOH (outdoor, front
+light, empenas, mobiliário urbano, painel de LED de mídia) voltaram como frentes. Para elas, as exclusões de
+"gráfica em massa", "veiculação" e "locação de estrutura" não valem (campo `exceto` da exclusão no perfil);
+sinalização viária e placas de veículo saem sempre. Gráfica em massa (folders, cartilhas, banners, impressos)
+continua fora do radar.
+
 No `--repontuar`, o que não passa vai a nota 0, exceto licitações em que a equipe já mexeu (carteira, etapa
 ou decisão).
 

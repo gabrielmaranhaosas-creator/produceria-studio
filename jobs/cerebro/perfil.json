@@ -1,6 +1,6 @@
 {
-  "versao": "2026-11-10d",
-  "manifesto": "A PRODUCERIA disputa onde o craft decide: filme, fotografia, transmissão, som, conteúdo e direção de arte. Entra no radar só o que o próprio objeto da licitação pede e o CNAE de uma empresa do hub cobre. Impressão, placas, mídia exterior, agência de publicidade, shows, decoração e eventos ficam fora.",
+  "versao": "2026-11-10e",
+  "manifesto": "A PRODUCERIA disputa onde o craft decide: filme, fotografia, transmissão, som, conteúdo, direção de arte, comunicação visual e mídia exterior. Entra no radar só o que o próprio objeto da licitação pede. Gráfica em massa, agência de publicidade, shows, decoração e eventos ficam fora.",
   "modalidades": {
     "6": "Pregão - Eletrônico",
     "8": "Dispensa de Licitação",
@@ -187,9 +187,72 @@
         "criacao de (marca|arte|pecas|layout)",
         "projeto grafico"
       ]
+    },
+    {
+      "nome": "Comunicação visual e sinalização",
+      "craft": 0.6,
+      "forte": false,
+      "presencial": true,
+      "cnaes": [
+        "18.21-1-00",
+        "18.22-9-99"
+      ],
+      "porta": [
+        "comunicacao visual",
+        "identificacao visual",
+        "sinalizacao (visual|interna|predial|institucional|de ambientes|indicativa|expografica|turistica)",
+        "\\btotens?\\b",
+        "letreiros?",
+        "fachadas? (em acm|luminos|de identificacao|comercial)",
+        "\\bacm\\b",
+        "adesivac",
+        "plotage",
+        "backdrops?",
+        "painel institucional",
+        "placas? (de identificacao|indicativas?|em acm|em acrilico|de acrilico|em aco|de aco|de inauguracao|inaugura|de homenagem|comemorativ|de denominacao|personalizad)",
+        "lonas? (impressa|personalizada|backlight)",
+        "wayfinding",
+        "envelopamento (veicular|de veiculos|de frota|de vitrines?|de paredes|de vidros?)"
+      ]
+    },
+    {
+      "nome": "Mídia exterior OOH/DOOH",
+      "craft": 0.6,
+      "forte": false,
+      "presencial": false,
+      "cnaes": [
+        "63.19-4-00"
+      ],
+      "porta": [
+        "midia exterior",
+        "\\boutdoors?\\b",
+        "\\bfront ?light",
+        "\\bback ?light",
+        "\\bdooh\\b",
+        "midia (digital )?indoor",
+        "minidoors?",
+        "busdoors?",
+        "\\bempenas?\\b",
+        "mobiliario urbano",
+        "relogios? (digita|de rua)",
+        "paine(l|is) (de led|eletronico|digital|de midia)s? (para|de) (publicidade|divulgacao|midia|veiculacao)"
+      ]
     }
   ],
   "exclusoes": [
+    {
+      "nome": "sinalização viária e placas de veículo",
+      "tipo": "rigida",
+      "padroes": [
+        "sinalizacao (viaria|horizontal|vertical|semaforic|de transito|rodoviaria|nautica|de obras|de seguranca|de emergencia)",
+        "semaforo",
+        "\\btransito\\b",
+        "placas? (de veiculo|veicular|de licenciamento|mercosul|de transito|de regulamentacao|de advertencia)",
+        "faixas? de pedestre",
+        "pintura de (meio-fio|faixas)",
+        "despachantes?"
+      ]
+    },
     {
       "nome": "agência de publicidade (Lei 12.232)",
       "tipo": "rigida",
@@ -230,7 +293,8 @@
         "suporte (tecnico )?(dos|de|aos) sistemas",
         "\\binformatica",
         "contratacao de ferramentas",
-        "ferramentas (graficas|digitais|de edicao)"
+        "ferramentas (graficas|digitais|de edicao)",
+        "solucao de gestao"
       ]
     },
     {
@@ -252,7 +316,11 @@
         "(?<!mao de )\\bobras?\\b(?! de arte)",
         "reforma",
         "construc",
-        "pavimenta"
+        "pavimenta",
+        "pedreiro",
+        "azulej",
+        "alvenaria",
+        "pintura predial"
       ]
     },
     {
@@ -302,7 +370,18 @@
         "acordo de cooperacao",
         "disponibilizacao de profissionais",
         "postos de trabalho",
-        "dedicacao exclusiva de mao de obra"
+        "dedicacao exclusiva de mao de obra",
+        "\\btriton\\b",
+        "\\biptu\\b",
+        "guias de (iptu|arrecadacao|recolhimento)",
+        "dados variaveis",
+        "faturamento",
+        "arrecadacao",
+        "iluminacao publica",
+        "luminarias?",
+        "outsourcing",
+        "\\bcopias\\b",
+        "reprografi"
       ]
     },
     {
@@ -351,10 +430,17 @@
         "locacao de elementos",
         "locacao(,| e) (transporte|montagem)",
         "montagem de cenario"
-      ]
+      ],
+      "exceto": {
+        "frentes": [
+          "Mídia exterior OOH/DOOH",
+          "Comunicação visual e sinalização"
+        ],
+        "se": "midia exterior|outdoors? (publicit|de divulgac)|espaco publicitario|publicid|divulgac|fachada|letreiro|\\btotens?\\b|\\bacm\\b|comunicacao visual"
+      }
     },
     {
-      "nome": "veiculação, live marketing e mídia exterior",
+      "nome": "veiculação e live marketing",
       "tipo": "branda",
       "padroes": [
         "veiculac",
@@ -362,10 +448,13 @@
         "marketing promocional",
         "\\bclipping",
         "fixacao (mensal )?de banner",
-        "midia exterior",
-        "outdoor",
         "agencia(s)? de marketing"
-      ]
+      ],
+      "exceto": {
+        "frentes": [
+          "Mídia exterior OOH/DOOH"
+        ]
+      }
     },
     {
       "nome": "assessoria de imprensa",
@@ -376,23 +465,43 @@
       ]
     },
     {
-      "nome": "gráfica, placas e sinalização",
+      "nome": "gráfica em massa",
       "tipo": "branda",
       "padroes": [
         "impress(ao|oes)",
         "servicos graficos",
         "material grafico",
-        "\\bplacas?\\b",
-        "sinalizac",
+        "apostila",
+        "\\blivros?\\b",
+        "\\bcarnes?\\b",
+        "boletos?",
+        "\\brevistas? impressa",
+        "folders?",
+        "panfletos?",
+        "cartilhas?",
+        "\\bbanners?\\b(?! do site| digita| (do|no|para o) (site|portal))",
+        "faixas?\\b",
+        "cartazes"
+      ],
+      "exceto": {
+        "frentes": [
+          "Comunicação visual e sinalização",
+          "Mídia exterior OOH/DOOH"
+        ]
+      }
+    },
+    {
+      "nome": "brindes, troféus e vestuário",
+      "tipo": "branda",
+      "padroes": [
         "brindes",
-        "medalha",
-        "trofeu",
+        "medalhas?",
+        "trofeus?",
         "vestuario",
-        "uniforme",
-        "adesiv",
-        "confecc",
-        "confeccionad",
-        "\\bmdf\\b"
+        "uniformes?",
+        "camisetas?",
+        "crachas?",
+        "\\bbones?\\b"
       ]
     }
   ]

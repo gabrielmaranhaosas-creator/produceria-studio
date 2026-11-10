@@ -19,7 +19,8 @@ class Porta(unittest.TestCase):
     def test_objeto_sem_trabalho_do_hub_nao_entra(self):
         self.assertIsNone(nota("SERVIÇOS"))
         self.assertIsNone(nota("Contratação de banda musical para animação do baile da terceira idade"))
-        self.assertIsNone(nota("Seguro da caminhonete L200 Triton Outdoor"))
+        n = nota("Seguro da caminhonete L200 Triton Outdoor")
+        self.assertTrue(n is None or n["score"] == 0)
 
     def test_nucleo_entra_com_nota_alta(self):
         n = nota("Contratação de empresa especializada em produção audiovisual, para criação, captação, edição e finalização de vídeos")
@@ -54,13 +55,37 @@ class Exclusoes(unittest.TestCase):
 
     def test_branda_cai_sem_porta_forte(self):
         self.fora("Prestação de serviços de ornamentação e cenografia natalina", "decoração")
-        self.fora("Confecção e fornecimento de estrutura cenográfica", "gráfica")
+        self.fora("Confecção e fornecimento de estrutura cenográfica", "estrutura")
 
     def test_branda_cede_quando_o_servico_vem_antes(self):
         n = nota("Serviço de filmagem e transmissão ao vivo via YouTube da chegada do Papai Noel")
         self.assertGreater(n["score"], 0)
         self.assertIn("atenção", n["motivo"])
         self.fora("Serviços de painel de LED e filmagem aérea com veículo não tripulado", "LED")
+
+
+class ComunicacaoVisualEOOH(unittest.TestCase):
+    def test_comunicacao_visual_entra(self):
+        for obj in ("Confecção e instalação de letreiros e totens de identificação em ACM para as unidades de saúde",
+                    "Prestação de serviços de comunicação visual com fornecimento e instalação de adesivos e placas de identificação",
+                    "Contratação de empresa para sinalização interna e wayfinding do novo prédio do fórum"):
+            n = nota(obj)
+            self.assertEqual(n["frente"], "Comunicação visual e sinalização", obj)
+            self.assertGreater(n["score"], 0, obj)
+
+    def test_ooh_entra(self):
+        for obj in ("Locação de outdoors e minidoors para divulgação de campanhas institucionais",
+                    "Contratação de empresa para veiculação de campanha em mídia exterior (front light, backlight e empenas)"):
+            n = nota(obj)
+            self.assertEqual(n["frente"], "Mídia exterior OOH/DOOH", obj)
+            self.assertGreater(n["score"], 0, obj)
+
+    def test_ruido_de_placa_e_impresso_sai(self):
+        n = nota("Serviços de sinalização viária horizontal e vertical com placas de regulamentação")
+        self.assertTrue(n is None or n["score"] == 0)
+        self.assertIsNone(nota("Registro de preços para serviços gráficos: impressão de folders, cartilhas e banners"))
+        n = nota("Locação de painel de LED, som e iluminação para o show de aniversário da cidade")
+        self.assertTrue(n is None or n["score"] == 0)
 
 
 class Nota(unittest.TestCase):

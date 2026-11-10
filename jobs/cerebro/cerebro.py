@@ -116,7 +116,11 @@ class Cerebro:
             cn = set(f.get("cnaes", []))
             quem = [k for k, e in ents.items() if cn & set(e.get("cnaes", []))]
             self.frentes.append({**f, "entidades": quem, "_rx": [re.compile(x) for x in f["porta"]]})
-        self.exc = [{**x, "_rx": re.compile("|".join(f"(?:{p})" for p in x["padroes"]))} for x in perfil.get("exclusoes", [])]
+        self.exc = []
+        for x in perfil.get("exclusoes", []):
+            ex = x.get("exceto") or {}
+            self.exc.append({**x, "_rx": re.compile("|".join(f"(?:{p})" for p in x["padroes"])),
+                             "_exf": set(ex.get("frentes", [])), "_exse": re.compile(ex["se"]) if ex.get("se") else None})
         self.w = perfil["pesos"]
         self.assunto = perfil.get("assunto_chars", 200)
 
@@ -140,13 +144,20 @@ class Cerebro:
             if x["tipo"] == "rigida" and x["_rx"].search(principal):
                 return frente, outras, x["nome"], ""
         # exclusão branda: cede só quando um serviço forte aparece ANTES dela no objeto (é o assunto principal)
-        brandas = [(m.start(), x["nome"]) for x in self.exc if x["tipo"] == "branda" for m in [x["_rx"].search(t)] if m]
+        nomes = {a[1]["nome"] for a in achados}
+        brandas = [(m.start(), x["nome"]) for x in self.exc if x["tipo"] == "branda" and not self._exceto(x, nomes, t)
+                   for m in [x["_rx"].search(t)] if m]
         if brandas:
             pos, nome = min(brandas)
             if pos <= pos_forte:
                 return frente, outras, nome, ""
             return frente, outras, "", nome
         return frente, outras, "", ""
+
+    @staticmethod
+    def _exceto(x, nomes, t):
+        """a exclusão não vale para estas frentes (ex.: placa e adesivo são o próprio trabalho de comunicação visual)"""
+        return bool(x["_exf"] & nomes) and (x["_exse"] is None or bool(x["_exse"].search(t)))
 
     def banda_valor(self, v):
         """(banda 0–1, alerta). Ideal entre ~R$ 20 mil e R$ 1,5 mi: as empresas do hub são ME."""
