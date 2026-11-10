@@ -35,7 +35,7 @@ FRENTES = [
     {"id": "publicidade", "nome": "Publicidade · agência com conta pública", "craft": 0.9,
      "inc": rx(r"agencias? de (propaganda|publicidade|comunicacao)", r"servicos? de publicidade", r"servicos? publicitari", r"publicidade (institucional|de utilidade publica|e propaganda)",
                r"lei (n[o.]? ?)?12\.?232", r"campanhas? publicitari", r"comunicacao (publicitaria|institucional e publicidade)", r"planejamento,? (conceituacao|criacao|desenvolvimento)"),
-     "exc": rx(r"veiculacao (de|em) (jornal|radio|revista|site|portal|blog)", r"insercoes? (em|de) (radio|jornal|tv)", r"jornal impresso", r"divulgacao em (banner digital|portal|site|jornal|radio)", r"spots? em radio", r"anuncio")},
+     "exc": rx(r"veiculacao (de|em) (jornal|radio|revista|site|portal|blog)", r"insercoes? (em|de) (radio|jornal|tv)", r"jornal impresso", r"spots? em radio", r"anuncio")},
     {"id": "audiovisual", "nome": "Produção audiovisual", "craft": 1.0,
      "inc": rx(r"producao (audiovisual|de videos?|de filmes?|cinematografic|de conteudo audiovisual)", r"servicos? (audiovisua|de filmagem|de video|de producao de video)",
                r"videos? (institucion|educativ|promociona|documenta|curtos|publicitari)", r"filmes? (institucion|publicitari|documenta|educativ)", r"filmagem", r"videografi",
@@ -103,7 +103,7 @@ BRANDAS = [
     ("decoração e Natal", rx(r"ornament", r"decorac", r"natal", r"papai noel", r"iluminacao decorativa")),
     ("locação de som, luz, palco ou estrutura", rx(r"sonorizac", r"\bpalco", r"iluminacao (cenica|de palco)", r"tendas?\b", r"geradores?", r"locacao de (equipamentos?|estruturas?|som)", r"som e luz", r"sistemas? de som", r"estruturas? (metalica|de palco|modula|para evento|temporaria)", r"trio eletrico")),
     ("veiculação em jornal, rádio ou site", rx(r"veiculac(ao|oes) (de|em) (jornal|jornais|radio|materias|site|portal|blog|revista|tv|programa)", r"publicac(ao|oes) de materias", r"credenciamento de (radios|emissoras|veiculos de comunicacao|jornais|sites|portais)",
-                                              r"jornal impresso", r"\bspots? em radio", r"insercoes? (em|de) (radio|jornal|tv)")),
+                                              r"jornal impresso", r"divulgacao em (banner digital|portal|site|jornal|radio)", r"\bspots? em radio", r"insercoes? (em|de) (radio|jornal|tv)")),
     ("assessoria de imprensa", rx(r"assessoria de imprensa", r"relacoes publicas")),
 ]
 FORTES = ("audiovisual", "fotografia", "transmissao")

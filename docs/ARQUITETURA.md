@@ -75,7 +75,7 @@ ficam (núcleo). O ruído sai por regras rígidas no início do objeto (curso, s
 eventos, fora do ramo) e brandas que cedem a filmagem, foto ou transmissão citadas antes (shows, Natal, locação de
 palco e som, veiculação em jornal/rádio/site, assessoria de imprensa). Rádio, TV e jornal que vendem veiculação também
 saem. `jobs/vencedores/limpar.py` aplica isso ao `vencedores.json` publicado e regrava o `.bin.wasm`; a rotina mensal
-usa o mesmo `classes.py` publicado em `vencedores/`. Limpeza de 10/11/2026: 15.318 → 7.982 contratos no arquivo.
+usa o mesmo `classes.py` publicado em `vencedores/`. Limpeza de 10/11/2026: 15.318 → 7.978 contratos no arquivo.
 
 No `--repontuar`, o que não passa vai a nota 0, exceto licitações em que a equipe já mexeu (carteira, etapa
 ou decisão).
