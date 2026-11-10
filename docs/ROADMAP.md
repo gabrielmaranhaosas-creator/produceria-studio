@@ -24,7 +24,10 @@
   por etapa, triagem (abordar, monitorar, descartar com motivo), sinais do radar de licitações, extração de alvos de
   texto colado e abordagem por IA, atração levada ao funil e proposta com a tabela de serviços (`src/lib/servicos.ts`,
   709 serviços, cálculo em centavos) e download em .md. O componente antigo fica de reserva.
-- Vencedores, Contas e agências, Estratégia e funil.
+- ~~Vencedores de licitações~~ Feito em 10/11/2026: `src/paginas/vencedores.ts`, com quem abordar por segmento
+  (guias revistos: comunicação visual, OOH e gráfica como núcleo; eventos só na parte de craft), órgãos e recompra,
+  preços e calendário, contratos, CSV de cada lista, virar alvo na Captação e levar recompra ao funil.
+- Contas e agências, Estratégia e funil.
 - Uma página por entrega, sempre com o legado como reserva.
 
 ## Fase 3 · Oficina e casca

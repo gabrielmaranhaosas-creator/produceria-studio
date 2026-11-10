@@ -21,7 +21,7 @@ tudo de uma vez tiraria o Studio do ar e arriscaria o banco. Então:
    montagem (`initCN(r.current)` etc.) por "pergunte primeiro ao registro; se não houver, use a cópia
    antiga". Se o pacote falhar, o Studio continua funcionando com a cópia antiga.
 3. Quando uma página migrada estabiliza, a cópia antiga sai do legado.
-4. As páginas que ainda são React montado (Vencedores, Contas e agências, Oficina)
+4. As páginas que ainda são React montado (Contas e agências, Oficina)
    migram uma a uma, até o legado sobrar só como casca e ser substituído por um shell próprio.
 
 ## Regras de negócio (src/lib)

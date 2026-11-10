@@ -9,7 +9,7 @@ compartilhado pela equipe.
 | Pasta | O que tem |
 |---|---|
 | `src/lib/` | Regras de negócio em TypeScript, com testes: nomes, datas, prioridade única, cadência de contato, acesso ao banco |
-| `src/paginas/` | Páginas já migradas para código-fonte: Central, Agenda, Casos, Mapa de contas, Licitações, Captação |
+| `src/paginas/` | Páginas já migradas para código-fonte: Central, Agenda, Casos, Mapa de contas, Licitações, Captação, Vencedores |
 | `src/componentes/` | Kit de componentes compartilhados pelas páginas |
 | `src/estilos/` | CSS das páginas migradas |
 | `legacy/studio.html` | O Studio publicado antes da migração (bundle montado). Sai página por página |

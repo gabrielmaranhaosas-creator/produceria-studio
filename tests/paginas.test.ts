@@ -250,3 +250,66 @@ describe('Captação', () => {
     expect(db.dados.alvos['al-1']).toMatchObject({ status: 'Descartado', triagem: 'Descartar', motivoDescarte: 'Momento errado' });
   });
 });
+
+describe('Vencedores', () => {
+  const contrato = (id: string, o: Record<string, unknown> = {}) => ({ id, link: 'https://pncp.gov.br/x', orgao: 'Prefeitura A', cnpjOrgao: '111', esfera: 'Municipal', uf: 'SP', fornecedor: 'Agência Pública Ltda', cnpj: '12345678000199', objeto: 'Serviços de publicidade', frente: 'publicidade', valor: 500000, inicio: '2025-01-01', fim: '2026-12-01', status: 'vigente', ...o });
+  const mapa = {
+    meta: { geradoEm: '2026-11-05', fonte: 'PNCP', periodo: ['2024-11-05', '2026-11-04'], cobertura: { dias: 730, lidos: 1000 }, noEscopo: 3, empresas: 2, orgaos: 1, valorTotal: 900000, vigentes: 2 },
+    precos: { publicidade: { nome: 'Publicidade · agência com conta pública', craft: 0.9, nContratos: 2, vigentes: 2, p25: 1, mediana: 2, p75: 3, p90: 4, total: 900000 }, grafica: { nome: 'Produção gráfica', craft: 0.4, nContratos: 1, vigentes: 0, p25: 1, mediana: 2, p75: 3, p90: 4, total: 1 } },
+    calendario: [{ mes: '2026-12', contratos: 2, valor: 900000 }], modalidades: [{ modalidade: 'Dispensa', contratos: 1, valor: 100 }],
+    empresas: [
+      { cnpj: '12345678000199', raiz: '12345678', cnpjF: '12.345.678/0001-99', nome: 'Agência Pública Ltda', tipo: 'Agência', segmento: 'Agência com conta pública', prioridade: 90, contratos: 2, vigentes: 2, valorTotal: 900000, valorVigente: 900000, frentePrincipal: 'publicidade', frentes: { publicidade: 2 }, ufs: { SP: 2 }, orgaos: ['Prefeitura A'], nOrgaos: 1, proximoFim: '2026-12-01', maior: 'c1' },
+      { cnpj: '99999999000100', raiz: '99999999', cnpjF: '99.999.999/0001-00', nome: 'Gráfica Velha', tipo: 'Gráfica', segmento: 'Gráfica e comunicação visual', prioridade: 40, contratos: 1, vigentes: 0, valorTotal: 1, valorVigente: 0, frentePrincipal: 'grafica', frentes: { grafica: 1 }, ufs: { RJ: 1 }, orgaos: ['Câmara B'], nOrgaos: 1, proximoFim: '' },
+    ],
+    orgaos: [{ cnpj: '111', nome: 'Prefeitura A', uf: 'SP', esfera: 'Municipal', poder: 'Executivo', contratos: 2, valorTotal: 900000, valorCraft: 900000, frentes: { publicidade: 2 }, fornecedores: 1, vencendo: 2, valorVencendo: 900000, proximoVencimento: '2026-12-01' }],
+    contratos: [contrato('c1', { valor: 400000 }), contrato('c2'), contrato('c3', { fornecedor: 'Gráfica Velha', cnpj: '99999999000100', status: 'encerrado', frente: 'grafica', valor: 1, orgao: 'Câmara B', uf: 'RJ' })],
+  };
+  beforeEach(() => {
+    try { localStorage.clear(); } catch { /* */ }
+    vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify(mapa), { status: 200 })));
+  });
+
+  it('lista quem abordar por segmento e filtra só vigentes', async () => {
+    const { raiz } = await montar('vencedores', bancoFalso({}));
+    expect(raiz.querySelectorAll('#vcK .k').length).toBe(4);
+    expect(raiz.querySelectorAll('.vc-linha').length).toBe(1);
+    expect(raiz.querySelector('.vc-linha')?.textContent).toContain('Agência Pública Ltda');
+    // a gráfica sem contrato vigente só aparece ao desmarcar "Só vigentes"
+    expect(raiz.querySelector('[data-seg="Gráfica e comunicação visual"]')).toBeNull();
+    const vig = raiz.querySelector<HTMLInputElement>('#vcVig')!;
+    vig.checked = false; vig.dispatchEvent(new Event('change', { bubbles: true }));
+    raiz.querySelector<HTMLButtonElement>('[data-seg="Gráfica e comunicação visual"]')!.click();
+    expect(raiz.querySelector('.vc-linha')?.textContent).toContain('Gráfica Velha');
+  });
+
+  it('empresa vira alvo na Captação e órgão vai ao funil', async () => {
+    const db = bancoFalso({ contratos_novos: { c9: contrato('c9', { fornecedor: 'Produtora Nova', cnpj: '55555555000155', segmento: 'Produtora concorrente', valor: 10 }) } });
+    const { raiz } = await montar('vencedores', db);
+    expect(raiz.querySelector('#vcK')?.textContent).toContain('1 contrato(s) novo(s)');
+    raiz.querySelector<HTMLButtonElement>('[data-emp="12345678000199"]')!.click();
+    const d = document.querySelector('#vcD')!;
+    expect(d.textContent).toContain('Contratos no período (2)');
+    d.querySelector<HTMLButtonElement>('#vcAlvo')!.click();
+    await espera();
+    const a = Object.values(db.dados.alvos)[0];
+    expect(a).toMatchObject({ nome: 'Agência Pública Ltda', perfil: 'publica', status: 'Mapeado', origem: 'Mapa de vencedores' });
+    (d as HTMLDialogElement).close();
+    raiz.querySelector<HTMLButtonElement>('[data-visao="orgaos"]')!.click();
+    raiz.querySelector<HTMLButtonElement>('[data-org="111"]')!.click();
+    d.querySelector<HTMLButtonElement>('#vcFunil')!.click();
+    await espera();
+    expect(Object.values(db.dados.pipeline)[0]).toMatchObject({ eixo: 'Público', titulo: 'Recompra · Prefeitura A', estagio: 'Identificada' });
+  });
+
+  it('contratos filtram por busca e preços mostram a tabela', async () => {
+    const { raiz } = await montar('vencedores', bancoFalso({}));
+    raiz.querySelector<HTMLButtonElement>('[data-visao="contratos"]')!.click();
+    expect(raiz.querySelectorAll('.vc-ct tbody tr').length).toBe(2);
+    const q = raiz.querySelector<HTMLInputElement>('#vcQ')!;
+    q.value = 'nada'; q.dispatchEvent(new Event('input', { bubbles: true }));
+    expect(raiz.querySelector('.empty h2')?.textContent).toBe('Nenhum contrato com esses filtros');
+    raiz.querySelector<HTMLButtonElement>('[data-visao="precos"]')!.click();
+    expect(raiz.querySelectorAll('.vc-t tbody tr').length).toBe(2);
+    expect(raiz.querySelectorAll('.vc-mes').length).toBe(1);
+  });
+});
