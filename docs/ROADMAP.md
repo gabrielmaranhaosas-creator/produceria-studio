@@ -23,6 +23,6 @@
 - Shell próprio (navegação, busca Ctrl K, avisos, tema). O legado sai.
 
 ## Fase 4 · operação
-- Prompts das tarefas agendadas versionados em `rotinas/`, com script que confere se o que está agendado
-  bate com o repositório.
+- ~~Prompts das tarefas agendadas versionados em `rotinas/`, com script que confere se o que está agendado
+  bate com o repositório.~~ Feito em 10/11/2026 (`rotinas/conferir.py`), com vigia de rotina parada e backup semanal.
 - Publicação automática a partir do `main`.

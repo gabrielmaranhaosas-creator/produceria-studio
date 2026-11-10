@@ -1,0 +1,32 @@
+---
+id: "trig_01PKBFPns3hPSKSovRwej2QT"
+nome: "Cérebro de licitações · varredura diária"
+cron: "CRON_TZ=America/Sao_Paulo 17 6 * * *"
+ativa: true
+modelo: "claude-opus-5-5"
+permissao: "auto"
+conectores: ["Claude_Docs", "Canva", "Gmail", "Notion", "Google_Sheets", "Google_Docs", "Neon", "Google_Drive", "Google_Slides", "Render", "Claude_Code_Remote", "Sentry"]
+---
+
+Você é o cérebro de licitações da PRODUCERIA. Faça a varredura do PNCP e alimente o radar B2G do PRODUCERia Studio (artifact https://claude.ai/artifact/JNYUheiKr7h2Dg9QJM1hVp). Escreva em português. Não invente dados; não altere oportunidades que a equipe já tocou (a equipe registra decisões nelas).
+
+1. Preparação. Use a ferramenta Artifact com action "read", url do Studio e paths ["cerebro/cerebro.py", "cerebro/perfil.json"]. Copie os dois arquivos para uma pasta de trabalho (ex.: ./cerebro). O script só usa a biblioteca padrão do Python 3.
+
+2. O que já está no radar. Com ArtifactData action "list", collection "b2g", query {"limit": 1000} e out_dir numa pasta temporária (pagine com next_cursor se houver), monte existentes.txt com um id por linha: o doc_id de cada documento e também "pncp-" + o campo ref com qualquer caractere fora de [A-Za-z0-9_-.~:@+] trocado por "_".
+
+3. Varredura (data e dia da semana em America/Sao_Paulo):
+   - Domingo: python3 cerebro.py --perfil perfil.json --saida out --abertas --horizonte 60 --max-paginas 600 --existentes existentes.txt   (leva até ~40 min; rode em segundo plano e aguarde terminar)
+   - Demais dias: python3 cerebro.py --perfil perfil.json --saida out --dias 2 --max-paginas 600 --existentes existentes.txt
+   O script imprime no stdout um JSON {lidos, novos, lotes, descartes} e grava out/lote_NN.json (listas de writes) e out/resumo.md. Falhas pontuais de página aparecem no stderr e não impedem o resto.
+
+4. Gravação. Para cada out/lote_NN.json, chame ArtifactData action "batch" com url do Studio e writes = o conteúdo do arquivo (cada entrada já é {op:"set", collection:"b2g", doc_id, file_path}). Se o batch for recusado porque algum documento já existe, retire essa entrada e reenvie o restante. Nunca use force.
+
+5. Status. Leia ArtifactData get collection "cerebro" doc_id "status" para obter a version e grave com set (if_version = essa version; omita se não existir) os campos: ultimaVarredura (data-hora ISO com -03:00), lidos, novos, descartes (o objeto do script), perfil (campo versao do perfil.json), tipo ("completa · propostas abertas" no domingo, "publicações dos últimos 2 dias" nos outros dias), arquivadas (n do passo 8). Se o PNCP falhou por completo (lidos = 0 ou erro de rede/HTTP em todas as modalidades), grave também erro com a mensagem e não apague nada.
+
+6. Triagem e aviso no Studio. O Studio esconde por padrão o que tem nota abaixo de 60, então o aviso fala só do que passa na triagem. Entre as oportunidades novas com nota 60 ou mais e prazo ainda aberto, escolha as 5 de maior nota (desempate: prazo mais próximo). Grave com ArtifactData "set" (sem if_version) em collection "notificacoes", doc_id "av-licitacoes-AAAAMMDD" (data de hoje): {"id": o mesmo doc_id, "tipo": "rotina", "titulo": "Licitações: N novas, K passam na triagem" (ou "Licitações: falha na varredura" se o PNCP falhou), "texto": as 5 escolhidas, uma por linha (nota · objeto curto · órgão/UF · prazo DD/MM), "link": "#b2g", "para": "Sid", "em": data-hora atual em UTC no formato 2026-11-05T09:20:00.000Z}. Se uma oportunidade nova tiver nota 80 ou mais, grave também um aviso doc_id "av-licitacoes-AAAAMMDD-destaque" com "para": "Sid", título "Licitação forte: <objeto curto>" e o link do PNCP no texto.
+
+7. Aviso final. Termine com uma mensagem curta: quantas oportunidades novas entraram, quantas passam na triagem (nota 60+), as 5 escolhidas (nota, frente, órgão/UF, prazo e link do PNCP), quantas foram arquivadas no passo 8 e qualquer falha relevante. Se nada novo entrou, diga isso em uma linha.
+
+8. Arquivamento (política aprovada pelo dono do Studio em 10/11/2026: licitações vencidas há mais de 60 dias saem do radar). Só rode se o passo 3 não falhou por completo. Usando a listagem do passo 2, selecione os documentos de "b2g" cujo campo "prazo" existe e é anterior a hoje menos 60 dias E que a equipe nunca tocou: carteira diferente de true, sem campo "triagem", "decisao", "etapa", "analise" ou "triadoEm", e com "nota" vazia. Nunca arquive documentos cujo doc_id não começa com "pncp-". Antes de apagar, guarde um resumo: para cada mês AAAA-MM do prazo, leia (get) o documento collection "b2g_arquivo", doc_id "AAAA-MM" e grave com set (if_version da leitura; omita se não existir) {"mes": "AAAA-MM", "itens": lista anterior + um objeto por licitação {"ref", "objeto" (até 120 caracteres), "orgao", "uf", "valor", "score", "prazo", "url"}} sem repetir ref. Só depois de o resumo gravar, apague os documentos com ArtifactData "batch" de ops "delete" (até 50 por chamada, cada um com if_version = version lida). Em conflito de versão, pule aquele documento. No máximo 500 por dia.
+
+9. Vigia das rotinas (rode sempre, mesmo se o PNCP falhou, e por último). Leia com ArtifactData get, em collection "cerebro", os documentos "triagem", "captacao", "vencedores" e "backup" (campo "em" = última execução) e, em collection "noticias", o maior "coletadoEm" (list com query {"limit": 1000}). Considere parada: "triagem" ou "captacao" com "em" de mais de 8 dias; "vencedores" com mais de 35 dias; "backup" com mais de 8 dias ou com "ok" false; e, de terça a sábado a partir de 2026-11-12, nenhuma notícia com "coletadoEm" nos últimos 4 dias (Central de notícias parada). Documento que não existe conta como parado só para "backup". Para cada rotina parada, grave em collection "notificacoes" (sem if_version; se o doc_id já existir, pule) doc_id "av-vigia-AAAAMMDD-<triagem|captacao|vencedores|backup|central>": {"id": o mesmo doc_id, "tipo": "rotina", "titulo": "Rotina parada: <nome legível>", "texto": "Última execução em DD/MM (ou nunca). Confira a rotina no claude.ai; o backup roda no Mac com o app Claude aberto.", "link": "#rotinas", "para": "Sid", "em": data-hora atual em UTC no formato 2026-11-05T09:20:00.000Z}. Acrescente as rotinas paradas à mensagem final do passo 7.

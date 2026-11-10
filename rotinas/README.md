@@ -16,5 +16,19 @@ Horários em America/Sao_Paulo.
 | Aprovações e prazos · alerta da tarde | — | Vigiava peças e prazos | pausada |
 | Relatório de craft · mensal | — | Relatório de rodadas por cliente | pausada |
 
-Próximo passo (Fase 4 do roadmap): guardar aqui o texto completo de cada tarefa e conferir
-automaticamente se o que está agendado bate com o repositório.
+Cada rotina do claude.ai tem o texto completo em `rotinas/<nome>.md` (cabeçalho com id, horário, se está ativa,
+modelo e conectores). Para conferir se o que está agendado bate com o repositório, salve a listagem das rotinas
+(RemoteTrigger `list`) num arquivo e rode:
+
+```bash
+python3 rotinas/conferir.py listagem.json
+```
+
+Ele sai com erro e lista o que diverge. Depois de mudar uma rotina no claude.ai, `--atualizar` regrava os `.md`.
+Para mudar só o texto de uma rotina, o RemoteTrigger `update` aceita `{"prompt": "..."}` e preserva o resto.
+
+A rotina de backup é local (tarefa agendada do app neste Mac) e não entra na conferência; o texto dela fica em
+`~/.claude/scheduled-tasks/studio-backup-semanal/SKILL.md`, porque cita a pasta pessoal do Google Drive.
+
+**Vigia:** desde 10/11/2026 o passo 9 da varredura diária do cérebro confere se triagem, captação, vencedores,
+backup e Central rodaram no prazo e cria um aviso "Rotina parada" no Studio quando não.
