@@ -5,7 +5,7 @@ Uso: python3 novos.py DADOS SAIDA --existentes existentes.txt
 Grava SAIDA/lote_NN.json (listas de {op, collection, doc_id, file_path}) e SAIDA/docs/*.json; imprime um resumo JSON."""
 import json, glob, os, re, sys, argparse
 from datetime import date
-from classes import classificar, tipo_empresa, MEI
+from classes import classificar, fornecedor_e_veiculo, tipo_empresa, MEI
 
 ESF = {"F": "Federal", "E": "Estadual", "M": "Municipal", "D": "Distrital", "N": "Não informada"}
 
@@ -51,11 +51,12 @@ def main():
             if not ctrl or doc_id in exist or doc_id in vistos:
                 continue
             fr, _ = classificar(it.get("objetoContrato"), it.get("informacaoComplementar"))
-            if not fr:
-                continue
+            if not fr or fornecedor_e_veiculo(it.get("nomeRazaoSocialFornecedor") or "", fr["id"]):
+                continue  # fora do escopo, ruído, ou rádio/TV/jornal vendendo veiculação
             vg0 = it.get("valorGlobal") or 0
-            # mesmo corte do arquivo publicado: frentes de craft a partir de R$ 3 mil, demais só a partir de R$ 80 mil
-            if not ((fr["id"] in ("audiovisual", "publicidade", "cenografia", "fotografia", "conteudo", "transmissao", "audio", "design", "eventos", "ooh") and vg0 >= 3000) or vg0 >= 80000):
+            # mesmo corte do arquivo publicado: frentes de craft e mídia exterior a partir de R$ 3 mil; gráfica e comunicação
+            # visual só a partir de R$ 80 mil (são milhares de impressos pequenos por mês). Eventos saíram do escopo.
+            if not ((fr["id"] in ("audiovisual", "publicidade", "cenografia", "fotografia", "conteudo", "transmissao", "audio", "design", "ooh") and vg0 >= 3000) or vg0 >= 80000):
                 continue
             vistos.add(doc_id)
             org, uni = it.get("orgaoEntidade") or {}, it.get("unidadeOrgao") or {}

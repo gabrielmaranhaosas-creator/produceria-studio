@@ -35,7 +35,7 @@ FRENTES = [
     {"id": "publicidade", "nome": "Publicidade · agência com conta pública", "craft": 0.9,
      "inc": rx(r"agencias? de (propaganda|publicidade|comunicacao)", r"servicos? de publicidade", r"servicos? publicitari", r"publicidade (institucional|de utilidade publica|e propaganda)",
                r"lei (n[o.]? ?)?12\.?232", r"campanhas? publicitari", r"comunicacao (publicitaria|institucional e publicidade)", r"planejamento,? (conceituacao|criacao|desenvolvimento)"),
-     "exc": rx(r"veiculacao (de|em) (jornal|radio|revista|site|portal|blog)", r"insercoes? (em|de) (radio|jornal|tv)", r"jornal impresso", r"spots? em radio", r"anuncio")},
+     "exc": rx(r"veiculacao (de|em) (jornal|radio|revista|site|portal|blog)", r"insercoes? (em|de) (radio|jornal|tv)", r"jornal impresso", r"divulgacao em (banner digital|portal|site|jornal|radio)", r"spots? em radio", r"anuncio")},
     {"id": "audiovisual", "nome": "Produção audiovisual", "craft": 1.0,
      "inc": rx(r"producao (audiovisual|de videos?|de filmes?|cinematografic|de conteudo audiovisual)", r"servicos? (audiovisua|de filmagem|de video|de producao de video)",
                r"videos? (institucion|educativ|promociona|documenta|curtos|publicitari)", r"filmes? (institucion|publicitari|documenta|educativ)", r"filmagem", r"videografi",
@@ -79,6 +79,63 @@ DURO = rx(r"publicidade legal", r"streaming de (livros|musica|filmes)", r"aquisi
           r"licencas? (de|do|dos) (uso de )?softwares?", r"drenagem", r"galerias? pluvia", r"tubulac", r"esgoto", r"video ?inspec", r"video ?monitor", r"atendimento ao publico", r"call ?center", r"palestrante", r"\bpalestras?\b", r"formac(ao|oes) (de|continuada)", r"livros? didatic", r"biblioteca digital", r"solucao editorial", r"materia(l|is) (didatic|pedagogic|bibliografic)", r"votacao eletronica", r"concurso publico", r"processo seletivo", r"vestibular", r"apostila", r"\bsoftwares?\b", r"data ?center", r"adobe", r"facilities", r"coffee ?break", r"buffet", r"tecnologia da informacao")
 
 
+# escopo de 10/11/2026: eventos saem; gráfica, comunicação visual e mídia exterior são núcleo e ficam.
+# Rígidas valem no assunto principal (início do objeto); brandas cedem só a um serviço de craft citado antes.
+ASSUNTO = 240
+RIGIDAS = [
+    ("eventos (fora do escopo)", rx(r"(organizacao|producao|realizacao|gestao|execucao) (e (producao|realizacao|execucao) )?de eventos", r"organizacao, producao e realizacao",
+                                    r"montagem de eventos?", r"(montagem|desmontagem|locacao|cota) de (estandes?|stands?)", r"(estandes?|stands?) (institucional|de feira|em feira|no evento)",
+                                    r"cerimonial", r"locacao de (um )?espaco de \d+", r"promotora (exclusiva )?do evento")),
+    ("curso, palestra ou inscrição", rx(r"\binscric", r"\bcursos?\b", r"capacitac", r"palestra", r"webinari", r"docencia", r"mentoria", r"workshop", r"treinamento")),
+    ("software ou licença", rx(r"\blicencas?\b", r"software", r"\bsaas\b", r"subscric", r"hardware", r"solucao em nuvem", r"sistemas? (aplicativos?|de informatica|informatizad|de gestao)", r"rastreabilidade", r"virtualizacao")),
+    ("compra de equipamento", rx(r"aquisic(ao|oes) (e instalacao )?de (\(?\d+\)? |um |uma )?\(?(equipamentos?|cameras?|filmadoras?|lentes?|drones?|projetor|televis|tvs?\b|monitor|microfones?|notebooks?|computador|paineis de led|painel de led|totens? de led|veiculos?)",
+                                 r"aquisic(ao|oes) de .{0,25}(cameras?|filmadoras?|computador|equipamentos?)", r"fornecimento de equipamentos?")),
+    ("obra e engenharia", rx(r"engenharia", r"construc", r"reforma\b", r"pavimenta", r"(?<!mao de )\bobras? (de|civil|civis)\b")),
+    ("fora do ramo", rx(r"fornecimento de alimentacao", r"alimentacao e bebida", r"refeic", r"coffee", r"buffet", r"merenda", r"\bseguros?\b", r"apolice", r"radiodifus", r"emissoras?\b",
+                        r"\bradios?\b (fm|am|comunitar)", r"libras", r"inventario", r"contab", r"limpeza", r"vigilancia", r"\bcarnes?\b", r"boletos?", r"dados variaveis", r"faturamento",
+                        r"cartoes? (pre-?impressos|de pvc|pvc)", r"certificado digital", r"\bchips?\b", r"fantasias", r"servicos postais", r"correios",
+                        r"redes? (lan|wlan)", r"papeis? (couche|sulfite|a4|offset)", r"bolsas? termica", r"mochilas?", r"cedulas? de identidade", r"\btapetes?\b", r"automove", r"ca(mi)?nhonete", r"camionete", r"telefon", r"celular", r"sacolas", r"moda feminina", r"levantamento cadastral", r"hospedagem (e manutencao )?de sites?",
+                        r"manutencao e reparos?", r"provas (escolares|de avaliacao)", r"direitos? de exibicao", r"empresa jornalistica", r"imprensa escrita", r"materia(l|is) permanentes?",
+                        r"publicidade (institucional )?legal")),
+]
+BRANDAS = [
+    ("shows e festas", rx(r"\bshows?\b", r"\bbandas?\b", r"apresentac(ao|oes) (artistica|musica)", r"animacao (musical|de bailes|do publico|de festa)", r"recreac", r"\bdj\b", r"torneio", r"futsal", r"\bcaches?\b", r"atrac(ao|oes) (principal|musica|local|artistic)")),
+    ("decoração e Natal", rx(r"ornament", r"decorac", r"natal", r"papai noel", r"iluminacao decorativa")),
+    ("locação de som, luz, palco ou estrutura", rx(r"sonorizac", r"\bpalco", r"iluminacao (cenica|de palco)", r"tendas?\b", r"geradores?", r"locacao de (equipamentos?|estruturas?|som)", r"som e luz", r"sistemas? de som", r"estruturas? (metalica|de palco|modula|para evento|temporaria)", r"trio eletrico")),
+    ("veiculação em jornal, rádio ou site", rx(r"veiculac(ao|oes) (de|em) (jornal|jornais|radio|materias|site|portal|blog|revista|tv|programa)", r"publicac(ao|oes) de materias", r"credenciamento de (radios|emissoras|veiculos de comunicacao|jornais|sites|portais)",
+                                              r"jornal impresso", r"\bspots? em radio", r"insercoes? (em|de) (radio|jornal|tv)")),
+    ("assessoria de imprensa", rx(r"assessoria de imprensa", r"relacoes publicas")),
+]
+FORTES = ("audiovisual", "fotografia", "transmissao")
+
+
+def ruido(t, frentes):
+    """motivo do ruído no objeto normalizado t, ou None. frentes = ids das frentes que casaram, em ordem."""
+    principal = t[:ASSUNTO]
+    pos_forte = min([m.start() for f in FRENTES if f["id"] in FORTES and f["id"] in frentes for m in [f["inc"].search(t)] if m] or [len(t)])
+    for nome, r in RIGIDAS:
+        m = r.search(principal)
+        if m and not (nome.startswith("curso") and pos_forte < m.start()):  # "filmagem do encontro de capacitação" fica
+            return nome
+    for nome, r in BRANDAS:
+        m = r.search(t)
+        if m and m.start() <= pos_forte:
+            if nome.startswith("locação") and "ooh" in frentes and re.search(r"midia exterior|outdoors? (publicit|de divulgac)|espaco publicitario|publicid|divulgac", t):
+                continue  # painel de LED de mídia exterior é núcleo
+            if nome.startswith("locação") and "comvisual" in frentes and re.search(r"fachada|letreiro|\btotens?\b|\bacm\b|comunicacao visual", t):
+                continue  # estrutura de fachada, letreiro ou totem é comunicação visual
+            return nome
+    return None
+
+
+VEICULO = rx(r"\bradios?\b", r"\bfm\b", r"emissoras?", r"radiodifus", r"\bjornal\b", r"jornais", r"\btv\b", r"televisao", r"\bportal\b", r"\bnoticias\b", r"\bblog\b", r"\brevista\b")
+
+
+def fornecedor_e_veiculo(nome, frente):
+    """rádio, jornal, TV ou portal que vende espaço de veiculação: não é cliente nem concorrente do hub"""
+    return frente in ("publicidade", "conteudo", "audio") and bool(VEICULO.search(norm(nome)))
+
+
 def classificar(objeto, compl=""):
     t = norm(f"{objeto} {compl}")
     if DURO.search(t):
@@ -87,7 +144,9 @@ def classificar(objeto, compl=""):
     for f in FRENTES:
         if f["inc"].search(t) and not (f["exc"].pattern and f["exc"].search(t)):
             achou.append(f)
-    if not achou:
+    if not achou or achou[0]["id"] == "eventos":
+        return None, []
+    if ruido(norm(objeto), [f["id"] for f in achou]):
         return None, []
     # ruído só derruba quando a frente principal não é inequívoca (publicidade/audiovisual/cenografia/fotografia são fortes)
     forte = achou[0]["id"] in ("publicidade", "audiovisual", "cenografia", "fotografia", "transmissao", "conteudo", "design")

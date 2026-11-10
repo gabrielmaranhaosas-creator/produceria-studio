@@ -65,8 +65,17 @@ do hub):
 
 A varredura diária (rotina "Cérebro de licitações · varredura diária", 06:17) lê `cerebro/perfil.json` e
 `cerebro/cerebro.py` publicados no Studio: publicar o Studio com esses arquivos já muda o critério da rotina.
-`scripts/montar.mjs` também tira da lista de frentes do Licitações (cadastro manual) eventos, gráfica,
-comunicação visual e mídia exterior.
+`scripts/montar.mjs` tira da lista de frentes do Licitações (cadastro manual) só as de eventos: arte-finalização,
+produção gráfica, comunicação visual e mídia exterior são o núcleo da PRODUCERIA e ficam.
+
+## Escopo do mapa de vencedores
+
+`jobs/vencedores/classes.py` usa o mesmo escopo, adaptado: eventos saem; gráfica, comunicação visual e mídia exterior
+ficam (núcleo). O ruído sai por regras rígidas no início do objeto (curso, software, compra de equipamento, obra,
+eventos, fora do ramo) e brandas que cedem a filmagem, foto ou transmissão citadas antes (shows, Natal, locação de
+palco e som, veiculação em jornal/rádio/site, assessoria de imprensa). Rádio, TV e jornal que vendem veiculação também
+saem. `jobs/vencedores/limpar.py` aplica isso ao `vencedores.json` publicado e regrava o `.bin.wasm`; a rotina mensal
+usa o mesmo `classes.py` publicado em `vencedores/`. Limpeza de 10/11/2026: 15.318 → 7.982 contratos no arquivo.
 
 No `--repontuar`, o que não passa vai a nota 0, exceto licitações em que a equipe já mexeu (carteira, etapa
 ou decisão).

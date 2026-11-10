@@ -18,13 +18,11 @@ for (const [fn, nome] of Object.entries(montagens)) {
 
 // Frentes de eventos saíram do escopo (perfil do cérebro 2026-11-10a): tira-as também da lista de
 // frentes das Licitações do legado (cadastro manual, leitura de edital).
-// frentes fora do escopo do hub (eventos desde o perfil 2026-11-10a; gráfica, placas e mídia exterior desde o 2026-11-10c)
+// frentes fora do escopo do hub: só eventos (perfil 2026-11-10a). Arte-finalização, produção gráfica,
+// comunicação visual e mídia exterior são o núcleo da PRODUCERIA e ficam no cadastro manual.
 const frentesFora = [
   '"Produção e organização de eventos",',
   '"Infraestrutura, cenografia e locações para eventos",',
-  '"Arte-finalização e produção gráfica",',
-  '"Comunicação visual e sinalização",',
-  '"Mídia exterior OOH/DOOH",',
 ];
 for (const f of frentesFora) {
   const n = html.split(f).length - 1;
