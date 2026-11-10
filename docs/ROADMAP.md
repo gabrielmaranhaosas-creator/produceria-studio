@@ -17,8 +17,10 @@
   (66 KB) e o build confere a sintaxe do legado; no lugar fica um aviso para o caso de o pacote não carregar.
 
 ## Fase 2 · migrar o Comercial que ainda é legado
-- Captação (alvos, triagem, abordagem, proposta), Licitações (radar, carteira, habilitação),
-  Vencedores, Contas e agências, Estratégia e funil.
+- ~~Licitações (radar, carteira, habilitação, vias)~~ Feito em 10/11/2026: `src/paginas/licitacoes.ts`, com
+  Disputar / Monitorar / Descartar com motivo, descartes revisáveis (e desfazíveis), carteira por etapa com análise
+  go/no-go por IA, habilitação por empresa e leitura de edital por IA. O componente antigo fica de reserva.
+- Captação (alvos, triagem, abordagem, proposta), Vencedores, Contas e agências, Estratégia e funil.
 - Uma página por entrega, sempre com o legado como reserva.
 
 ## Fase 3 · Oficina e casca

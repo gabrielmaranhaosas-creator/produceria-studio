@@ -1,0 +1,52 @@
+.mc .lc-abas{display:flex;flex-wrap:wrap;gap:8px;border-bottom:1px solid var(--line);padding-bottom:12px}
+.mc .lc-abas button{background:transparent;color:var(--ink-muted);border:1px solid var(--line-strong);border-radius:40px;min-height:40px;padding:8px 16px}
+.mc .lc-abas button[aria-selected=true]{background:var(--sinal);color:var(--on-sinal);border-color:transparent}
+.mc .lc-cerebro p{max-width:68ch;font-size:15px;line-height:1.55}
+.mc .lc-cerebro p.note{font-size:13px}
+.mc .lc-filtros{display:flex;flex-wrap:wrap;gap:10px 12px;align-items:flex-end;border-top:1px solid var(--line-strong);padding-top:16px;margin-bottom:16px}
+.mc .lc-filtros .chip[aria-pressed=true]{background:var(--ink);color:var(--surface-000,#fff);border-color:var(--ink)}
+.mc .lc-ord{width:auto;min-width:170px}
+.mc .lc-q{flex:1 1 240px;max-width:340px}
+.mc .lc-l{list-style:none;margin:0;padding:0;border-top:1px solid var(--line)}
+.mc .lc-it{display:grid;grid-template-columns:minmax(0,1fr) minmax(150px,auto);gap:12px 24px;padding:16px 0;border-bottom:1px solid var(--line)}
+.mc .lc-c{display:flex;flex-direction:column;gap:6px;min-width:0}
+.mc .lc-tags{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.mc .lc-obj{font-size:15px;line-height:1.45;font-weight:500;overflow-wrap:anywhere}
+.mc .lc-v{display:flex;flex-direction:column;gap:6px;align-items:flex-end;text-align:right}
+.mc .lc-nota{display:flex;align-items:baseline;gap:6px;font-size:12px;color:var(--ink-muted)}
+.mc .lc-nota b{font:400 32px/1 var(--font-display);color:var(--ink);font-variant-numeric:tabular-nums}
+.mc .lc-nota.alta b{color:var(--sinal-text,var(--ink))}
+.mc .lc-val{font:400 18px/1.2 var(--font-display)}
+.mc .lc-acts{display:flex;flex-wrap:wrap;gap:8px;justify-content:flex-end;align-items:center}
+.mc .lc-desc{width:auto;min-height:36px;padding:4px 8px;font-size:13px}
+.mc .tag.ok{color:var(--ok);border-color:currentColor}
+.mc .tag.aviso{color:var(--aviso,var(--ink-muted));border-color:currentColor}
+.mc .tag.erro{color:var(--erro);border-color:currentColor}
+.mc .lc-kanban{display:grid;grid-template-columns:repeat(5,minmax(220px,1fr));gap:16px;overflow-x:auto;padding-bottom:8px}
+.mc .lc-col{display:flex;flex-direction:column;gap:10px;border-top:1px solid var(--line-strong);padding-top:10px;min-width:0}
+.mc .lc-col.quente{border-top-color:var(--sinal)}
+.mc .lc-colh{display:flex;flex-direction:column;gap:2px}
+.mc .lc-card{display:flex;flex-direction:column;gap:8px;border:1px solid var(--line);border-radius:4px;padding:12px;background:var(--surface-100)}
+.mc .lc-mv{display:flex;justify-content:space-between}
+.mc .lc-mv button{min-width:44px}
+.mc .lc-box{border:1px solid var(--line);border-radius:4px;padding:12px;margin-top:16px;display:flex;flex-direction:column;gap:6px}
+.mc .lc-pre{white-space:pre-wrap;font-size:14px;line-height:1.55;max-width:72ch}
+.mc .lc-hab th[scope=row]{position:static;font-weight:400;text-align:left;padding:12px 12px 12px 0;vertical-align:top;background:transparent;white-space:normal}
+.mc .lc-hab td{vertical-align:top;cursor:default}
+.mc .lc-hab tbody tr{cursor:default}
+.mc .lc-hab tbody tr:hover td{background:transparent}
+.mc .lc-req{font-size:14px}
+.mc .lc-st{text-decoration:none}
+.mc .lc-val-d{margin-top:6px;min-height:36px;padding:4px 8px;font-size:13px;width:auto}
+.mc .lc-emp{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,260px),1fr));gap:24px}
+.mc .lc-vias{list-style:none;margin:0;padding:0;counter-reset:via;display:flex;flex-direction:column}
+.mc .lc-vias li{counter-increment:via;display:grid;grid-template-columns:48px minmax(0,1fr);gap:4px 12px;padding:16px 0;border-bottom:1px solid var(--line)}
+.mc .lc-vias li::before{content:"0" counter(via);grid-row:span 2;font-variant-numeric:tabular-nums;color:var(--ink-muted);font-size:13px;padding-top:4px}
+.mc .lc-vias p{max-width:72ch;font-size:15px;line-height:1.55}
+.mc .rs{border:0;padding:0;margin:12px 0 0;display:flex;flex-direction:column;gap:8px}
+.mc .f.full{grid-column:1/-1}
+@media (max-width:760px){.mc .lc-it{grid-template-columns:minmax(0,1fr)}
+.mc .lc-v{align-items:flex-start;text-align:left}
+.mc .lc-acts{justify-content:flex-start}
+}
+.mc .lc-varr{font-variant-numeric:tabular-nums;overflow-wrap:anywhere}

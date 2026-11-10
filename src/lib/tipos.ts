@@ -51,6 +51,19 @@ export interface Licitacao {
   score: number; frente: string; url?: string; carteira?: boolean;
 }
 
+/** Documento completo do radar `b2g` (cérebro + decisões da equipe). */
+export interface Oportunidade extends Omit<Licitacao, 'score'> {
+  id: string; score?: number; craft?: number; frenteCerebro?: string; aderencia?: 'direta' | 'condicionada' | string;
+  entidades?: string[]; motivo?: string; nota?: string; municipio?: string; srp?: boolean; unidade?: string;
+  fonte?: string; exemplo?: boolean;
+  triagem?: 'Disputar' | 'Monitorar' | 'Descartar' | string; motivoDescarte?: string; triadoEm?: string;
+  etapa?: string; decisao?: '' | 'Go' | 'No-go' | string; proxAcao?: string; analise?: string;
+}
+
+/** Requisito de habilitação de uma empresa do hub (coleção `habilitacao`, doc = empresa). */
+export interface Requisito { status: 'pendente' | 'ok' | 'na'; validade?: string; nota?: string }
+export interface Habilitacao { id: string; req?: Record<string, Requisito> }
+
 export interface Noticia {
   id: string; data: string; titulo: string; resumo?: string;
   categoria?: 'conta' | 'licitacao' | 'inhouse' | 'negocio' | 'mercado';

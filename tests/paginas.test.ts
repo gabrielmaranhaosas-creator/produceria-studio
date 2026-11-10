@@ -120,3 +120,59 @@ describe('Mapa de contas', () => {
     desmontar();
   });
 });
+
+describe('Licitações', () => {
+  const base = {
+    b2g: {
+      'pncp-1': { objeto: 'Produção audiovisual institucional', orgao: 'Prefeitura A', uf: 'SP', score: 90, craft: 1, frenteCerebro: 'Produção audiovisual e filmes', aderencia: 'direta', entidades: ['cria'], prazo: '2099-01-10', valor: 100000, fonte: 'Cérebro' },
+      'pncp-2': { objeto: 'Placas de identificação em ACM', orgao: 'Câmara B', uf: 'MG', score: 55, craft: 0.6, frenteCerebro: 'Comunicação visual e sinalização', aderencia: 'direta', entidades: ['cria'], prazo: '2099-02-01', fonte: 'Cérebro' },
+      'pncp-3': { objeto: 'Show de aniversário', orgao: 'Município C', uf: 'GO', score: 0, frenteCerebro: 'x', prazo: '2099-01-05', fonte: 'Cérebro' },
+    },
+    habilitacao: { cria: { req: { fgts: { status: 'ok', validade: '2099-12-31' } } } },
+    cerebro: { status: { ultimaVarredura: '2026-11-10T06:21:15-03:00', lidos: 5926, novos: 121, perfil: '2026-11-10e' } },
+  };
+
+  it('filtra o radar pela nota, pela frente e pela busca', async () => {
+    const { filtrarRadar } = await import('../src/paginas/licitacoes');
+    const L = Object.entries(base.b2g).map(([id, d]) => ({ id, ...d })) as any[];
+    const f = { frente: '', aderencia: '' as const, nota60: true, abertas: true, estudio: false, descartadas: false, q: '', ordem: 'nota' as const };
+    expect(filtrarRadar(L, f).map((o) => o.id)).toEqual(['pncp-1']);
+    expect(filtrarRadar(L, { ...f, nota60: false }).map((o) => o.id)).toEqual(['pncp-1', 'pncp-2', 'pncp-3']);
+    expect(filtrarRadar(L, { ...f, nota60: false, frente: 'Comunicação visual e sinalização' }).map((o) => o.id)).toEqual(['pncp-2']);
+    expect(filtrarRadar(L, { ...f, nota60: false, q: 'câmara' }).map((o) => o.id)).toEqual(['pncp-2']);
+  });
+
+  it('Disputar manda para a carteira e Descartar grava o motivo', async () => {
+    const db = bancoFalso(base);
+    const { raiz } = await montar('licitacoes', db);
+    expect(raiz.querySelectorAll('.lc-it').length).toBe(1);
+    expect(raiz.textContent).toContain('perfil 2026-11-10e');
+    raiz.querySelector<HTMLButtonElement>('[data-disp="pncp-1"]')!.click();
+    await espera();
+    expect(db.dados.b2g['pncp-1']).toMatchObject({ carteira: true, etapa: 'Triagem', triagem: 'Disputar' });
+    raiz.querySelector<HTMLButtonElement>('[data-tg="nota60"]')!.click();
+    const sel = raiz.querySelector<HTMLSelectElement>('[data-desc="pncp-3"]')!;
+    sel.value = 'Fora do escopo';
+    sel.dispatchEvent(new Event('change', { bubbles: true }));
+    await espera();
+    expect(db.dados.b2g['pncp-3']).toMatchObject({ triagem: 'Descartar', motivoDescarte: 'Fora do escopo' });
+    expect(raiz.querySelector('[data-desc="pncp-3"]')).toBeNull(); // sai do radar
+  });
+
+  it('a carteira avança de etapa e a habilitação alterna o status', async () => {
+    const db = bancoFalso({ ...base, b2g: { ...base.b2g, 'pncp-1': { ...base.b2g['pncp-1'], carteira: true, etapa: 'Triagem' } } });
+    const { raiz } = await montar('licitacoes', db);
+    raiz.querySelector<HTMLButtonElement>('[data-aba="carteira"]')!.click();
+    expect(raiz.querySelectorAll('.lc-card').length).toBe(1);
+    raiz.querySelector<HTMLButtonElement>('[data-et="pncp-1"][data-d="1"]')!.click();
+    await espera();
+    expect(db.dados.b2g['pncp-1'].etapa).toBe('Go / No-go');
+    raiz.querySelector<HTMLButtonElement>('[data-aba="habilitacao"]')!.click();
+    await espera();
+    expect(raiz.querySelector('[data-hab="cria"][data-req="fgts"]')?.textContent).toBe('Em dia');
+    raiz.querySelector<HTMLButtonElement>('[data-hab="cria"][data-req="cnae"]')!.click();
+    await espera();
+    expect((db.dados.habilitacao.cria as any).req.cnae.status).toBe('ok');
+    expect((db.dados.habilitacao.cria as any).req.fgts.validade).toBe('2099-12-31'); // não perde os outros
+  });
+});

@@ -20,6 +20,18 @@ for (const [fn, nome] of Object.entries(montagens)) {
   html = html.replace(antes, `(window.__studio&&window.__studio.montar(${JSON.stringify(nome)},r.current)||${antes})`);
 }
 
+// Licitações (Fase 2): a página do código-fonte entra no lugar do componente React do legado (`te`), que fica
+// como reserva enquanto a nova estabiliza. LC é um invólucro React mínimo, no mesmo escopo do MC (Mapa de contas).
+{
+  const uso = '(0,l.jsx)(te,{opps:a})';
+  const n = html.split(uso).length - 1;
+  if (n !== 1) throw new Error(`Esperava 1 uso de ${uso} no legado, achei ${n}.`);
+  html = html.replace(uso, '(0,l.jsx)(window.__studio&&window.__studio.paginas.includes("licitacoes")?LC:te,{opps:a})');
+  const mc = 'function MC(){';
+  if (html.split(mc).length - 1 !== 1) throw new Error('Esperava 1 definição de MC no legado.');
+  html = html.replace(mc, 'function LC(){let r=(0,c.useRef)(null);(0,c.useEffect)(()=>{r.current.dataset.th=document.documentElement.getAttribute("data-theme")||"";return window.__studio.montar("licitacoes",r.current)||void 0},[]);return(0,l.jsx)("div",{ref:r,className:"mc cn"})}' + mc);
+}
+
 // As 4 páginas migradas rodam a partir do código-fonte desde a Fase 0; as cópias antigas saem do legado.
 // No lugar fica um aviso, que só aparece se o pacote de módulos não carregar.
 const aviso = (f) => `function ${f}(root){root.innerHTML='<div class="wrap"><div class="empty"><h2 class="d d-sub">Esta página não carregou</h2><p class="note">Recarregue o Studio. Se continuar, avise quem cuida do sistema.</p></div></div>'}`;

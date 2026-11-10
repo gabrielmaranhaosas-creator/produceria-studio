@@ -9,10 +9,12 @@
 import base from './estilos/base.css?inline';
 import central from './estilos/central.css?inline';
 import agenda from './estilos/agenda.css?inline';
+import licitacoes from './estilos/licitacoes.css?inline';
 import * as pCentral from './paginas/central';
 import * as pAgenda from './paginas/agenda';
 import * as pCasos from './paginas/casos';
 import * as pContas from './paginas/mapa-contas';
+import * as pLicitacoes from './paginas/licitacoes';
 
 import type { Montar } from './paginas/dom';
 
@@ -21,13 +23,14 @@ const paginas: Record<string, Montar> = {
   agenda: pAgenda.montar,
   casos: pCasos.montar,
   contas: pContas.montar,
+  licitacoes: pLicitacoes.montar,
 };
 
 function estilos() {
   if (document.getElementById('studio-src-css')) return;
   const el = document.createElement('style');
   el.id = 'studio-src-css';
-  el.textContent = base + central + agenda;
+  el.textContent = base + central + agenda + licitacoes;
   document.head.appendChild(el);
 }
 
