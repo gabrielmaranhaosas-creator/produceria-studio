@@ -7,8 +7,9 @@
   "scripts": {
     "build": "vite build && node scripts/montar.mjs",
     "test": "vitest run",
+    "test:cerebro": "python3 -B -m unittest discover -s jobs/cerebro",
     "typecheck": "tsc --noEmit",
-    "check": "npm run typecheck && npm test && npm run build"
+    "check": "npm run typecheck && npm test && npm run test:cerebro && npm run build"
   },
   "devDependencies": {
     "typescript": "5.6.3",

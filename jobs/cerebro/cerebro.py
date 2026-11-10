@@ -97,39 +97,71 @@ def varrer(path: str, base: dict, modalidades: list[str], max_paginas: int, log,
 
 # ---------------------------------------------------------------- classificação e nota
 class Cerebro:
+    """Critério do perfil:
+    1. porta: o OBJETO precisa citar trabalho do hub (o texto complementar do PNCP não abre a porta);
+    2. exclusões rígidas (curso, software, compra, obra, eventos, fora do ramo) valem sempre, mas só no
+       assunto principal (início do objeto), para não derrubar um bom objeto por palavra incidental;
+    3. exclusões brandas (shows, decoração, locação de estrutura, agência, gráfica) cedem a uma porta forte
+       (audiovisual, fotografia, transmissão) só
+       quando aparece antes dela no objeto, isto é, quando o serviço é o assunto principal;
+    4. nota: craft, aderência pelo CNAE das empresas do hub, faixa de valor, prazo e recorrência, com redutores
+       para objeto misto (serviço + item excluído) e para serviço presencial pequeno longe de São Paulo."""
+
     def __init__(self, perfil: dict):
         self.p = perfil
-        self.frentes = [{**f, "_t": [norm(t) for t in f["termos"]]} for f in perfil["frentes"]]
-        self.pen = [{**x, "_t": [norm(t) for t in x["termos"]]} for x in perfil.get("penalidades", [])]
+        ents = perfil.get("entidades", {})
+        self.frentes = []
+        for f in perfil["frentes"]:
+            cn = set(f.get("cnaes", []))
+            quem = [k for k, e in ents.items() if cn & set(e.get("cnaes", []))]
+            self.frentes.append({**f, "entidades": quem, "_rx": [re.compile(x) for x in f["porta"]]})
+        self.exc = [{**x, "_rx": re.compile("|".join(f"(?:{p})" for p in x["padroes"]))} for x in perfil.get("exclusoes", [])]
         self.w = perfil["pesos"]
+        self.assunto = perfil.get("assunto_chars", 200)
 
-    def classificar(self, texto: str):
-        t = norm(texto)
-        melhor, achados = None, []
+    def classificar(self, objeto: str):
+        """devolve (frente, outras frentes, motivo de exclusão, alerta brando)"""
+        t = norm(objeto)
+        achados, pos_forte = [], len(t)
         for f in self.frentes:
-            hits = [term for term in f["_t"] if casa(term, t)]
-            if not hits:
-                continue
-            # força = craft da frente, reforçada por mais de um termo
-            forca = f["craft"] * (1 + 0.15 * min(len(hits) - 1, 3))
-            achados.append((forca, f, hits))
+            ms = [m for m in (rx.search(t) for rx in f["_rx"]) if m]
+            if ms:
+                # frente com CNAE do hub vence empate com frente sem CNAE
+                achados.append((f["craft"] * (1 + 0.15 * min(len(ms) - 1, 3)) * (1.0 if f["entidades"] else 0.8), f))
+                if f.get("forte"):
+                    pos_forte = min(pos_forte, *(m.start() for m in ms))
         if not achados:
-            return None, [], 1.0, ""
+            return None, [], "o objeto não cita trabalho do hub", ""
         achados.sort(key=lambda x: x[0], reverse=True)
-        melhor = achados[0]
-        fator, motivo_pen = 1.0, ""
-        for pen in self.pen:
-            if any(casa(term, t) for term in pen["_t"]):
-                if pen["fator"] < fator:
-                    fator, motivo_pen = pen["fator"], pen["motivo"]
-        return melhor[1], [a[1]["nome"] for a in achados[1:3]], fator, motivo_pen
+        frente, outras = achados[0][1], [a[1]["nome"] for a in achados[1:3]]
+        principal = t[: self.assunto]
+        for x in self.exc:
+            if x["tipo"] == "rigida" and x["_rx"].search(principal):
+                return frente, outras, x["nome"], ""
+        # exclusão branda: cede só quando um serviço forte aparece ANTES dela no objeto (é o assunto principal)
+        brandas = [(m.start(), x["nome"]) for x in self.exc if x["tipo"] == "branda" for m in [x["_rx"].search(t)] if m]
+        if brandas:
+            pos, nome = min(brandas)
+            if pos <= pos_forte:
+                return frente, outras, nome, ""
+            return frente, outras, "", nome
+        return frente, outras, "", ""
 
-    @staticmethod
-    def banda_valor(v):
+    def banda_valor(self, v):
+        """(banda 0–1, alerta). Ideal entre ~R$ 20 mil e R$ 1,5 mi: as empresas do hub são ME."""
+        pt = self.p.get("porte", {})
+        peq, imin, imax, teto = pt.get("pequena", 5e3), pt.get("ideal_min", 2e4), pt.get("ideal_max", 1.5e6), pt.get("teto", 1e7)
         if not v or v <= 0:
-            return 0.4  # valor sigiloso ou não divulgado: neutro
-        # R$ 2 mil -> ~0,1 · R$ 20 mil -> ~0,45 · R$ 200 mil -> ~0,8 · R$ 1 mi+ -> 1
-        return max(0.05, min(1.0, (math.log10(v) - 3.0) / 3.0))
+            return 0.5, ""
+        if v < peq:
+            return 0.2, "valor pequeno (abaixo de R$ %s mil)" % int(peq / 1000)
+        if v < imin:
+            return 0.2 + 0.8 * (math.log10(v) - math.log10(peq)) / (math.log10(imin) - math.log10(peq)), ""
+        if v <= imax:
+            return 1.0, ""
+        if v <= teto:
+            return 0.6, "acima do porte do hub: confira capacidade técnica e atestados"
+        return 0.3, "muito acima do porte do hub: só com consórcio ou parceiro"
 
     @staticmethod
     def banda_prazo(fim: str | None, hoje: date):
@@ -148,30 +180,55 @@ class Cerebro:
             return 0.6, dias
         return 1.0, dias
 
-    def pontuar(self, objeto: str, extra: str, valor, fim, modalidade: str, srp: bool, hoje: date):
-        frente, outras, fator, motivo_pen = self.classificar(f"{objeto} {extra}")
+    def fator_logistica(self, frente: dict, uf: str, valor):
+        """redutor para serviço presencial pequeno longe de São Paulo (deslocamento come a margem)"""
+        if not frente.get("presencial") or not uf or uf == self.p.get("sede", "SP"):
+            return 1.0, ""
+        perto = uf in self.p.get("vizinhas", [])
+        if valor and valor >= 100000:
+            return 1.0, ""
+        if perto:
+            return (0.9, f"serviço presencial em {uf}: some o deslocamento") if (not valor or valor < 30000) else (1.0, "")
+        return (0.75 if valor else 0.85), f"serviço presencial em {uf}, longe de SP: deslocamento pesa num contrato pequeno"
+
+    def pontuar(self, objeto: str, valor, fim, modalidade: str, srp: bool, hoje: date, uf: str = ""):
+        """None = sem porta; {"score": 0, "fora": motivo} = excluído; senão a nota completa"""
+        frente, outras, fora, branda = self.classificar(objeto)
         if not frente:
             return None
+        if fora:
+            return {"score": 0, "craft": 0, "frente": frente["nome"], "outrasFrentes": outras, "entidades": frente["entidades"],
+                    "aderencia": "fora", "fora": fora, "motivo": f"fora do radar: {fora}"}
         prazo_b, dias = self.banda_prazo(fim, hoje)
+        valor_b, alerta_valor = self.banda_valor(valor)
+        fator, alerta_log = self.fator_logistica(frente, uf, valor)
+        if branda:
+            fator *= 0.85
         mod = norm(modalidade)
         rec = 1.0 if (srp or any(k in mod for k in ("credenciamento", "chamada publica", "inexigibilidade"))) else 0.3
         ader = 1.0 if frente["entidades"] else 0.4
-        bruto = (self.w["craft"] * frente["craft"] + self.w["aderencia"] * ader + self.w["valor"] * self.banda_valor(valor)
-                 + self.w["prazo"] * prazo_b + self.w["recorrencia"] * rec)
+        w = self.w
+        bruto = (w["craft"] * frente["craft"] + w["aderencia"] * ader + w["valor"] * valor_b
+                 + w["prazo"] * prazo_b + w["recorrencia"] * rec)
         nota = round(bruto * fator)
         motivos = [f"frente {frente['nome']} (craft {int(frente['craft'] * 100)})"]
+        if frente["entidades"]:
+            motivos.append("CNAE compatível: " + ", ".join(frente["entidades"]))
+        else:
+            motivos.append("nenhuma empresa do hub tem CNAE desta frente: confira a habilitação")
+        if branda:
+            motivos.append(f"atenção: o objeto também envolve {branda}")
         if srp:
             motivos.append("registro de preços: demanda recorrente por 12 meses")
         if rec == 1.0 and not srp:
             motivos.append(f"{modalidade.lower()}: entrada sem disputa de preço")
         if dias is not None:
             motivos.append("prazo vencido" if dias < 0 else f"{dias} dia(s) para enviar proposta")
-        if motivo_pen:
-            motivos.append(motivo_pen)
+        motivos += [m for m in (alerta_valor, alerta_log) if m]
         return {
-            "score": max(0, min(100, nota)), "craft": round(frente["craft"] * fator, 2), "frente": frente["nome"],
-            "outrasFrentes": outras, "entidades": frente["entidades"],
-            "aderencia": "direta" if frente["craft"] >= 0.6 and fator == 1.0 else "condicionada",
+            "score": max(0, min(100, nota)), "craft": frente["craft"], "frente": frente["nome"],
+            "outrasFrentes": outras, "entidades": frente["entidades"], "fora": "",
+            "aderencia": "direta" if frente["entidades"] and frente["craft"] >= 0.6 and not branda else "condicionada",
             "motivo": "; ".join(motivos),
         }
 
@@ -250,19 +307,16 @@ def main():
             d = json.load(open(os.path.join(a.repontuar, nome), encoding="utf-8"))
             if not str(d.get("fonte", "")).startswith("Cérebro"):
                 continue  # registros da equipe ou do Atlas ficam como estão
-            n = cb.pontuar(d.get("objeto", ""), "", d.get("valor"), d.get("prazo"), d.get("modalidade", ""), d.get("srp", False), hoje)
-            if not n:
-                # sem frente no perfil novo: zera só o que o perfil exclui de propósito (penalidade zero, ou
-                # sinalização que entrava só pela palavra "placas"); o resto fica como está, porque pode ter
-                # entrado pelo texto complementar do PNCP, que o radar não guarda
-                t = norm(d.get("objeto", ""))
-                fora = any(pen["fator"] == 0 and any(casa(x, t) for x in pen["_t"]) for pen in cb.pen)
-                placa = (d.get("frenteCerebro") or d.get("frente")) == "Comunicação visual e sinalização" and "placa" in t
-                if not (fora or placa):
-                    continue
-                n = {"score": 0, "craft": 0, "frente": d.get("frenteCerebro") or d.get("frente", ""),
-                     "motivo": f"sem frente no perfil {perfil.get('versao', '')}: fora do escopo"}
+            n = cb.pontuar(d.get("objeto", ""), d.get("valor"), d.get("prazo"), d.get("modalidade", ""), d.get("srp", False), hoje, d.get("uf", ""))
+            if not n or n["score"] == 0:
+                if d.get("carteira") or d.get("etapa") or d.get("decisao"):
+                    continue  # a equipe já mexeu nesta licitação: não some do radar por mudança de critério
+                if not n:
+                    n = {"score": 0, "craft": 0, "frente": d.get("frenteCerebro") or d.get("frente", ""),
+                         "motivo": "fora do radar: o objeto não cita trabalho do hub"}
             novo = {"score": n["score"], "craft": n["craft"], "motivo": n["motivo"], "frenteCerebro": n["frente"]}
+            if n["score"] > 0:
+                novo.update(aderencia=n["aderencia"], entidades=n["entidades"])
             if all(d.get(k) == v for k, v in novo.items()):
                 continue
             docs[nome[:-5]] = novo
@@ -289,10 +343,13 @@ def main():
 
     vistos, docs, descartes = set(), {}, {"sem frente": 0, "abaixo da nota": 0, "já no radar": 0, "prazo vencido": 0}
     for it in brutos:
-        nota = cb.pontuar(it.get("objetoCompra", ""), it.get("informacaoComplementar", "") or "", it.get("valorTotalEstimado"),
-                          it.get("dataEncerramentoProposta"), it.get("modalidadeNome", ""), bool(it.get("srp")), hoje)
+        nota = cb.pontuar(it.get("objetoCompra", ""), it.get("valorTotalEstimado"), it.get("dataEncerramentoProposta"),
+                          it.get("modalidadeNome", ""), bool(it.get("srp")), hoje, (it.get("unidadeOrgao") or {}).get("ufSigla", ""))
         if not nota:
             descartes["sem frente"] += 1
+            continue
+        if nota["fora"]:
+            descartes["excluídas"] = descartes.get("excluídas", 0) + 1
             continue
         k, d = para_doc(it, nota, hoje)
         if k in vistos:

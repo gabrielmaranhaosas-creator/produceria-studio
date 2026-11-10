@@ -44,6 +44,26 @@ sozinhos casavam com "stand by", "stand alone" e "estande de tiro". Foto, transm
 cenografia **de** eventos continuam, pelas próprias frentes. `scripts/montar.mjs` tira as duas frentes de
 eventos da lista de Licitações do legado.
 
+Desde o `2026-11-10c` o critério é este (pesquisa no radar de 10/11/2026: só ~1 em 8 visíveis era trabalho
+do hub):
+
+1. **Porta pelo objeto.** O objeto precisa citar o serviço (padrões `porta` de cada frente). O texto
+   complementar do PNCP não abre mais a porta.
+2. **Frentes só onde há CNAE.** Saíram mídia exterior, comunicação visual/placas e produção gráfica:
+   nenhuma empresa do hub tem CNAE de impressão, sinalização ou agenciamento de mídia, e publicidade de
+   agência exige certificação (Lei 12.232). A aderência vem do CNAE das empresas em `entidades`; direção de
+   arte e cenografia não tem CNAE no hub e fica "condicionada".
+3. **Exclusões rígidas** (curso, software, compra, obra, agência, eventos, fora do ramo) valem sempre, mas
+   só nos primeiros `assunto_chars` caracteres, para não derrubar um bom objeto por palavra incidental.
+4. **Exclusões brandas** (shows, decoração, locação de estrutura, veiculação, assessoria de imprensa,
+   gráfica) cedem só quando um serviço forte (audiovisual, fotografia, transmissão) aparece antes delas no
+   objeto; nesse caso a nota leva redutor de 0,85 e um aviso.
+5. **Nota:** valor ideal entre R$ 20 mil e R$ 1,5 mi (acima, alerta de porte), e redutor para serviço
+   presencial pequeno longe de São Paulo. Os testes ficam em `jobs/cerebro/test_cerebro.py`.
+
+No `--repontuar`, o que não passa vai a nota 0, exceto licitações em que a equipe já mexeu (carteira, etapa
+ou decisão).
+
 ## Publicação
 
 `npm run build` gera `dist/index.html`. Publicar = Artifact `publish` com esse arquivo na URL do Studio,

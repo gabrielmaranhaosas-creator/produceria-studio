@@ -1,6 +1,6 @@
 {
-  "versao": "2026-11-10b",
-  "manifesto": "A PRODUCERIA disputa onde o craft decide: filme, fotografia, direção de arte, cenografia, som, conteúdo e campanhas. Impressão e placa entram só quando abrem porta ou geram atestado. O cérebro prioriza o estúdio, não o volume.",
+  "versao": "2026-11-10c",
+  "manifesto": "A PRODUCERIA disputa onde o craft decide: filme, fotografia, transmissão, som, conteúdo e direção de arte. Entra no radar só o que o próprio objeto da licitação pede e o CNAE de uma empresa do hub cobre. Impressão, placas, mídia exterior, agência de publicidade, shows, decoração e eventos ficam fora.",
   "modalidades": {
     "6": "Pregão - Eletrônico",
     "8": "Dispensa de Licitação",
@@ -19,350 +19,379 @@
     "prazo": 10,
     "recorrencia": 10
   },
+  "porte": {
+    "pequena": 5000,
+    "ideal_min": 20000,
+    "ideal_max": 1500000,
+    "teto": 10000000
+  },
+  "sede": "SP",
+  "vizinhas": [
+    "RJ",
+    "MG",
+    "PR"
+  ],
+  "assunto_chars": 240,
+  "entidades": {
+    "cria": {
+      "nome": "Produceria Cria Ltda",
+      "porte": "ME",
+      "cnaes": [
+        "59.11-1-02",
+        "18.21-1-00",
+        "18.22-9-99"
+      ]
+    },
+    "producoes": {
+      "nome": "Produceria Produções Ltda",
+      "porte": "ME",
+      "cnaes": [
+        "59.11-1-02",
+        "59.11-1-01",
+        "59.20-1-00",
+        "74.20-0-04",
+        "18.21-1-00",
+        "58.12-3-02",
+        "82.11-3-00",
+        "82.19-9-99"
+      ]
+    },
+    "digitais": {
+      "nome": "Produceria Produções Digitais Ltda",
+      "porte": "ME",
+      "cnaes": [
+        "63.19-4-00",
+        "59.11-1-02",
+        "74.20-0-01",
+        "58.22-1-02"
+      ]
+    }
+  },
   "frentes": [
     {
       "nome": "Produção audiovisual e filmes",
       "craft": 1.0,
-      "entidades": [
-        "cria",
-        "producoes",
-        "digitais"
+      "forte": true,
+      "presencial": true,
+      "cnaes": [
+        "59.11-1-02",
+        "59.11-1-01"
       ],
-      "termos": [
-        "produção audiovisual",
-        "producao audiovisual",
-        "serviços audiovisuais",
-        "servicos audiovisuais",
-        "vídeo institucional",
-        "video institucional",
-        "vídeos institucionais",
-        "filme institucional",
-        "filme publicitário",
-        "produção de vídeo",
-        "producao de video",
-        "produção de vídeos",
-        "filmagem",
-        "videografia",
-        "edição de vídeo",
-        "pós-produção",
-        "pos-producao",
-        "documentário",
-        "documentario",
-        "animação",
-        "motion graphics",
-        "websérie",
-        "minidocumentário",
-        "teaser",
-        "videoclipe"
-      ]
-    },
-    {
-      "nome": "Transmissão e streaming",
-      "craft": 0.8,
-      "entidades": [
-        "producoes",
-        "digitais",
-        "cria"
-      ],
-      "termos": [
-        "transmissão ao vivo",
-        "transmissao ao vivo",
-        "streaming",
-        "transmissão online",
-        "webinar",
-        "live stream"
+      "porta": [
+        "producao (de )?(audio ?visual|audiovisuais)",
+        "servicos? audiovisua",
+        "(video|filme)s? (institucion|publicit|documenta|educativ|promociona)",
+        "producao de (videos?|filmes?)",
+        "documentari",
+        "captacao (e edicao )?de (imagens|video|audio e video)",
+        "filmage",
+        "cinegraf",
+        "pos-?producao (de video|audiovisual)",
+        "edicao (de )?(video|audiovisual)",
+        "motion ?graphic",
+        "animac(ao|oes) (2d|3d|grafica|digital)",
+        "videoclipe",
+        "webserie",
+        "gravacao(,| e) edicao",
+        "gravacao de (video|sess|program|spot|podcast)",
+        "estudio de gravacao"
       ]
     },
     {
       "nome": "Fotografia e cobertura de imagem",
       "craft": 0.85,
-      "entidades": [
-        "digitais",
-        "producoes"
+      "forte": true,
+      "presencial": true,
+      "cnaes": [
+        "74.20-0-01",
+        "74.20-0-04"
       ],
-      "termos": [
-        "cobertura fotográfica",
-        "cobertura fotografica",
-        "registro fotográfico",
-        "registro fotografico",
-        "serviços fotográficos",
-        "servicos fotograficos",
-        "ensaio fotográfico",
-        "fotografia institucional",
-        "banco de imagens",
-        "cobertura audiovisual",
-        "drone"
+      "porta": [
+        "cobertura (foto|audiovisual|jornalistica)",
+        "registros? (foto|audiovisua|de imagens)",
+        "servicos? (de )?fotogra",
+        "fotografia (institucional|publicitaria|profissional|aerea)",
+        "ensaio fotograf",
+        "fotografia e filmagem",
+        "fotos? e (videos?|filmage)"
       ]
     },
     {
-      "nome": "Direção de arte e cenografia",
-      "craft": 0.9,
-      "entidades": [
-        "eventos"
-      ],
-      "termos": [
-        "cenografia",
-        "cenográfic",
-        "cenografic",
-        "direção de arte",
-        "ambientação",
-        "ambientacao",
-        "expografia",
-        "museografia",
-        "instalação artística",
-        "montagem de exposição"
-      ]
-    },
-    {
-      "nome": "Som, trilha e mixagem",
+      "nome": "Transmissão ao vivo",
       "craft": 0.8,
-      "entidades": [
-        "producoes"
+      "forte": true,
+      "presencial": true,
+      "cnaes": [
+        "59.11-1-02",
+        "63.19-4-00"
       ],
-      "termos": [
-        "mixagem",
-        "trilha sonora",
-        "locução",
-        "locucao",
-        "produção de áudio",
-        "producao de audio",
-        "spot de rádio",
-        "jingle",
-        "podcast",
-        "sonorização de vídeo"
+      "porta": [
+        "transmiss(ao|oes) (ao vivo|online|on-line|em tempo real|via internet|das sessoes|de sessoes|esportiva)",
+        "live ?stream",
+        "streaming de (video|sess|event)",
+        "transmiss(ao|oes) audiovisua",
+        "operacao audiovisual"
       ]
     },
     {
       "nome": "Campanhas e conteúdo",
       "craft": 0.85,
-      "entidades": [
-        "cria",
-        "digitais"
+      "forte": false,
+      "presencial": false,
+      "cnaes": [
+        "59.11-1-02",
+        "63.19-4-00"
       ],
-      "termos": [
-        "campanha publicitária",
-        "campanha publicitaria",
-        "campanha educativa",
-        "campanha institucional",
-        "produção de conteúdo",
+      "porta": [
         "producao de conteudo",
-        "conteúdo digital",
-        "conteudo digital",
+        "conteudos? (audiovisua|digita|multimidia|para (as )?(midias|redes))",
+        "gestao de (redes sociais|presenca digital)",
         "redes sociais",
-        "comunicação institucional",
-        "peças publicitárias",
+        "campanha(s)? (publicitaria|institucional|educativa|de comunicacao)",
+        "comunicacao (institucional|digital)",
+        "marketing digital"
+      ]
+    },
+    {
+      "nome": "Som, trilha e locução",
+      "craft": 0.8,
+      "forte": false,
+      "presencial": false,
+      "cnaes": [
+        "59.20-1-00"
+      ],
+      "porta": [
+        "spots?\\b",
+        "jingle",
+        "trilha sonora",
+        "podcast",
+        "producao de audio",
+        "locucao (de|para) (spot|video|vinheta|campanha)",
+        "vinheta"
+      ]
+    },
+    {
+      "nome": "Direção de arte e cenografia",
+      "craft": 0.9,
+      "forte": false,
+      "presencial": true,
+      "cnaes": [],
+      "porta": [
+        "cenografi",
+        "expografi",
+        "museografi",
+        "direcao (de arte|criativa)",
+        "concepcao artistica",
         "identidade visual",
-        "criação de marca",
-        "design gráfico"
-      ]
-    },
-    {
-      "nome": "Mídia exterior OOH/DOOH",
-      "craft": 0.6,
-      "entidades": [
-        "digitais"
-      ],
-      "termos": [
-        "mídia exterior",
-        "midia exterior",
-        "outdoor",
-        "painel de led",
-        "painéis de led",
-        "mídia digital",
-        "dooh",
-        "front light",
-        "backlight",
-        "relógio digital"
-      ]
-    },
-    {
-      "nome": "Comunicação visual e sinalização",
-      "craft": 0.35,
-      "entidades": [
-        "cria",
-        "producoes"
-      ],
-      "termos": [
-        "comunicação visual",
-        "comunicacao visual",
-        "sinalização",
-        "sinalizacao",
-        "adesivos",
-        "fachada",
-        "totem",
-        "backdrop",
-        "letreiro",
-        "placas de sinalização",
-        "placas de sinalizacao",
-        "placas de identificação",
-        "placas de identificacao",
-        "placas de inauguração",
-        "placas de inauguracao",
-        "placas inaugurais",
-        "placa inaugural",
-        "placas de obra",
-        "placa de obra",
-        "placas indicativas",
-        "placas em acm",
-        "placas em acrílico",
-        "placas em acrilico",
-        "confecção de placas",
-        "confeccao de placas",
-        "placas de homenagem",
-        "placas comemorativas",
-        "placas de acrílico",
-        "placas de acrilico",
-        "placas em aço",
-        "placas em aco",
-        "placas de denominação",
-        "placas de denominacao",
-        "placas personalizadas",
-        "placas de aço",
-        "placas de aco",
-        "placas em alumínio composto",
-        "placas em aluminio composto",
-        "placas autorais",
-        "painel institucional"
-      ]
-    },
-    {
-      "nome": "Arte-finalização e produção gráfica",
-      "craft": 0.25,
-      "entidades": [
-        "cria",
-        "producoes",
-        "digitais"
-      ],
-      "termos": [
-        "serviços gráficos",
-        "servicos graficos",
-        "material gráfico",
-        "material grafico",
-        "impressão",
-        "impressao",
-        "banner",
-        "folder",
-        "cartilha",
-        "arte-final",
-        "arte final",
-        "calendários"
+        "design grafico",
+        "criacao de (marca|arte|pecas|layout)",
+        "projeto grafico"
       ]
     }
   ],
-  "penalidades": [
+  "exclusoes": [
     {
-      "termos": [
-        "aquisição de lente",
-        "aquisição de câmera",
-        "aquisição de equipamento",
-        "aquisicao de equipamento",
-        "compra de equipamento",
-        "fornecimento de equipamento",
-        "lente para câmera",
-        "material de consumo",
-        "lente",
-        "flash",
-        "bateria",
-        "tripé",
-        "cartão de memória",
-        "aquisição de câmeras",
-        "aquisição de materiais",
-        "aquisicao de materiais",
-        "aquisição de",
-        "aquisicao de",
+      "nome": "agência de publicidade (Lei 12.232)",
+      "tipo": "rigida",
+      "padroes": [
+        "agencia(s)? de (publicidade|propaganda)",
+        "intermediac",
+        "agenciamento",
+        "publicidade legal",
+        "compra de midia"
+      ]
+    },
+    {
+      "nome": "capacitação, curso ou palestra",
+      "tipo": "rigida",
+      "padroes": [
+        "\\binscric",
+        "\\bcurso\\b",
+        "capacitac",
+        "palestra",
+        "webinari",
+        "docencia",
+        "mentoria",
+        "workshop"
+      ]
+    },
+    {
+      "nome": "software, licença ou assinatura",
+      "tipo": "rigida",
+      "padroes": [
+        "\\blicencas?\\b",
+        "software",
+        "\\bsaas\\b",
+        "subscric",
+        "assinatura",
+        "hardware",
+        "solucao em nuvem",
+        "sistemas? (aplicativos?|de informatica|informatizad|de gestao)",
+        "suporte (tecnico )?(dos|de|aos) sistemas",
+        "\\binformatica"
+      ]
+    },
+    {
+      "nome": "compra de equipamento ou material",
+      "tipo": "rigida",
+      "padroes": [
+        "aquisic",
         "compra de",
-        "locação de equipamentos",
-        "locacao de equipamentos",
-        "locação de estrutura",
-        "locacao de estrutura",
-        "sonorização e iluminação",
-        "sonorizacao e iluminacao",
-        "fornecimento de materiais",
-        "registro de preços para aquisição"
-      ],
-      "fator": 0.35,
-      "motivo": "compra ou locação de equipamento/material, não serviço de criação"
+        "fornecimento de (equipamento|camera|filmadora|materia)",
+        "filmadora",
+        "material de consumo"
+      ]
     },
     {
-      "termos": [
-        "locação de veículo",
-        "limpeza",
-        "vigilância",
-        "obra de engenharia",
-        "pavimentação",
-        "merenda",
-        "apólice",
-        "apolice",
-        "seguro de veículo",
-        "seguro de veiculo",
-        "seguro para o veículo",
-        "seguro para o veiculo",
-        "seguro veicular",
-        "revisão de veículo",
-        "revisao de veiculo",
-        "manutenção de veículo",
-        "manutencao de veiculo",
-        "manutenção preventiva e corretiva de veículo",
-        "manutencao preventiva e corretiva de veiculo",
-        "manutenção da frota",
-        "manutencao da frota",
-        "peças automotivas",
-        "pecas automotivas",
-        "recape",
-        "asfáltic",
-        "asfaltic",
-        "cbuq",
-        "tapa-buraco",
-        "meio-fio",
-        "pré-moldad",
-        "pre-moldad",
-        "placa mãe",
-        "placa mae",
-        "placas de vídeo",
-        "placas de video",
-        "placa de vídeo",
-        "placa de video",
-        "placa de rede",
-        "materiais de construção",
-        "materiais de construcao",
-        "medicamento",
-        "gêneros alimentícios",
-        "generos alimenticios"
-      ],
-      "fator": 0.0,
-      "motivo": "fora do escopo do hub (frota, seguro, obra, informática, saúde, alimentação)"
+      "nome": "obra e engenharia",
+      "tipo": "rigida",
+      "padroes": [
+        "engenharia",
+        "(?<!mao de )\\bobras?\\b(?! de arte)",
+        "reforma",
+        "construc",
+        "pavimenta"
+      ]
     },
     {
-      "termos": [
-        "organização de eventos",
-        "organizacao de eventos",
-        "produção de eventos",
-        "producao de eventos",
-        "realização de eventos",
-        "realizacao de eventos",
-        "gestão de eventos",
-        "gestao de eventos",
+      "nome": "produção e organização de eventos (fora do escopo)",
+      "tipo": "rigida",
+      "padroes": [
+        "(organizacao|producao|realizacao|gestao) (e (producao|realizacao) )?de eventos",
+        "organizacao, producao e realizacao",
         "montagem de evento",
-        "montagem de estande",
-        "desmontagem de estande",
-        "locação de estande",
-        "locacao de estande",
-        "cota de estande",
-        "estande institucional",
-        "estande de feira",
-        "estande em feira",
-        "estande no evento",
-        "montagem de stand",
-        "desmontagem de stand",
-        "locação de stand",
-        "locacao de stand",
-        "stand de feira",
-        "stands de feira",
-        "stand institucional",
+        "(montagem|desmontagem|locacao|cota) de (estande|stand)",
+        "(estande|stands?) (institucional|de feira|em feira|no evento)",
         "cerimonial"
-      ],
-      "fator": 0.0,
-      "motivo": "eventos fora do escopo: a PRODUCERIA não trabalha com produção e organização de eventos"
+      ]
+    },
+    {
+      "nome": "fora do ramo do hub",
+      "tipo": "rigida",
+      "padroes": [
+        "inventario",
+        "contab",
+        "refeic",
+        "lanches?\\b",
+        "alimentacao (escolar|hospitalar|de pacientes)",
+        "buffet",
+        "coffee",
+        "generos alimenticios",
+        "merenda",
+        "mobiliari",
+        "servico movel pessoal",
+        "\\bchips?\\b",
+        "radiodifusao",
+        "libras",
+        "tapete",
+        "kit corporativo",
+        "limpeza",
+        "vigilancia",
+        "medicamento",
+        "\\bseguros?\\b",
+        "apolice",
+        "\\bveiculos? (automotor|oficia|de passeio|utilitario)",
+        "locacao de veiculo",
+        "frota",
+        "placas? (mae|de video|de rede)",
+        "fornecimento de alimentacao",
+        "alimentacao e bebida",
+        "cooperacao tecnica",
+        "acordo de cooperacao",
+        "disponibilizacao de profissionais",
+        "postos de trabalho",
+        "dedicacao exclusiva de mao de obra"
+      ]
+    },
+    {
+      "nome": "shows, festas e torneios",
+      "tipo": "branda",
+      "padroes": [
+        "\\bshows?\\b",
+        "\\bbandas?\\b",
+        "artistas?",
+        "apresentac(ao|oes) (artistica|musica)",
+        "animacao (musical|de bailes|do publico|de festa)",
+        "recreac",
+        "\\bdj\\b",
+        "formatura",
+        "futsal",
+        "\\bcopa\\b",
+        "torneio"
+      ]
+    },
+    {
+      "nome": "decoração e ornamentação",
+      "tipo": "branda",
+      "padroes": [
+        "ornament",
+        "decorac",
+        "natal",
+        "papai noel",
+        "iluminacao decorativa"
+      ]
+    },
+    {
+      "nome": "locação de som, luz, LED, palco ou estrutura",
+      "tipo": "branda",
+      "padroes": [
+        "sonorizac",
+        "paine(l|is) de led",
+        "\\bpalco",
+        "iluminacao (cenica|de palco)",
+        "tendas?\\b",
+        "locacao de (equipamento|estrutura|som)",
+        "estruturas? (metalica|de palco|modula|para evento)",
+        "\\bestandes?\\b",
+        "\\bstands?\\b(?! ?-?by| ?-?alone)",
+        "estruturas? (temporaria|cenografica)",
+        "montagem de estrutura",
+        "locacao de elementos",
+        "locacao(,| e) (transporte|montagem)",
+        "montagem de cenario"
+      ]
+    },
+    {
+      "nome": "veiculação, live marketing e mídia exterior",
+      "tipo": "branda",
+      "padroes": [
+        "veiculac",
+        "live marketing",
+        "marketing promocional",
+        "\\bclipping",
+        "fixacao (mensal )?de banner",
+        "midia exterior",
+        "outdoor",
+        "agencia(s)? de marketing"
+      ]
+    },
+    {
+      "nome": "assessoria de imprensa",
+      "tipo": "branda",
+      "padroes": [
+        "assessoria de imprensa",
+        "relacoes publicas"
+      ]
+    },
+    {
+      "nome": "gráfica, placas e sinalização",
+      "tipo": "branda",
+      "padroes": [
+        "impress(ao|oes)",
+        "servicos graficos",
+        "material grafico",
+        "\\bplacas?\\b",
+        "sinalizac",
+        "brindes",
+        "medalha",
+        "trofeu",
+        "vestuario",
+        "uniforme",
+        "adesiv",
+        "confecc",
+        "confeccionad",
+        "\\bmdf\\b"
+      ]
     }
   ]
 }
