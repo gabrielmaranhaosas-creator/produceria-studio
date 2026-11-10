@@ -1,0 +1,354 @@
+{
+  "versao": "2026-11-09a",
+  "manifesto": "A PRODUCERIA disputa onde o craft decide: filme, fotografia, direção de arte, cenografia, som, conteúdo e campanhas. Impressão e placa entram só quando abrem porta ou geram atestado. O cérebro prioriza o estúdio, não o volume.",
+  "modalidades": {
+    "6": "Pregão - Eletrônico",
+    "8": "Dispensa de Licitação",
+    "12": "Credenciamento",
+    "4": "Concorrência - Eletrônica",
+    "9": "Inexigibilidade",
+    "3": "Concurso",
+    "10": "Manifestação de Interesse",
+    "5": "Concorrência - Presencial",
+    "7": "Pregão - Presencial"
+  },
+  "pesos": {
+    "craft": 45,
+    "aderencia": 20,
+    "valor": 15,
+    "prazo": 10,
+    "recorrencia": 10
+  },
+  "frentes": [
+    {
+      "nome": "Produção audiovisual e filmes",
+      "craft": 1.0,
+      "entidades": [
+        "cria",
+        "producoes",
+        "digitais"
+      ],
+      "termos": [
+        "produção audiovisual",
+        "producao audiovisual",
+        "serviços audiovisuais",
+        "servicos audiovisuais",
+        "vídeo institucional",
+        "video institucional",
+        "vídeos institucionais",
+        "filme institucional",
+        "filme publicitário",
+        "produção de vídeo",
+        "producao de video",
+        "produção de vídeos",
+        "filmagem",
+        "videografia",
+        "edição de vídeo",
+        "pós-produção",
+        "pos-producao",
+        "documentário",
+        "documentario",
+        "animação",
+        "motion graphics",
+        "websérie",
+        "minidocumentário",
+        "teaser",
+        "videoclipe"
+      ]
+    },
+    {
+      "nome": "Transmissão e streaming",
+      "craft": 0.8,
+      "entidades": [
+        "producoes",
+        "digitais",
+        "cria"
+      ],
+      "termos": [
+        "transmissão ao vivo",
+        "transmissao ao vivo",
+        "streaming",
+        "transmissão online",
+        "webinar",
+        "live stream"
+      ]
+    },
+    {
+      "nome": "Fotografia e cobertura de imagem",
+      "craft": 0.85,
+      "entidades": [
+        "digitais",
+        "producoes"
+      ],
+      "termos": [
+        "cobertura fotográfica",
+        "cobertura fotografica",
+        "registro fotográfico",
+        "registro fotografico",
+        "serviços fotográficos",
+        "servicos fotograficos",
+        "ensaio fotográfico",
+        "fotografia institucional",
+        "banco de imagens",
+        "cobertura audiovisual",
+        "drone"
+      ]
+    },
+    {
+      "nome": "Direção de arte e cenografia",
+      "craft": 0.9,
+      "entidades": [
+        "eventos"
+      ],
+      "termos": [
+        "cenografia",
+        "cenográfic",
+        "cenografic",
+        "direção de arte",
+        "ambientação",
+        "ambientacao",
+        "expografia",
+        "museografia",
+        "instalação artística",
+        "montagem de exposição"
+      ]
+    },
+    {
+      "nome": "Som, trilha e mixagem",
+      "craft": 0.8,
+      "entidades": [
+        "producoes"
+      ],
+      "termos": [
+        "mixagem",
+        "trilha sonora",
+        "locução",
+        "locucao",
+        "produção de áudio",
+        "producao de audio",
+        "spot de rádio",
+        "jingle",
+        "podcast",
+        "sonorização de vídeo"
+      ]
+    },
+    {
+      "nome": "Campanhas e conteúdo",
+      "craft": 0.85,
+      "entidades": [
+        "cria",
+        "digitais"
+      ],
+      "termos": [
+        "campanha publicitária",
+        "campanha publicitaria",
+        "campanha educativa",
+        "campanha institucional",
+        "produção de conteúdo",
+        "producao de conteudo",
+        "conteúdo digital",
+        "conteudo digital",
+        "redes sociais",
+        "comunicação institucional",
+        "peças publicitárias",
+        "identidade visual",
+        "criação de marca",
+        "design gráfico"
+      ]
+    },
+    {
+      "nome": "Mídia exterior OOH/DOOH",
+      "craft": 0.6,
+      "entidades": [
+        "digitais"
+      ],
+      "termos": [
+        "mídia exterior",
+        "midia exterior",
+        "outdoor",
+        "painel de led",
+        "painéis de led",
+        "mídia digital",
+        "dooh",
+        "front light",
+        "backlight",
+        "relógio digital"
+      ]
+    },
+    {
+      "nome": "Produção e organização de eventos",
+      "craft": 0.6,
+      "entidades": [
+        "eventos",
+        "producoes"
+      ],
+      "termos": [
+        "organização de eventos",
+        "organizacao de eventos",
+        "produção de eventos",
+        "producao de eventos",
+        "estande",
+        "stand",
+        "montagem de evento",
+        "cerimonial"
+      ]
+    },
+    {
+      "nome": "Comunicação visual e sinalização",
+      "craft": 0.35,
+      "entidades": [
+        "cria",
+        "producoes"
+      ],
+      "termos": [
+        "comunicação visual",
+        "comunicacao visual",
+        "sinalização",
+        "sinalizacao",
+        "adesivos",
+        "fachada",
+        "totem",
+        "backdrop",
+        "letreiro",
+        "placas de sinalização",
+        "placas de sinalizacao",
+        "placas de identificação",
+        "placas de identificacao",
+        "placas de inauguração",
+        "placas de inauguracao",
+        "placas inaugurais",
+        "placa inaugural",
+        "placas de obra",
+        "placa de obra",
+        "placas indicativas",
+        "placas em acm",
+        "placas em acrílico",
+        "placas em acrilico",
+        "confecção de placas",
+        "confeccao de placas",
+        "placas de homenagem",
+        "placas comemorativas",
+        "placas de acrílico",
+        "placas de acrilico",
+        "placas em aço",
+        "placas em aco",
+        "placas de denominação",
+        "placas de denominacao",
+        "placas personalizadas",
+        "placas de aço",
+        "placas de aco",
+        "placas em alumínio composto",
+        "placas em aluminio composto",
+        "placas autorais",
+        "painel institucional"
+      ]
+    },
+    {
+      "nome": "Arte-finalização e produção gráfica",
+      "craft": 0.25,
+      "entidades": [
+        "cria",
+        "producoes",
+        "digitais"
+      ],
+      "termos": [
+        "serviços gráficos",
+        "servicos graficos",
+        "material gráfico",
+        "material grafico",
+        "impressão",
+        "impressao",
+        "banner",
+        "folder",
+        "cartilha",
+        "arte-final",
+        "arte final",
+        "calendários"
+      ]
+    }
+  ],
+  "penalidades": [
+    {
+      "termos": [
+        "aquisição de lente",
+        "aquisição de câmera",
+        "aquisição de equipamento",
+        "aquisicao de equipamento",
+        "compra de equipamento",
+        "fornecimento de equipamento",
+        "lente para câmera",
+        "material de consumo",
+        "lente",
+        "flash",
+        "bateria",
+        "tripé",
+        "cartão de memória",
+        "aquisição de câmeras",
+        "aquisição de materiais",
+        "aquisicao de materiais",
+        "aquisição de",
+        "aquisicao de",
+        "compra de",
+        "locação de equipamentos",
+        "locacao de equipamentos",
+        "locação de estrutura",
+        "locacao de estrutura",
+        "sonorização e iluminação",
+        "sonorizacao e iluminacao",
+        "fornecimento de materiais",
+        "registro de preços para aquisição"
+      ],
+      "fator": 0.35,
+      "motivo": "compra ou locação de equipamento/material, não serviço de criação"
+    },
+    {
+      "termos": [
+        "locação de veículo",
+        "limpeza",
+        "vigilância",
+        "obra de engenharia",
+        "pavimentação",
+        "merenda",
+        "apólice",
+        "apolice",
+        "seguro de veículo",
+        "seguro de veiculo",
+        "seguro para o veículo",
+        "seguro para o veiculo",
+        "seguro veicular",
+        "revisão de veículo",
+        "revisao de veiculo",
+        "manutenção de veículo",
+        "manutencao de veiculo",
+        "manutenção preventiva e corretiva de veículo",
+        "manutencao preventiva e corretiva de veiculo",
+        "manutenção da frota",
+        "manutencao da frota",
+        "peças automotivas",
+        "pecas automotivas",
+        "recape",
+        "asfáltic",
+        "asfaltic",
+        "cbuq",
+        "tapa-buraco",
+        "meio-fio",
+        "pré-moldad",
+        "pre-moldad",
+        "placa mãe",
+        "placa mae",
+        "placas de vídeo",
+        "placas de video",
+        "placa de vídeo",
+        "placa de video",
+        "placa de rede",
+        "materiais de construção",
+        "materiais de construcao",
+        "medicamento",
+        "gêneros alimentícios",
+        "generos alimenticios"
+      ],
+      "fator": 0.0,
+      "motivo": "fora do escopo do hub (frota, seguro, obra, informática, saúde, alimentação)"
+    }
+  ]
+}
