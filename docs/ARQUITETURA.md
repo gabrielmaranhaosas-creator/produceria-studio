@@ -38,7 +38,9 @@ tudo de uma vez tiraria o Studio do ar e arriscaria o banco. Então:
 O perfil do cérebro (`jobs/cerebro/perfil.json`) define as frentes que entram no radar `b2g`. Produção e
 organização de eventos está **fora do escopo** desde o perfil `2026-11-10a`: a frente saiu e os termos de
 eventos (organização, produção, estandes, cerimonial) viraram penalidade zero, o que também zera as
-licitações de eventos já gravadas quando o cérebro roda com `--repontuar`. Foto, transmissão e
+licitações de eventos já gravadas quando o cérebro roda com `--repontuar`. Desde o `2026-11-10b`, estande e
+stand só contam em expressões de feira ("montagem de estande", "cota de estande", "stand de feira"…):
+sozinhos casavam com "stand by", "stand alone" e "estande de tiro". Foto, transmissão e
 cenografia **de** eventos continuam, pelas próprias frentes. `scripts/montar.mjs` tira as duas frentes de
 eventos da lista de Licitações do legado.
 
