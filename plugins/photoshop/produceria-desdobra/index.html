@@ -33,22 +33,16 @@
     <option value="MIDDLERIGHT">Direita</option>
   </select>
 
-  <label for="formatos">Formatos, um por linha. Ex.: stories;1080;1920 · 1920x1080 · capa: 29,7x32 cm</label>
+  <label for="formatos">Formatos (um por linha: nome;largura;altura)</label>
   <textarea id="formatos"></textarea>
-  <button id="btnPadrao">Voltar à lista padrão de formatos</button>
-  <div class="nota">cm e mm viram pixels pelo ppi do documento aberto.</div>
 
   <div class="linha"><input type="checkbox" id="salvar"> <label style="display:inline" for="salvar">Salvar um PSD de cada formato</label></div>
-  <label for="destinoPsd">Onde salvar</label>
-  <select id="destinoPsd">
-    <option value="aoLado">Ao lado do arquivo aberto (pasta "desdobra")</option>
-    <option value="escolher">Escolher uma pasta</option>
-  </select>
-  <button id="btnPasta" style="display:none">Escolher pasta para os PSD</button>
+  <button id="btnPasta">Escolher pasta para os PSD</button>
   <div id="pasta" class="nota"></div>
 
   <button id="btnDesdobrar">Desdobrar</button>
   <div id="resumo"></div>
   <div id="resultado"></div>
+  <script src="index.js"></script>
 </body>
 </html>

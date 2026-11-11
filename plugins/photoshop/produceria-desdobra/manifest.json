@@ -2,10 +2,10 @@
   "manifestVersion": 5,
   "id": "br.com.produceria.desdobra",
   "name": "Produceria Desdobra KV",
-  "version": "1.1.0",
+  "version": "1.0.1",
   "main": "index.html",
   "host": { "app": "PS", "minVersion": "23.3.0" },
-  "requiredPermissions": { "localFileSystem": "fullAccess" },
+  "requiredPermissions": { "localFileSystem": "request" },
   "entrypoints": [
     {
       "type": "panel",

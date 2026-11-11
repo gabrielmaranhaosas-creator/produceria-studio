@@ -11,8 +11,7 @@ window.addEventListener("error", (e) => { const r = document.getElementById("res
 window.addEventListener("unhandledrejection", (e) => { const r = document.getElementById("resumo"); if (r) r.textContent = "Erro no painel: " + msg(e.reason); });
 
 if (!$("formatos").value.trim()) $("formatos").value = PADRAO_FORMATOS;
-$("btnPadrao").addEventListener("click", () => { $("formatos").value = PADRAO_FORMATOS; });
-$("destinoPsd").addEventListener("change", () => { $("btnPasta").style.display = $("destinoPsd").value === "escolher" ? "" : "none"; });
+
 
 function linha(texto) {
   const d = document.createElement("div");
@@ -22,23 +21,13 @@ function linha(texto) {
 }
 
 $("btnPasta").addEventListener("click", async () => {
-  $("pasta").textContent = "Abrindo a janela de escolher pasta... (se não aparecer, procure atrás da janela do Photoshop ou use a opção \"Ao lado do arquivo aberto\").";
+  $("pasta").textContent = "Abrindo a janela de escolher pasta... (se não aparecer, procure atrás da janela do Photoshop).";
   try {
     const p = await localFileSystem.getFolder();
     if (p) { pastaPSD = p; $("pasta").textContent = "Pasta: " + p.nativePath; }
     else $("pasta").textContent = "Nenhuma pasta escolhida.";
-  } catch (e) { $("pasta").textContent = "Não foi possível abrir a janela de pastas: " + msg(e) + ". Use a opção \"Ao lado do arquivo aberto\"."; }
+  } catch (e) { $("pasta").textContent = "Não foi possível abrir a janela de pastas: " + msg(e) + "."; }
 });
-
-// Pasta "desdobra" ao lado do arquivo aberto, sem janela (precisa do documento salvo em disco).
-async function pastaAoLado(doc) {
-  let caminho = "";
-  try { caminho = String(doc.path || ""); } catch (e) { caminho = ""; }
-  if (!caminho) throw new Error("o documento ainda não foi salvo em disco. Salve o PSD uma vez (Cmd + S) ou escolha uma pasta");
-  const dir = caminho.replace(/[\\/][^\\/]*$/, "");
-  const base = await localFileSystem.getEntryWithUrl("file:" + dir);
-  try { return await base.getEntry("desdobra"); } catch (e) { return await base.createFolder("desdobra"); }
-}
 
 $("btnDesdobrar").addEventListener("click", async () => {
   $("resultado").innerHTML = "";
@@ -49,12 +38,7 @@ $("btnDesdobrar").addEventListener("click", async () => {
   const { formatos, erros } = lerFormatos($("formatos").value, Number(doc.resolution) || 72);
   if (erros.length) { $("resumo").textContent = "Corrija a lista de formatos."; erros.forEach((e) => linha("[ERRO] " + e)); return; }
   if (formatos.length === 0) { $("resumo").textContent = "Nenhum formato informado."; return; }
-  const aoLado = $("destinoPsd").value === "aoLado";
-  if ($("salvar").checked && !aoLado && !pastaPSD) { $("resumo").textContent = "Escolha a pasta para os PSD, use \"Ao lado do arquivo aberto\" ou desmarque a opção de salvar."; return; }
-  if ($("salvar").checked && aoLado) {
-    try { pastaPSD = await pastaAoLado(doc); $("pasta").textContent = "Pasta: " + pastaPSD.nativePath; }
-    catch (e) { $("resumo").textContent = "Não deu para usar a pasta ao lado: " + msg(e) + "."; return; }
-  }
+  if ($("salvar").checked && !pastaPSD) { $("resumo").textContent = "Escolha a pasta para os PSD ou desmarque a opção de salvar."; return; }
 
   const modo = $("modo").value;
   const ancora = constants.AnchorPosition[$("ancora").value] || constants.AnchorPosition.MIDDLECENTER;

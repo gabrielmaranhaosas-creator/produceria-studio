@@ -29,6 +29,8 @@ describe('manifestos e arquivos dos plugins do Photoshop', () => {
     expect(existe(p, m.main)).toBe(true);
     const html = ler(p, m.main);
     expect(html).toContain('<meta charset="utf-8">');
+    // sem esta linha o Photoshop mostra o painel mas nenhum botão funciona (erro da v1.0)
+    expect(html).toContain('<script src="index.js"></script>');
     for (const f of arquivosDe(p).filter((x) => x.endsWith('.js'))) {
       const src = ler(p, f);
       for (const [, r] of src.matchAll(/require\("\.\/([^"]+)"\)/g)) expect(existe(p, r)).toBe(true);

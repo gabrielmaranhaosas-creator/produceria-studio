@@ -140,9 +140,7 @@ export const ROTEIRO: Record<string, Passo[]> = {
   desdobra: [
     { fazer: 'Abra um KV de teste. Preencha cliente TESTE, campanha piloto, versão 1. Deixe a lista de formatos como veio, modo Cobrir, foco Centro. Clique em Desdobrar.', esperado: 'Um documento novo por formato, cada um com nome TESTE_piloto_<formato>_v01 e as medidas da lista (confira em Imagem > Tamanho da imagem).' },
     { fazer: 'Volte ao documento original.', esperado: 'Nome e tamanho originais, sem nenhuma mudança.' },
-    { fazer: 'Salve o KV (Cmd + S). Marque "Salvar um PSD de cada formato", deixe "Ao lado do arquivo aberto" e desdobre de novo.', esperado: 'Uma pasta "desdobra" aparece ao lado do KV, com um PSD por formato e os mesmos nomes.' },
-    { fazer: 'Troque para "Escolher uma pasta", clique em "Escolher pasta para os PSD".', esperado: 'O painel avisa que está abrindo a janela e a janela de pastas do Mac aparece. Se não aparecer, anote o que o painel mostrou.' },
-    { fazer: 'Na lista de formatos, escreva 1920x1080 numa linha e capa: 29,7x32 cm em outra. Desdobre.', esperado: 'Dois documentos: 1920x1080 px e o da capa convertido pelo ppi do KV (em 300 ppi, 3508 x 3780 px).' },
+    { fazer: 'Marque "Salvar um PSD de cada formato", clique em "Escolher pasta para os PSD", escolha a pasta "Teste plugins" e desdobre de novo.', esperado: 'A janela de pastas do Mac abre; depois os PSD aparecem na pasta com os mesmos nomes.' },
     { fazer: 'Troque o modo para Conter e desdobre.', esperado: 'A imagem inteira aparece em cada formato, com área vazia (transparente ou fundo) nas sobras.' },
     { fazer: 'Na lista de formatos, acrescente a linha "erro;abc;10" e clique em Desdobrar.', esperado: 'Mensagem pedindo para corrigir a lista e o erro da linha. Nenhum documento novo.' },
   ],
