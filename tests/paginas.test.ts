@@ -623,6 +623,17 @@ describe('Ferramentas da casa (Oficina)', () => {
     (desmontar as () => void)();
   });
 
+  it('Retoque abre com ajustes, ampliação e os quatro especialistas', async () => {
+    const { raiz, desmontar } = await montar('retoque', bancoFalso({}));
+    expect(raiz.querySelector('nav.oficina [aria-current="page"]')?.textContent).toBe('Retoque');
+    expect(raiz.querySelectorAll('[data-aj]').length).toBe(7);
+    expect([...raiz.querySelectorAll('[data-pes]')].map((b) => b.textContent)).toEqual(['Diretor de Arte', 'Arte-finalista Sênior', 'Prompts de Retoque e Geração', 'Upscale e Grande Formato']);
+    raiz.querySelector<HTMLButtonElement>('[data-pes="upscale"]')!.click();
+    expect(raiz.querySelector('#rtFoco')?.textContent).toContain('Magnific');
+    expect(raiz.querySelector<HTMLButtonElement>('#rtPerg')!.disabled).toBe(true);
+    (desmontar as () => void)();
+  });
+
   it('Conferência: checa o arquivo, gera nomes e só entrega no padrão', async () => {
     location.hash = '#entrega/checar';
     const { raiz, desmontar } = await montar('entrega', bancoFalso({}));
@@ -698,7 +709,7 @@ describe('Agentes', () => {
     const mod = await import('../src/paginas/agentes');
     const raiz = document.createElement('div'); document.body.appendChild(raiz);
     mod.montar(raiz); await espera();
-    expect(raiz.querySelectorAll('.ag-btn').length).toBe(24);
+    expect(raiz.querySelectorAll('.ag-btn').length).toBe(28);
     raiz.querySelector<HTMLButtonElement>('[data-sug]')!.click(); await espera(40);
     expect(raiz.querySelector('.ag-msgs')?.textContent).toContain('Resposta de teste');
     expect(Object.values(db.dados.conversas || {})[0]).toMatchObject({ agente: 'orcamentista' });
@@ -717,7 +728,7 @@ describe('Casca própria', () => {
   it('busca Ctrl K acha telas, serviços, alvos e licitações', async () => {
     const { buscarTudo } = await import('../src/casca/casca');
     const d = { alvos: [{ id: 'a', nome: 'Agência Outdoor Brasil', status: 'Mapeado' }], b2g: [{ id: 'b', objeto: 'Locação de outdoor', orgao: 'Prefeitura' }], frentes: [], swot: [] };
-    expect(buscarTudo('', d).length).toBe(23);
+    expect(buscarTudo('', d).length).toBe(24);
     const r = buscarTudo('outdoor', d);
     expect(r.some((x) => x.tipo === 'Serviço')).toBe(true);
     expect(r.find((x) => x.tipo === 'Alvo')?.href).toBe('#captacao');

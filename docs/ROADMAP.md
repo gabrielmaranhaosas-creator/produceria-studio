@@ -87,3 +87,13 @@
   - A aba "Desdobramento de KV" da Bancada virou "Orçar desdobramento" (é o orçamento pela tabela).
   - Divergência conhecida: no Studio o ponto de foco fica no centro do recorte; no núcleo Python é a posição do
     recorte na sobra. Com foco no meio, o resultado é igual.
+- ~~Retoque e especialistas de imagem~~ Feito em 11/11/2026, depois do primeiro teste real da Desdobra (um resumo
+  visual 1354x4832 com várias peças foi usado como KV e os recortes pegaram pedaços da prancha):
+  - Desdobra avisa proporção de prancha, imagem pequena e formatos com as mesmas medidas (stories e dooh-vertical).
+  - **Retoque** (`#retoque`): exposição, contraste, realces, sombras, temperatura, saturação e nitidez com antes e
+    depois, ampliação clássica até 4x (passos de 2x, limite de 12.000 px), saída na próxima versão do nome.
+  - **Especialistas de imagem** (`src/oficina/personas.ts`): Diretor de Arte, Arte-finalista Sênior, Prompts de
+    Retoque e Geração, Upscale e Grande Formato. Estão em Agentes (grupo "Craft e imagem", com anexo de imagem) e na
+    leitura da imagem do Retoque. Fazem contas pela ferramenta `calcular_pixels` e seguem as regras do kit.
+  - Upscale com IA continua fora do navegador: a chave do Magnific não pode ficar no Studio. O caminho é o
+    `magnific_lote.py` do Kit; o especialista de Upscale monta o plano e os parâmetros de partida.

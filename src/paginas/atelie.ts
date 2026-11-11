@@ -13,12 +13,13 @@ export const PRINCIPIOS: [string, string][] = [
 interface Ferramenta { h: string; t: string; d: string; tag?: string }
 export const FERRAMENTAS: Ferramenta[] = [
   { h: 'desdobra', t: 'Desdobra de KV', d: 'A peça-mãe em todos os formatos, com ponto de foco, cobrir ou conter, e zip com nomes e manifesto.', tag: 'nova' },
+  { h: 'retoque', t: 'Retoque', d: 'Exposição, contraste, realces, sombras, cor e nitidez com antes e depois, ampliação clássica e saída na próxima versão.', tag: 'nova' },
+  { h: 'agentes', t: 'Especialistas de imagem', d: 'Diretor de arte, arte-finalista, prompts de retoque e upscale: leem a imagem e respondem com o método da casa.', tag: 'nova' },
   { h: 'entrega/checar', t: 'Checar arquivo', d: 'Medidas, ppi, CMYK, perfil de cor e nome. O tamanho de impressão a 300 e 150 ppi.', tag: 'nova' },
   { h: 'entrega/nomes', t: 'Nomes e pastas', d: 'Nomes no padrão CLIENTE_campanha_formato_v01 e a estrutura do job pronta para baixar.', tag: 'nova' },
   { h: 'entrega/entrega', t: 'Montar entrega', d: 'Confere os arquivos finais, escreve o manifesto com sha256 e entrega um zip só.', tag: 'nova' },
   { h: 'grafica', t: 'Gráfica', d: 'Ficha técnica de impressão, aproveitamento de folha, checklist de fechamento e pacote do job.' },
   { h: 'ferramentas', t: 'Bancada', d: 'Orçar desdobramento, rodadas de revisão, pré-checagem de briefing e cotações.' },
-  { h: 'agentes', t: 'Agentes', d: 'Especialistas da casa com acesso à tabela de serviços, às oportunidades e à memória da Produceria.' },
   { h: 'biblioteca', t: 'Biblioteca', d: 'Referências, manuais de marca e arquivos de apoio da equipe.' },
 ];
 

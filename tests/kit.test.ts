@@ -132,3 +132,55 @@ describe('leitura de cabeçalho', () => {
     expect(await sha256(new TextEncoder().encode('abc'))).toBe('ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad');
   });
 });
+
+import { ajustarTom, nitidez, medidasAmpliadas, ZERO, neutro } from '../src/oficina/retoque';
+import { calcularPixels, PERSONAS, FERRAMENTAS_IMAGEM } from '../src/oficina/personas';
+import { gemeo } from '../src/paginas/desdobra';
+
+describe('retoque', () => {
+  const px = (...v: number[]) => new Uint8ClampedArray(v);
+  it('sem ajuste não mexe', () => {
+    const d = px(10, 120, 250, 255); ajustarTom(d, { ...ZERO }); expect([...d]).toEqual([10, 120, 250, 255]);
+    expect(neutro(ZERO)).toBe(true);
+  });
+  it('exposição +1 EV dobra, saturação −100 vira cinza, temperatura esquenta', () => {
+    const d = px(50, 60, 70, 255); ajustarTom(d, { ...ZERO, exposicao: 1 }); expect([...d]).toEqual([100, 120, 140, 255]);
+    const g = px(200, 100, 50, 255); ajustarTom(g, { ...ZERO, saturacao: -100 }); expect(g[0]).toBe(g[1]); expect(g[1]).toBe(g[2]);
+    const t = px(100, 100, 100, 255); ajustarTom(t, { ...ZERO, temperatura: 100 }); expect(t[0]).toBeGreaterThan(t[2]);
+  });
+  it('sombras clareiam o escuro mais que o claro', () => {
+    const d = px(30, 30, 30, 255, 220, 220, 220, 255); ajustarTom(d, { ...ZERO, sombras: 100 });
+    expect(d[0] - 30).toBeGreaterThan(d[4] - 220);
+  });
+  it('nitidez realça a borda e não mexe na área lisa', () => {
+    const w = 5, h = 3, d = new Uint8ClampedArray(w * h * 4);
+    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) { const v = x < 2 ? 50 : 200; d.set([v, v, v, 255], (y * w + x) * 4); }
+    nitidez(d, w, h, 100);
+    expect(d[(1 * w + 1) * 4]).toBeLessThan(50); expect(d[(1 * w + 2) * 4]).toBeGreaterThan(200); expect(d[(1 * w + 3) * 4]).toBe(200);
+  });
+  it('ampliação respeita o limite do navegador', () => {
+    expect(medidasAmpliadas(1000, 500, 2)).toEqual({ largura: 2000, altura: 1000, fator: 2, limitado: false });
+    expect(medidasAmpliadas(5000, 3000, 4)).toMatchObject({ largura: 12000, limitado: true });
+  });
+});
+
+describe('especialistas de imagem', () => {
+  it('calcula pixels, ampliação e ppi efetivo', () => {
+    expect(calcularPixels(210, 297, 300)).toMatchObject({ pixels: { largura: 2480, altura: 3508 } });
+    const r = calcularPixels(9000, 3000, 30, 1354, 4832) as Record<string, any>;
+    expect(r.pixels).toEqual({ largura: 10630, altura: 3543 });
+    expect(r.ampliacao).toBeCloseTo(7.85, 1);
+    expect(r.proporcaoDifere).toBe(true);
+    expect(() => calcularPixels(0, 10, 300)).toThrow();
+  });
+  it('quatro personas com método e ferramentas de conta', () => {
+    expect(PERSONAS.map((p) => p.id)).toEqual(['diretor_arte', 'artefinalista', 'prompts_retoque', 'upscale']);
+    expect(PERSONAS.every((p) => p.guia.length > 200 && p.pede.length >= 2)).toBe(true);
+    expect(FERRAMENTAS_IMAGEM.map((f) => f.name)).toEqual(['calcular_pixels', 'regras_do_kit']);
+    expect(FERRAMENTAS_IMAGEM[0].execute({ largura_mm: 0 })).toHaveProperty('erro');
+  });
+  it('Desdobra aponta formatos com as mesmas medidas', () => {
+    const fs = [{ nome: 'stories', largura: 1080, altura: 1920 }, { nome: 'dooh-vertical', largura: 1080, altura: 1920 }, { nome: 'feed', largura: 1080, altura: 1080 }];
+    expect(gemeo(fs[1], fs)).toBe('stories'); expect(gemeo(fs[2], fs)).toBeUndefined();
+  });
+});

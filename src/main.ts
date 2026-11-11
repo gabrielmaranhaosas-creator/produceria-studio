@@ -41,6 +41,7 @@ import * as pLixeira from './paginas/lixeira';
 import * as pAtelie from './paginas/atelie';
 import * as pDesdobra from './paginas/desdobra';
 import * as pEntrega from './paginas/entrega';
+import * as pRetoque from './paginas/retoque';
 import casca from './estilos/casca.css?inline';
 import { iniciarCasca } from './casca/casca';
 
@@ -70,6 +71,7 @@ const paginas: Record<string, Montar> = {
   atelie: pAtelie.montar,
   desdobra: pDesdobra.montar,
   entrega: pEntrega.montar,
+  retoque: pRetoque.montar,
 };
 
 function estilos() {

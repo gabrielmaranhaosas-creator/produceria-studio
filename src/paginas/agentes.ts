@@ -2,14 +2,15 @@
 // e podem registrar oportunidades no funil. Cada conversa fica salva em `conversas`.
 import { esc, dt } from '../lib/formato';
 import { banco, type Banco } from '../lib/db';
-import { conversar, iaDisponivel, CONTEXTO, ErroIA, type Ferramenta, type Mensagem } from '../lib/ia';
+import { conversar, iaDisponivel, aceitaImagens, CONTEXTO, ErroIA, type Ferramenta, type Mensagem } from '../lib/ia';
+import { PERSONAS, FERRAMENTAS_IMAGEM, imagemParaIA } from '../oficina/personas';
 import { quemSou } from '../lib/arquivos';
 import { SERVICOS, rotulo } from '../lib/servicos';
 import { EMPRESAS } from './licitacoes';
 import { seletor, comId } from './dom';
 import { navOficina, cabecalho } from './oficina';
 
-export interface Agente { id: string; grupo: string; nome: string; foco: string; pede: string[] }
+export interface Agente { id: string; grupo: string; nome: string; foco: string; pede: string[]; guia?: string; imagem?: boolean }
 const ESP = (id: string, nome: string, foco: string, grupo = 'Especialistas'): Agente => ({ id, nome, foco, grupo, pede: [] });
 /** Agentes da casa. Tráfego e Produção executiva saíram com a produção (dependiam de projetos e tarefas). */
 export const AGENTES: Agente[] = [
@@ -17,6 +18,7 @@ export const AGENTES: Agente[] = [
   { id: 'revisor', grupo: 'Operação', nome: 'Revisor de texto e claims', foco: 'Revisão ortográfica e de padrão, glossário do cliente e afirmações que pedem comprovação.', pede: ['Revise este texto de post para cooperativa financeira'] },
   { id: 'comercial', grupo: 'Receita', nome: 'Diversificação e novos negócios', foco: 'Funil privado, público e internacional; concentração de receita; plays anticíclicos de reaproveitamento e fee mensal.', pede: ['Quais as 5 melhores oportunidades abertas agora?', 'Registre no funil o cadastro de fornecedor nas contas públicas de SP', 'Monte um plano anticíclico para o próximo trimestre'] },
   { id: 'b2g', grupo: 'Receita', nome: 'Licitações e B2G', foco: 'Radar do PNCP, carteira, habilitação do hub e estratégia de entrada em contas públicas via agências.', pede: ['Quais licitações de comunicação visual ou OOH vencem esta semana?', 'Qual empresa do hub disputa a melhor oportunidade do radar?'] },
+  ...PERSONAS.map((p): Agente => ({ id: p.id, grupo: 'Craft e imagem', nome: p.nome, foco: p.foco, pede: p.pede, guia: p.guia, imagem: true })),
   ESP('producao', 'Assistente de Produção Executiva e Craft Audiovisual', 'Planejar produção, cronograma, equipe e fornecedores de filmes, motion e finalização; transformar briefing em plano executável.'),
   ESP('producao_grafica', 'Engenharia Gráfica & Comunicação Visual', 'Especificar materiais, acabamentos, arte-final e instalação de peças gráficas e de sinalização.'),
   ESP('operacoes_campo', 'Operações de Campo & Positivação', 'Logística de campo, instalação, positivação em PDV e checagem de execução.'),
@@ -38,7 +40,7 @@ export const AGENTES: Agente[] = [
   ESP('social_cases', 'Gestor Editorial de Cases, Ativos, Créditos e Direitos', 'Acervo de projetos aptos para comunicação, com autorizações, créditos e versionamento.', 'Social Intelligence'),
   ESP('social_conteudo', 'Produtor de Conteúdo Social, Vídeo e IA Aplicada', 'Roteiros de produção e pós escaláveis, distinguindo documentação real de conteúdo gerado por IA.', 'Social Intelligence'),
 ];
-const ROTULOS: Record<string, string> = { memoria_da_casa: 'Consultando a memória da casa', buscar_tabela: 'Consultando a tabela', oportunidades: 'Lendo oportunidades', registrar_oportunidade: 'Registrando no funil' };
+const ROTULOS: Record<string, string> = { memoria_da_casa: 'Consultando a memória da casa', buscar_tabela: 'Consultando a tabela', oportunidades: 'Lendo oportunidades', registrar_oportunidade: 'Registrando no funil', calcular_pixels: 'Calculando pixels', regras_do_kit: 'Lendo as regras do kit' };
 const sem = (s: unknown) => String(s ?? '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
 export interface Conversa { id: string; agente: string; mensagens: Mensagem[]; acoes: string[]; em: string; autor?: string | null; titulo: string }
 type Doc = Record<string, unknown> & { id: string };
@@ -81,6 +83,7 @@ export function ferramentas(d: Dados, gravar: (doc: Doc) => Promise<void>, log: 
         log(`Oportunidade “${doc.titulo}” registrada no funil (${doc.eixo}).`);
         return doc;
       } },
+    ...FERRAMENTAS_IMAGEM,
   ];
 }
 
@@ -88,7 +91,7 @@ export function instrucao(a: Agente, pedido: string, hoje = new Date().toISOStri
   return `Você é o agente "${a.nome}" do PRODUCERia Studio. ${CONTEXTO}
 Empresas do hub: ${EMPRESAS.map((e) => e.nome).join(', ')}.
 Foco deste agente: ${a.foco}
-Hoje: ${hoje}.
+${a.guia ? a.guia + '\n' : ''}${a.imagem ? 'Se houver imagem anexada, descreva em uma linha o que vê antes de opinar e baseie tudo no que está na imagem.\n' : ''}Hoje: ${hoje}.
 - Use as ferramentas para ler dados reais antes de afirmar qualquer número. Se a ferramenta não trouxer, diga que não há dado.
 - Memória da casa: antes de falar de cliente, marca, agência, proposta, regra de texto ou estratégia, chame memoria_da_casa (Biblioteca, SWOT e alvos da Captação) e use o que vier; cite o nome do arquivo ou do item.
 - A ferramenta que grava (registrar_oportunidade) só quando o pedido pede ação; diga no fim exatamente o que gravou.
@@ -104,11 +107,12 @@ export function montar(root: HTMLElement): () => void {
   <div class="ag-grid"><aside class="ag-lado"><div class="f"><label for="agQ" class="sr">Buscar agente</label><input id="agQ" type="search" placeholder="Buscar entre ${AGENTES.length} agentes…"></div><div id="agL" class="ag-lista"></div><div id="agS"></div></aside>
   <section class="ag-chat" aria-labelledby="agN"><div class="lc-box ag-topo"><div class="ph"><h2 class="d d-sub" id="agN"></h2><button type="button" class="ghost sm" id="agNova" hidden>Nova conversa</button></div><span class="note" id="agF"></span></div>
     <div id="agM" class="ag-msgs" aria-live="polite"></div><div id="agA"></div>
-    <form id="agForm" class="ag-form"><label for="agT" class="sr">Mensagem para o agente</label><textarea id="agT" rows="3"></textarea><p class="erro" id="agE" role="alert"></p><div class="acts"><button type="submit" id="agEnv" disabled>Enviar</button><button type="button" class="lnk" id="agPara" hidden>Parar</button></div></form></section></div></div>`;
+    <form id="agForm" class="ag-form"><div class="ag-anexo" id="agX" hidden></div><label for="agT" class="sr">Mensagem para o agente</label><textarea id="agT" rows="3"></textarea><p class="erro" id="agE" role="alert"></p><div class="acts"><button type="submit" id="agEnv" disabled>Enviar</button><label class="lnk ag-clipe" id="agClipe" hidden><input type="file" id="agImg" accept="image/png,image/jpeg,image/webp" class="sr">Anexar imagem</label><button type="button" class="lnk" id="agPara" hidden>Parar</button></div></form></section></div></div>`;
   const $ = seletor(root);
   const d: Dados = { biblioteca: [], swot: [], tows: [], alvos: [], b2g: [], pipeline: [], descontos: {} };
   let db: Banco | null = null, conversas: Conversa[] = [], agente = AGENTES[0], busca = '', ia = true;
   let msgs: Mensagem[] = [], acoes: string[] = [], convId = '', ocupado = false, parcial = '', status = '', ctrl: AbortController | null = null;
+  let anexo: { blob: Blob; nome: string; url: string } | null = null, imagensOk = false;
   const offs: (() => void)[] = [];
 
   function lista() {
@@ -134,15 +138,19 @@ export function montar(root: HTMLElement): () => void {
     $<HTMLButtonElement>('#agEnv').textContent = ocupado ? 'Trabalhando…' : 'Enviar';
     $<HTMLButtonElement>('#agEnv').disabled = ocupado || !ia || !$<HTMLTextAreaElement>('#agT').value.trim();
     $('#agPara').hidden = !ocupado;
+    $('#agClipe').hidden = !agente.imagem || !imagensOk;
+    $('#agX').hidden = !anexo || !agente.imagem;
+    $('#agX').innerHTML = anexo ? `<img src="${anexo.url}" alt=""><span class="note">${esc(anexo.nome)} vai junto de cada mensagem</span><button type="button" class="lnk" id="agXt">tirar</button>` : '';
     $('#agM').lastElementChild?.scrollIntoView({ block: 'nearest' });
   }
-  const novaConversa = () => { ctrl?.abort(); msgs = []; acoes = []; convId = ''; parcial = ''; chat(); };
+  const tirarAnexo = () => { if (anexo) URL.revokeObjectURL(anexo.url); anexo = null; };
+  const novaConversa = () => { ctrl?.abort(); msgs = []; acoes = []; convId = ''; parcial = ''; tirarAnexo(); chat(); };
 
   async function enviar(texto: string) {
     const t = texto.trim();
     if (!t || ocupado) return;
     $('#agE').textContent = '';
-    const hist: Mensagem[] = [...msgs, { role: 'user', content: t }];
+    const hist: Mensagem[] = [...msgs, { role: 'user', content: anexo && agente.imagem && !msgs.length ? `${t}\n(imagem anexada: ${anexo.nome})` : t }];
     msgs = hist; ocupado = true; parcial = ''; status = '';
     $<HTMLTextAreaElement>('#agT').value = '';
     chat();
@@ -152,7 +160,7 @@ export function montar(root: HTMLElement): () => void {
     const envio: Mensagem[] = [{ role: 'user', content: instrucao(agente, hist[0].content) }, ...hist.slice(1)];
     ctrl = new AbortController();
     try {
-      const r = await conversar(envio, { ferramentas: fs, signal: ctrl.signal, aoEscrever: (x) => { parcial = x; const p = root.querySelector('#agP'); if (p) p.textContent = x; } });
+      const r = await conversar(envio, { ferramentas: fs, signal: ctrl.signal, imagens: anexo && agente.imagem ? [anexo.blob] : undefined, aoEscrever: (x) => { parcial = x; const p = root.querySelector('#agP'); if (p) p.textContent = x; } });
       msgs = [...hist, { role: 'assistant', content: r }];
       if (db) {
         const id = convId || 'cv-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
@@ -174,11 +182,19 @@ export function montar(root: HTMLElement): () => void {
     if (k.ag) { if (k.ag !== agente.id) { agente = AGENTES.find((a) => a.id === k.ag)!; novaConversa(); lista(); root.querySelector<HTMLElement>(`[data-ag="${k.ag}"]`)?.focus(); } return; }
     if (k.sug) { enviar(k.sug); return; }
     if (k.conv) { const c = conversas.find((x) => x.id === k.conv); if (c) { agente = AGENTES.find((a) => a.id === c.agente) || agente; msgs = c.mensagens || []; acoes = c.acoes || []; convId = c.id; lista(); chat(); $<HTMLElement>('#agT').focus(); } return; }
+    if (b.id === 'agXt') { tirarAnexo(); chat(); return; }
     if (b.id === 'agNova') { novaConversa(); $<HTMLElement>('#agT').focus(); return; }
     if (b.id === 'agPara') ctrl?.abort();
   });
   root.addEventListener('submit', (ev) => { if ((ev.target as HTMLElement).id === 'agForm') { ev.preventDefault(); enviar($<HTMLTextAreaElement>('#agT').value); } });
   root.addEventListener('keydown', (ev) => { const t = ev.target as HTMLElement; if (t.id === 'agT' && ev.key === 'Enter' && (ev.metaKey || ev.ctrlKey)) { ev.preventDefault(); enviar((t as HTMLTextAreaElement).value); } });
+  root.addEventListener('change', (ev) => {
+    const t = ev.target as HTMLInputElement;
+    if (t.id === 'agImg') {
+      const f = t.files?.[0]; t.value = '';
+      if (f) imagemParaIA(f).then((blob) => { tirarAnexo(); anexo = { blob, nome: f.name, url: URL.createObjectURL(blob) }; chat(); }).catch(() => { $('#agE').textContent = 'Não consegui abrir essa imagem.'; });
+    }
+  });
   root.addEventListener('input', (ev) => {
     const t = ev.target as HTMLInputElement;
     if (t.id === 'agQ') { busca = t.value; lista(); }
@@ -187,6 +203,7 @@ export function montar(root: HTMLElement): () => void {
 
   lista(); chat();
   iaDisponivel().then((ok) => { ia = ok; chat(); });
+  aceitaImagens().then((ok) => { imagensOk = ok; chat(); });
   (async () => {
     db = await banco();
     if (!db) return;
@@ -194,5 +211,5 @@ export function montar(root: HTMLElement): () => void {
     offs.push(db.collection<{ valores?: Record<string, number> }>('config').onSnapshot((s) => { d.descontos = s.docs.find((x) => x.id === 'descontos')?.data().valores || {}; }, () => {}));
     offs.push(db.collection<Conversa>('conversas').onSnapshot((s) => { conversas = s.docs.map(comId); salvas(); }, () => {}));
   })();
-  return () => { ctrl?.abort(); offs.forEach((x) => { try { x(); } catch { /* já cancelado */ } }); };
+  return () => { ctrl?.abort(); tirarAnexo(); offs.forEach((x) => { try { x(); } catch { /* já cancelado */ } }); };
 }

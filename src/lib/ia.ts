@@ -67,11 +67,11 @@ export interface Mensagem { role: 'user' | 'assistant'; content: string }
  * Conversa com ferramentas (agentes). Devolve o texto final; em falha lança ErroIA com a mensagem e,
  * se houver, o texto parcial em `parcial`.
  */
-export async function conversar(mensagens: Mensagem[], o: { ferramentas: Ferramenta[]; aoEscrever?: (t: string) => void; signal?: AbortSignal; tier?: 'default' | 'complex' }): Promise<string> {
+export async function conversar(mensagens: Mensagem[], o: { ferramentas: Ferramenta[]; aoEscrever?: (t: string) => void; signal?: AbortSignal; tier?: 'default' | 'complex'; imagens?: Blob[] }): Promise<string> {
   const s = await amostra();
   if (!s) throw new ErroIA('Os agentes precisam do Studio aberto no Claude.');
   try {
-    const r = await (s as unknown as (m: Mensagem[], x: object) => Promise<{ text: string }>)(mensagens, { tools: o.ferramentas, signal: o.signal, modelTier: o.tier ?? 'default', onText: ({ text }: { text: string }) => o.aoEscrever?.(text) });
+    const r = await (s as unknown as (m: Mensagem[], x: object) => Promise<{ text: string }>)(mensagens, { tools: o.ferramentas, signal: o.signal, modelTier: o.tier ?? 'default', onText: ({ text }: { text: string }) => o.aoEscrever?.(text), ...(o.imagens?.length ? { images: o.imagens, cache: false } : {}) });
     return r.text;
   } catch (e) {
     const code = (e as { code?: string })?.code || '';

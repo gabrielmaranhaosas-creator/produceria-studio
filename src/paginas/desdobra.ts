@@ -33,6 +33,8 @@ export function pintar(ctx: CanvasRenderingContext2D, img: CanvasImageSource, iw
 
 const lerMemoria = (): { cliente?: string; campanha?: string; escolhidos?: string[]; extras?: Formato[] } => { try { return JSON.parse(localStorage.getItem('studio.desdobra') || '{}'); } catch { return {}; } };
 const gravarMemoria = (m: object) => { try { localStorage.setItem('studio.desdobra', JSON.stringify(m)); } catch { /* sem memória local: tudo bem */ } };
+/** Outro formato escolhido com as mesmas medidas (o arquivo sai igual, só muda o nome). */
+export const gemeo = (f: Formato, fs: Formato[]) => fs.find((x) => x !== f && x.largura === f.largura && x.altura === f.altura)?.nome;
 const vezes = (n: number) => n.toLocaleString('pt-BR', { maximumFractionDigits: 1 });
 
 export function montar(root: HTMLElement): () => void {
@@ -145,7 +147,7 @@ export function montar(root: HTMLElement): () => void {
     cards.innerHTML = fs.map((f) => {
       const amp = ampliacao(st.iw, st.ih, f.largura, f.altura, st.modo);
       return `<li class="dd-card" data-card="${esc(f.nome)}"><div class="dd-tela"><canvas data-prev="${esc(f.nome)}" aria-hidden="true"></canvas></div>
-        <span class="dd-nome">${esc(nomeDe(f))}</span><span class="note">${int(f.largura)} × ${int(f.altura)} px${amp > 2 ? '' : ` · ${vezes(amp)}×`}</span>
+        <span class="dd-nome">${esc(nomeDe(f))}</span><span class="note">${int(f.largura)} × ${int(f.altura)} px${amp > 2 ? '' : ` · ${vezes(amp)}×`}${gemeo(f, fs) ? ` · mesmas medidas de ${esc(gemeo(f, fs)!)}` : ''}</span>
         ${amp > 2 ? `<span class="tag w">ampliado ${vezes(amp)}×: perde nitidez</span>` : ''}
         <button type="button" class="lnk" data-baixa="${esc(f.nome)}">Baixar ${st.saida.toUpperCase()}<span class="sr"> de ${esc(f.nome)}</span></button></li>`;
     }).join('');
@@ -198,6 +200,9 @@ export function montar(root: HTMLElement): () => void {
       const partes = [esc(file.name), `${int(st.iw)} × ${int(st.ih)} px`];
       if (cab?.dpi) partes.push(`${cab.dpi} ppi`);
       if (cab?.cmyk) partes.push('<b>CMYK</b>: o navegador converte para tela; a desdobra sai em RGB');
+      const prop = st.iw / st.ih;
+      if (prop < 0.4 || prop > 3.2) partes.push('<b>Proporção de prancha</b> (' + vezes(prop) + ':1): se este arquivo junta várias peças, recorte a peça-mãe antes; a desdobra corta a imagem inteira');
+      if (Math.max(st.iw, st.ih) < 2000) partes.push('<b>Imagem pequena</b>: formatos grandes vão sair ampliados');
       $('#ddInfo').innerHTML = partes.join(' · ');
       $('#ddZona').hidden = true; box.hidden = false;
       desenharKv(); desenharCards(); exemplo();

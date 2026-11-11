@@ -12,7 +12,7 @@ import type { Montar } from '../paginas/dom';
 export interface Item { h: string; l: string; rotas: string[] }
 export interface Nicho { id: string; l: string; home: string; itens: Item[] }
 export const NICHOS: Nicho[] = [
-  { id: 'oficina', l: 'Oficina', home: 'atelie', itens: [{ h: 'atelie', l: 'Ateliê', rotas: ['atelie'] }, { h: 'desdobra', l: 'Desdobra de KV', rotas: ['desdobra'] }, { h: 'entrega', l: 'Conferência e entrega', rotas: ['entrega'] }, { h: 'ferramentas', l: 'Bancada', rotas: ['ferramentas'] }, { h: 'grafica', l: 'Gráfica', rotas: ['grafica'] }, { h: 'plugins', l: 'Plugins', rotas: ['plugins'] }, { h: 'agentes', l: 'Agentes', rotas: ['agentes'] }, { h: 'biblioteca', l: 'Biblioteca', rotas: ['biblioteca'] }, { h: 'casos', l: 'Casos', rotas: ['casos'] }] },
+  { id: 'oficina', l: 'Oficina', home: 'atelie', itens: [{ h: 'atelie', l: 'Ateliê', rotas: ['atelie'] }, { h: 'desdobra', l: 'Desdobra de KV', rotas: ['desdobra'] }, { h: 'retoque', l: 'Retoque', rotas: ['retoque'] }, { h: 'entrega', l: 'Conferência e entrega', rotas: ['entrega'] }, { h: 'ferramentas', l: 'Bancada', rotas: ['ferramentas'] }, { h: 'grafica', l: 'Gráfica', rotas: ['grafica'] }, { h: 'plugins', l: 'Plugins', rotas: ['plugins'] }, { h: 'agentes', l: 'Agentes', rotas: ['agentes'] }, { h: 'biblioteca', l: 'Biblioteca', rotas: ['biblioteca'] }, { h: 'casos', l: 'Casos', rotas: ['casos'] }] },
   { id: 'comercial', l: 'Comercial', home: 'central', itens: [{ h: 'central', l: 'Central de notícias', rotas: ['central'] }, { h: 'agenda', l: 'Agenda de contatos', rotas: ['agenda'] }, { h: 'captacao', l: 'Captação', rotas: ['captacao'] }, { h: 'mercado', l: 'Contas e agências', rotas: ['mercado'] }, { h: 'b2g', l: 'Licitações', rotas: ['b2g'] }, { h: 'vencedores', l: 'Vencedores', rotas: ['vencedores'] }, { h: 'contas', l: 'Mapa de contas', rotas: ['contas'] }, { h: 'estrategia', l: 'Estratégia e funil', rotas: ['estrategia', 'funil'] }] },
   { id: 'gestao', l: 'Gestão', home: 'rotinas', itens: [{ h: 'rotinas', l: 'Rotinas do Claude', rotas: ['rotinas'] }, { h: 'tabela', l: 'Tabela de serviços', rotas: ['tabela'] }, { h: 'lixeira', l: 'Lixeira', rotas: ['lixeira'] }, { h: 'ajustes', l: 'Ajustes e dados', rotas: ['ajustes'] }] },
 ];
@@ -20,7 +20,7 @@ export const NICHOS: Nicho[] = [
 export const PAGINA: Record<string, string> = {
   painel: 'inicio', central: 'central', agenda: 'agenda', casos: 'casos', captacao: 'captacao', mercado: 'mercado', b2g: 'licitacoes', vencedores: 'vencedores',
   contas: 'contas', estrategia: 'estrategia', funil: 'funil', rotinas: 'rotinas', tabela: 'tabela', ajustes: 'ajustes', ferramentas: 'bancada', grafica: 'grafica',
-  plugins: 'plugins', agentes: 'agentes', biblioteca: 'biblioteca', lixeira: 'lixeira', atelie: 'atelie', desdobra: 'desdobra', entrega: 'entrega',
+  plugins: 'plugins', agentes: 'agentes', biblioteca: 'biblioteca', lixeira: 'lixeira', atelie: 'atelie', desdobra: 'desdobra', entrega: 'entrega', retoque: 'retoque',
 };
 const APELIDOS: Record<string, string> = { oficina: 'atelie', checar: 'entrega', diversificacao: 'funil', mapa: 'funil', frentes: 'estrategia', swot: 'estrategia', ia: 'estrategia', agencias: 'mercado', personas: 'agentes', receitas: 'funil' };
 /** Cabeçalho das telas do Comercial que não trazem o próprio. */
@@ -47,7 +47,7 @@ export function rotaDe(hash: string): string {
 export const nichoDe = (rota: string) => NICHOS.find((n) => n.itens.some((i) => i.rotas.includes(rota)));
 
 const IR = [
-  ['Início · o que fazer agora', 'painel'], ['Oficina · ateliê e ferramentas da casa', 'atelie'], ['Desdobra de KV · todos os formatos', 'desdobra'], ['Checar arquivo · ppi, CMYK, nome', 'entrega/checar'], ['Nomes e pastas do job', 'entrega/nomes'], ['Montar entrega · zip com manifesto', 'entrega/entrega'], ['Bancada · orçar desdobramento, revisão', 'ferramentas'], ['Central de notícias e leads', 'central'], ['Agenda · quem contatar hoje', 'agenda'],
+  ['Início · o que fazer agora', 'painel'], ['Oficina · ateliê e ferramentas da casa', 'atelie'], ['Desdobra de KV · todos os formatos', 'desdobra'], ['Retoque · ajustes, ampliação, especialistas', 'retoque'], ['Checar arquivo · ppi, CMYK, nome', 'entrega/checar'], ['Nomes e pastas do job', 'entrega/nomes'], ['Montar entrega · zip com manifesto', 'entrega/entrega'], ['Bancada · orçar desdobramento, revisão', 'ferramentas'], ['Central de notícias e leads', 'central'], ['Agenda · quem contatar hoje', 'agenda'],
   ['Casos da casa (portfólio)', 'casos'], ['Captação de novos negócios', 'captacao'], ['Contas e agências do mercado', 'mercado'], ['Vencedores de licitações', 'vencedores'],
   ['Funil comercial', 'funil'], ['Gráfica · ficha técnica e fechamento', 'grafica'], ['Plugins · Photoshop, Magnific, Firefly', 'plugins'], ['Licitações', 'b2g'],
   ['Estratégia · SWOT', 'estrategia'], ['Rotinas do Claude · rodar, pausar', 'rotinas'], ['Tabela de serviços', 'tabela'], ['Lixeira · restaurar o que foi apagado', 'lixeira'], ['Ajustes e dados', 'ajustes'], ['Atalhos de teclado', '?'],

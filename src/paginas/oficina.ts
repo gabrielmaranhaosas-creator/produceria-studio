@@ -1,7 +1,7 @@
 // Peças comuns às telas da Oficina: a navegação entre elas, o cabeçalho e o download de arquivos.
 import { esc } from '../lib/formato';
 
-const TELAS: [string, string][] = [['atelie', 'Ateliê'], ['desdobra', 'Desdobra'], ['entrega', 'Conferência'], ['ferramentas', 'Bancada'], ['grafica', 'Gráfica'], ['plugins', 'Plugins'], ['agentes', 'Agentes'], ['biblioteca', 'Biblioteca'], ['casos', 'Casos']];
+const TELAS: [string, string][] = [['atelie', 'Ateliê'], ['desdobra', 'Desdobra'], ['retoque', 'Retoque'], ['entrega', 'Conferência'], ['ferramentas', 'Bancada'], ['grafica', 'Gráfica'], ['plugins', 'Plugins'], ['agentes', 'Agentes'], ['biblioteca', 'Biblioteca'], ['casos', 'Casos']];
 
 /** Navegação da Oficina (mesmo markup do legado: nav.oficina). */
 export const navOficina = (atual: string) => `<nav class="oficina" aria-label="Oficina">${TELAS.map(([h, t]) => `<a href="#${h}"${h === atual ? ' aria-current="page"' : ''}>${t}</a>`).join('')}</nav>`;
