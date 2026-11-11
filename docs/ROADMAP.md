@@ -62,4 +62,7 @@
 - ~~CSS global do legado para `src/estilos/`~~ Feito em 11/11/2026 (`studio.css` e `reset.css`, conferidos regra a regra).
 - ~~Fontes com licença resolvida~~ Decidido em 11/11/2026: a equipe tem licença da ABC Whyte e ela fica. As fontes
   seguem embutidas (lidas de `legacy/studio.html` no build). Falta confirmar a licença da PTYPE (títulos).
-- Publicação automática a partir do `main`.
+- ~~Publicação automática a partir do `main`~~ Feito em 11/11/2026: rotina "Studio · publicação automática do main"
+  (todo dia 06h30, `rotinas/studio-publicacao-automatica-do-main.md`). Compara o commit carimbado no Studio publicado
+  com o `main`, só publica se mudou código (`src`, `scripts`, `legacy`, `package*.json`, configs), roda o
+  `npm run check` antes e deixa aviso no sino (publicou, testes falharam ou conflito). **Fase 4 concluída.**

@@ -34,6 +34,13 @@ O CSS global (classes `page-head`, `rail`, `chip`, `tag`, `paleta`...) e o reset
 as 4 fontes (`@font-face`), lidas no build. A equipe tem licença da ABC Whyte (confirmado em 11/11/2026), então elas
 ficam; se um dia saírem do legado, o lugar delas é um arquivo próprio em `src/estilos/`.
 
+## Publicação
+
+O Studio publicado é o `dist/index.html` montado do `main`. Duas vias: uma sessão do Claude Code publica na hora
+(Artifact, mesma URL), ou a rotina diária "Studio · publicação automática do main" faz isso sozinha quando o código
+mudou e o `npm run check` passa. A versão publicada leva o carimbo `versão+commit` (ver `vite.config.ts`), que a
+rotina usa para saber se há algo novo. Para voltar atrás, restaure uma versão anterior do artifact.
+
 ## Regras de negócio (src/lib)
 
 - `nomes.ts`: nomes legíveis (o PNCP publica em CAIXA ALTA), chave de comparação e "mesma empresa".
