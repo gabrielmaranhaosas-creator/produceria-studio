@@ -23,3 +23,7 @@ export const ERROS_ENVIO: Record<string, string> = {
   too_large: 'arquivo acima de 20 MB', quota_exceeded: 'o espaço de arquivos do Studio está cheio', not_granted: 'você não tem permissão para enviar arquivos aqui',
 };
 export const tamanho = (b: number) => (b >= 1048576 ? (b / 1048576).toFixed(1).replace('.', ',') + ' MB' : Math.max(1, Math.round(b / 1024)) + ' KB');
+/** Nome de quem está usando (para "Para fulano" nos avisos). Vazio fora do claude.ai. */
+export async function nomeProprio(): Promise<string> {
+  try { const u = (await usuario()) as (Usuario & { me?: () => Promise<{ name?: string } | null> }) | null; return (await u?.me?.())?.name || ''; } catch { return ''; }
+}

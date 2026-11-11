@@ -21,8 +21,16 @@ tudo de uma vez tiraria o Studio do ar e arriscaria o banco. Então:
    montagem (`initCN(r.current)` etc.) por "pergunte primeiro ao registro; se não houver, use a cópia
    antiga". Se o pacote falhar, o Studio continua funcionando com a cópia antiga.
 3. Quando uma página migrada estabiliza, a cópia antiga sai do legado.
-4. As páginas que ainda são React montado (Oficina)
-   migram uma a uma, até o legado sobrar só como casca e ser substituído por um shell próprio.
+4. As páginas que ainda eram React montado migraram uma a uma (Fases 2 e 3).
+
+**Desde 11/11/2026 o Studio publicado não carrega mais o app do legado.** `dist/index.html` traz só o reset do
+`<head>` e o bloco de estilos do legado (CSS + fontes) e o pacote de módulos; `src/casca/casca.ts` monta o menu
+(Oficina, Comercial, Gestão), as rotas por hash, a busca Ctrl K, os avisos, o tema e o aviso de conexão, e cada
+tela vem do registro de páginas. `dist/legado.html` continua sendo gerado como reserva: é o Studio antigo com as
+telas novas injetadas. Se algo der errado, basta publicar a versão anterior do artifact.
+
+O que ainda vem do legado: o CSS global (classes `page-head`, `rail`, `chip`, `tag`, `paleta`...) e as fontes
+embutidas. Tirar isso é o próximo passo (Fase 4): passar o CSS para `src/estilos/` e resolver a licença das fontes.
 
 ## Regras de negócio (src/lib)
 

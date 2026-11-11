@@ -36,6 +36,9 @@ import * as pGrafica from './paginas/grafica';
 import * as pPlugins from './paginas/plugins';
 import * as pBiblioteca from './paginas/biblioteca';
 import * as pAgentes from './paginas/agentes';
+import * as pInicio from './paginas/inicio';
+import casca from './estilos/casca.css?inline';
+import { iniciarCasca } from './casca/casca';
 
 import type { Montar } from './paginas/dom';
 
@@ -58,13 +61,14 @@ const paginas: Record<string, Montar> = {
   plugins: pPlugins.montar,
   biblioteca: pBiblioteca.montar,
   agentes: pAgentes.montar,
+  inicio: pInicio.montar,
 };
 
 function estilos() {
   if (document.getElementById('studio-src-css')) return;
   const el = document.createElement('style');
   el.id = 'studio-src-css';
-  el.textContent = base + central + agenda + licitacoes + captacao + vencedores + mercado + funil + estrategia + tabela + gestao + oficina;
+  el.textContent = base + central + agenda + licitacoes + captacao + vencedores + mercado + funil + estrategia + tabela + gestao + oficina + casca;
   document.head.appendChild(el);
 }
 
@@ -84,5 +88,9 @@ window.__studio = {
     return m(raiz) || (() => {});
   },
 };
+
+// Studio sem o legado: a página traz <div id="root" data-casca="propria"> e a casca própria monta tudo.
+const raizCasca = document.getElementById('root');
+if (raizCasca?.dataset.casca === 'propria') iniciarCasca(raizCasca, paginas, estilos);
 
 declare const __VERSAO__: string;

@@ -140,5 +140,18 @@ html = html.replace(marca, `<script type="module" data-studio="modulos">${modulo
 }
 
 mkdirSync('dist', { recursive: true });
-writeFileSync('dist/index.html', html);
-console.log(`dist/index.html: ${(html.length / 1024).toFixed(0)} KB (módulos ${(modulos.length / 1024).toFixed(0)} KB, ${(removidos / 1024).toFixed(0)} KB de cópias antigas retiradas)`);
+writeFileSync('dist/legado.html', html);
+
+// Fase 3: o Studio publicado sai sem o app React do legado. Do legado ficam só o reset do <head> e o bloco de
+// estilos (fontes + CSS); a casca própria (src/casca) monta menu, rotas, busca, avisos e todas as telas.
+// dist/legado.html continua sendo gerado como reserva (o mesmo Studio de antes, com as telas novas injetadas).
+{
+  const estilos = [...legado.matchAll(/<style[^>]*>[\s\S]*?<\/style>/g)].map((m) => m[0]);
+  const reset = estilos[0], studio = estilos.find((e) => e.includes('@font-face') && e.includes('.rail'));
+  if (!reset || !studio) throw new Error('Não achei os estilos do legado (reset e fontes + CSS).');
+  const novo = `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">${reset}<title>PRODUCERia Studio</title><meta name="claude:viewport-fit-sides" content="cover">${studio}</head>`
+    + `<body><a class="sr pular" href="#conteudo">Pular para o conteúdo</a><div id="root" data-casca="propria"></div><script type="module" data-studio="modulos">${modulos}</script></body></html>`;
+  if (/<script(?![^>]*data-studio)/i.test(novo.replace(modulos, ''))) throw new Error('O Studio novo não deve ter outro script além dos módulos.');
+  writeFileSync('dist/index.html', novo);
+  console.log(`dist/index.html: ${(novo.length / 1024).toFixed(0)} KB sem o legado (módulos ${(modulos.length / 1024).toFixed(0)} KB) · dist/legado.html: ${(html.length / 1024).toFixed(0)} KB de reserva`);
+}

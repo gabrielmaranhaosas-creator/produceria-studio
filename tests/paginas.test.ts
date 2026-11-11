@@ -624,3 +624,60 @@ describe('Agentes', () => {
     expect(Object.values(db.dados.conversas || {})[0]).toMatchObject({ agente: 'orcamentista' });
   });
 });
+
+describe('Casca própria', () => {
+  it('rotas, apelidos e nicho de cada tela', async () => {
+    const { rotaDe, nichoDe, PAGINA } = await import('../src/casca/casca');
+    expect(rotaDe('#b2g')).toBe('b2g'); expect(PAGINA.b2g).toBe('licitacoes');
+    expect(rotaDe('#swot')).toBe('estrategia'); expect(rotaDe('#personas')).toBe('agentes');
+    expect(rotaDe('#projetos/abc')).toBe('painel'); expect(rotaDe('')).toBe('painel');
+    expect(nichoDe('funil')?.id).toBe('comercial'); expect(nichoDe('grafica')?.id).toBe('oficina'); expect(nichoDe('tabela')?.id).toBe('gestao');
+  });
+
+  it('busca Ctrl K acha telas, serviços, alvos e licitações', async () => {
+    const { buscarTudo } = await import('../src/casca/casca');
+    const d = { alvos: [{ id: 'a', nome: 'Agência Outdoor Brasil', status: 'Mapeado' }], b2g: [{ id: 'b', objeto: 'Locação de outdoor', orgao: 'Prefeitura' }], frentes: [], swot: [] };
+    expect(buscarTudo('', d).length).toBe(16);
+    const r = buscarTudo('outdoor', d);
+    expect(r.some((x) => x.tipo === 'Serviço')).toBe(true);
+    expect(r.find((x) => x.tipo === 'Alvo')?.href).toBe('#captacao');
+    expect(r.find((x) => x.tipo === 'Licitação')?.href).toBe('#b2g');
+    expect(buscarTudo('tabela', d)[0]).toMatchObject({ tipo: 'Ir', href: '#tabela' });
+  });
+
+  it('monta o menu, troca de tela pelo hash e conta avisos não lidos', async () => {
+    try { localStorage.clear(); } catch { /* */ }
+    const db = bancoFalso({ notificacoes: { n1: { titulo: 'Aviso novo', em: '2099-01-01T00:00:00Z', tipo: 'rotina' } } });
+    vi.resetModules();
+    (window as any).claude = { use: async (n: string) => (n === 'db' ? db.banco : null) };
+    const { iniciarCasca } = await import('../src/casca/casca');
+    const raiz = document.createElement('div'); document.body.appendChild(raiz);
+    const montadas: string[] = [];
+    const pag = (n: string) => (r: HTMLElement) => { montadas.push(n); r.innerHTML = `<p class="pg">${n}</p>`; return () => {}; };
+    location.hash = '#captacao';
+    iniciarCasca(raiz, { captacao: pag('captacao'), tabela: pag('tabela'), inicio: pag('inicio') }, () => {});
+    await espera();
+    expect(raiz.querySelector('#conteudo .page-head h1')?.textContent).toBe('Novos negócios');
+    expect(raiz.querySelector('#csNav [aria-current="page"]')?.textContent).toBe('Captação');
+    expect(raiz.querySelector('#csAv .badge')?.textContent).toBe('1');
+    location.hash = '#tabela'; window.dispatchEvent(new HashChangeEvent('hashchange')); await espera();
+    expect(montadas).toEqual(['captacao', 'tabela']);
+    expect(raiz.querySelector('[data-nicho].on')?.textContent).toBe('Gestão');
+    location.hash = '';
+  });
+});
+
+describe('Início', () => {
+  it('ordena os próximos passos e resume o comercial', async () => {
+    const { passos } = await import('../src/paginas/inicio');
+    const p = passos([{ id: 'p', titulo: 'Fee', estagio: 'Contato', prazo: '2026-12-02', proximoPasso: 'Proposta' }, { id: 'q', titulo: 'Perdida', estagio: 'Perdida', prazo: '2026-01-01' }],
+      [{ id: 'a', nome: 'Agência', status: 'Abordado', prazo: '2026-11-20' }, { id: 'b', nome: 'Fora', status: 'Descartado', prazo: '2026-01-01' }],
+      [{ id: 'o', objeto: 'Ata OOH', orgao: 'Câmara', carteira: true, prazo: '2026-11-25' }]);
+    expect(p.map((x) => x.href)).toEqual(['#captacao', '#b2g', '#funil']);
+    const db = bancoFalso({ pipeline: { p: { estagio: 'Contato', valor: 1000 } }, alvos: { a: { nome: 'A', status: 'Cliente' } } });
+    const { raiz } = await montar('inicio', db);
+    const k = raiz.querySelectorAll('#inK .k');
+    expect(k.length).toBe(5);
+    expect(k[1].textContent).toContain('1 viraram cliente');
+  });
+});
