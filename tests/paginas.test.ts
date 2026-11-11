@@ -42,6 +42,7 @@ async function montar(pagina: string, db: ReturnType<typeof bancoFalso>) {
 
 beforeEach(() => {
   document.body.innerHTML = '';
+  history.replaceState(null, '', location.pathname); // a aba fica no endereço: cada teste começa sem aba
   // arquivos publicados (vencedores, mercado) não existem no teste: a página tem de seguir sem eles
   vi.stubGlobal('fetch', vi.fn(async () => new Response('', { status: 404 })));
 });
@@ -637,7 +638,7 @@ describe('Casca própria', () => {
   it('busca Ctrl K acha telas, serviços, alvos e licitações', async () => {
     const { buscarTudo } = await import('../src/casca/casca');
     const d = { alvos: [{ id: 'a', nome: 'Agência Outdoor Brasil', status: 'Mapeado' }], b2g: [{ id: 'b', objeto: 'Locação de outdoor', orgao: 'Prefeitura' }], frentes: [], swot: [] };
-    expect(buscarTudo('', d).length).toBe(16);
+    expect(buscarTudo('', d).length).toBe(18);
     const r = buscarTudo('outdoor', d);
     expect(r.some((x) => x.tipo === 'Serviço')).toBe(true);
     expect(r.find((x) => x.tipo === 'Alvo')?.href).toBe('#captacao');
@@ -724,5 +725,64 @@ describe('PCA dos órgãos', () => {
     raiz.querySelector<HTMLButtonElement>('[data-pca-funil="a"]')!.click();
     await espera();
     expect(Object.values(db.dados.pipeline)[0]).toMatchObject({ eixo: 'Público', origem: 'PCA', estagio: 'Identificada', valor: 50000 });
+  });
+});
+
+describe('Histórico: desfazer, lixeira e voltar', () => {
+  it('exclusão vai para a lixeira, Desfazer devolve e Restaurar também', async () => {
+    const db = bancoFalso({ casos: { c1: { titulo: 'Black Box', resumo: 'x', servicos: [], perfis: [] } } });
+    vi.resetModules();
+    (window as any).claude = { use: async (n: string) => (n === 'db' ? db.banco : null) };
+    const { banco } = await import('../src/lib/db');
+    const h = await import('../src/lib/historico');
+    const b = (await banco())!;
+    const off = b.collection('casos').onSnapshot(() => {}); await espera();
+    await b.collection('casos').doc('c1').delete();
+    expect(db.dados.casos.c1).toBeUndefined();
+    const lx = Object.values(db.dados.lixeira)[0] as { col: string; docId: string; rotulo: string };
+    expect(lx).toMatchObject({ col: 'casos', docId: 'c1', rotulo: 'Casos · Black Box' });
+    await h.desfazerUltimo();
+    expect(db.dados.casos.c1).toMatchObject({ titulo: 'Black Box' });
+    expect(Object.keys(db.dados.lixeira || {}).length).toBe(0);
+    await h.refazerUltimo();
+    expect(db.dados.casos.c1).toBeUndefined();
+    // edição: desfazer volta ao valor anterior
+    await b.collection('casos').doc('c2').set({ titulo: 'Novo' });
+    await b.collection('casos').doc('c2').update({ titulo: 'Editado' });
+    await new Promise((r) => setTimeout(r, 900));
+    await b.collection('casos').doc('c2').update({ titulo: 'De novo' });
+    await h.desfazerUltimo();
+    expect(db.dados.casos.c2.titulo).toBe('Editado');
+    off();
+  });
+
+  it('Lixeira lista e restaura', async () => {
+    const db = bancoFalso({ lixeira: { lx1: { id: 'lx1', col: 'pipeline', docId: 'fn-1', dados: { titulo: 'Fee exemplo', estagio: 'Contato' }, em: '2026-11-11T10:00:00Z', rotulo: 'Funil · Fee exemplo' } } });
+    const { raiz } = await montar('lixeira', db);
+    expect(raiz.querySelector('.lx-it')?.textContent).toContain('Funil · Fee exemplo');
+    raiz.querySelector<HTMLButtonElement>('[data-lxr="lx1"]')!.click(); await espera();
+    expect(db.dados.pipeline['fn-1']).toMatchObject({ titulo: 'Fee exemplo' });
+    expect(db.dados.lixeira.lx1).toBeUndefined();
+  });
+
+  it('Captação mostra os descartados e Reabrir devolve ao quadro', async () => {
+    const db = bancoFalso({ alvos: { a: { nome: 'Agência Descartada', status: 'Descartado', triagem: 'Descartar', motivoDescarte: 'Momento errado', perfil: 'independente' } } });
+    const { raiz } = await montar('captacao', db);
+    raiz.querySelector<HTMLButtonElement>('[data-pf="__descartados"]')!.click();
+    expect(raiz.querySelector('.cp-desc')?.textContent).toContain('Momento errado');
+    raiz.querySelector<HTMLButtonElement>('[data-reabre="a"]')!.click(); await espera();
+    expect(db.dados.alvos.a).toMatchObject({ status: 'Mapeado', triagem: '' });
+  });
+
+  it('a aba fica no endereço e o Voltar do navegador volta para a aba anterior', async () => {
+    location.hash = '#b2g';
+    const { raiz } = await montar('licitacoes', bancoFalso({ b2g: {} }));
+    raiz.querySelector<HTMLButtonElement>('[data-aba="carteira"]')!.click();
+    expect(location.hash).toBe('#b2g/carteira');
+    expect(raiz.querySelector('#lc-tab-carteira')?.getAttribute('aria-selected')).toBe('true');
+    location.hash = '#b2g'; window.dispatchEvent(new HashChangeEvent('hashchange'));
+    expect(raiz.querySelector('#lc-tab-radar')?.getAttribute('aria-selected')).toBe('true');
+    location.hash = '#b2g/habilitacao'; window.dispatchEvent(new HashChangeEvent('hashchange'));
+    expect(raiz.querySelector('#lc-tab-habilitacao')?.getAttribute('aria-selected')).toBe('true');
   });
 });

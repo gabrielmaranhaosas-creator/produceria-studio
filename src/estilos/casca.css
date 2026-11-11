@@ -30,3 +30,11 @@
 .mc .ini-al{list-style:none;margin:0;padding:0;display:grid;gap:6px;font-size:14px}
 .mc .ini-al a{color:var(--ink);text-decoration:none;display:grid;grid-template-columns:86px minmax(0,1fr);gap:10px}
 .mc .ini-al a:hover{text-decoration:underline}
+.mc .lx{display:flex;flex-direction:column;gap:16px}
+.mc .lx .acts{display:flex;flex-wrap:wrap;gap:8px}
+.mc .lx .chip[aria-pressed=true]{background:var(--ink);color:var(--surface-000,#fff);border-color:var(--ink)}
+.mc .lx-it{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:12px;align-items:center;padding:12px 4px}
+.cs-ajuda-b{border-style:dotted}
+.mc .cs-atalhos th{white-space:nowrap;font-weight:400;padding-right:16px}
+.mc kbd{font:500 12px/1 var(--font-body,inherit);border:1px solid var(--line-strong);border-bottom-width:2px;border-radius:4px;padding:2px 6px;background:var(--surface-100)}
+.mc .cs-atalhos{min-width:0;width:100%}

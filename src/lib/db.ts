@@ -20,6 +20,8 @@ export interface Colecao<T = Record<string, unknown>> extends Consulta<T> {
 }
 export interface Banco { collection<T = Record<string, unknown>>(caminho: string): Colecao<T> }
 
+import { instrumentar } from './historico';
+
 declare global {
   interface Window { claude?: { use(nome: string): Promise<unknown> } }
 }
@@ -29,7 +31,10 @@ let promessa: Promise<Banco | null> | null = null;
 export function banco(): Promise<Banco | null> {
   if (!promessa) {
     promessa = (async () => {
-      try { return ((await window.claude?.use('db')) as Banco) || null; } catch { return null; }
+      try {
+        const bruto = (await window.claude?.use('db')) as Banco | undefined;
+        return bruto ? instrumentar(bruto) : null; // histórico: Desfazer, Refazer e lixeira (ver historico.ts)
+      } catch { return null; }
     })();
   }
   return promessa;

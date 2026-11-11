@@ -37,6 +37,7 @@ import * as pPlugins from './paginas/plugins';
 import * as pBiblioteca from './paginas/biblioteca';
 import * as pAgentes from './paginas/agentes';
 import * as pInicio from './paginas/inicio';
+import * as pLixeira from './paginas/lixeira';
 import casca from './estilos/casca.css?inline';
 import { iniciarCasca } from './casca/casca';
 
@@ -62,6 +63,7 @@ const paginas: Record<string, Montar> = {
   biblioteca: pBiblioteca.montar,
   agentes: pAgentes.montar,
   inicio: pInicio.montar,
+  lixeira: pLixeira.montar,
 };
 
 function estilos() {

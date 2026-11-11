@@ -4,7 +4,7 @@ import { hoje, addDias } from '../lib/datas';
 import { banco, type Colecao } from '../lib/db';
 import { perguntar, CONTEXTO, ErroIA } from '../lib/ia';
 import type { Oportunidade, Habilitacao, Requisito } from '../lib/tipos';
-import { seletor, comId, type Dialogo } from './dom';
+import { seletor, comId, abaNoEndereco, type Dialogo } from './dom';
 import { kpis, numero, vazio, abrirDialogo, devolverFoco } from '../componentes';
 import { montarPca } from './pca';
 
@@ -109,7 +109,8 @@ export function montar(root: HTMLElement): () => void {
   let carregando = true, limite = 60;
   let desPca: (() => void) | null = null;
   let aba: Aba = 'radar';
-  try { aba = (localStorage.getItem('lc.aba') as Aba | null) || 'radar'; } catch { /* sem armazenamento */ }
+  const abas = abaNoEndereco<Aba>(['radar', 'carteira', 'habilitacao', 'pca', 'vias'], 'radar', (a) => { aba = a; render(); });
+  aba = abas.inicial;
   const F: FiltroRadar = { frente: '', aderencia: '', nota60: true, abertas: true, estudio: false, descartadas: false, q: '', ordem: 'nota' };
   const avisar = (t: string) => { $('#lcLive').textContent = t; };
   const D = $<Dialogo>('#lcD');
@@ -411,7 +412,7 @@ ${txt.slice(0, 30000)}`, { json: true })) as Record<string, unknown> | null;
     const b = (e.target as HTMLElement).closest<HTMLElement>('button');
     if (!b || !root.contains(b) || D.contains(b)) return;
     const d = b.dataset;
-    if (d.aba) { aba = d.aba as Aba; render(); $<HTMLElement>('#lc-tab-' + aba).focus(); return; }
+    if (d.aba) { abas.ir(d.aba as Aba); $<HTMLElement>('#lc-tab-' + aba).focus(); return; }
     if (d.fr !== undefined) { F.frente = F.frente === d.fr ? '' : d.fr; limite = 60; render(); return; }
     if (d.ad !== undefined) { F.aderencia = d.ad as FiltroRadar['aderencia']; limite = 60; render(); return; }
     if (d.tg) { const k = d.tg as 'nota60' | 'abertas' | 'estudio' | 'descartadas'; F[k] = !F[k]; limite = 60; render(); return; }
@@ -466,5 +467,5 @@ ${txt.slice(0, 30000)}`, { json: true })) as Record<string, unknown> | null;
       if (aba === 'radar' && !D.open) render();
     }, () => {}));
   })();
-  return () => { if (desPca) desPca(); offs.forEach((f) => { try { f(); } catch { /* já cancelado */ } }); };
+  return () => { abas.parar(); if (desPca) desPca(); offs.forEach((f) => { try { f(); } catch { /* já cancelado */ } }); };
 }

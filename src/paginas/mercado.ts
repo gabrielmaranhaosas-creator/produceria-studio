@@ -3,7 +3,7 @@
 import { esc, int, brk, dt } from '../lib/formato';
 import { banco, lerArquivo, type Banco } from '../lib/db';
 import { chave } from '../lib/nomes';
-import { seletor, comId, type Dialogo } from './dom';
+import { seletor, comId, abaNoEndereco, type Dialogo } from './dom';
 import { kpis, vazio, abrirDialogo, devolverFoco } from '../componentes';
 
 export interface Conta { data: string; anunciante: string; escopo: string; fonte: string; tipo: string; anterior: string }
@@ -90,7 +90,8 @@ export function montar(root: HTMLElement): () => void {
   let visao: Visao = 'movimentos';
   const f: Filtros = { busca: '', periodo: '180', soCriacao: true };
   const offs: (() => void)[] = [];
-  try { visao = (localStorage.getItem('mk.visao') as Visao | null) || 'movimentos'; } catch { /* sem armazenamento */ }
+  const abas = abaNoEndereco<Visao>(['movimentos', 'agencias', 'anunciantes', 'abordar'], 'movimentos', (a) => { visao = a; if (m) { filtros(); lista(); } });
+  visao = abas.inicial;
   const avisar = (t: string) => { $('#mkLive').textContent = t; };
   devolverFoco(D, () => $<HTMLElement>('#mkF [aria-pressed=true]'));
 
@@ -206,7 +207,7 @@ export function montar(root: HTMLElement): () => void {
   root.addEventListener('click', (ev) => {
     const b = (ev.target as HTMLElement).closest<HTMLElement>('button');
     if (!b || !root.contains(b) || D.contains(b) || !m) return;
-    if (b.dataset.visao) { visao = b.dataset.visao as Visao; filtros(); lista(); root.querySelector<HTMLElement>(`[data-visao="${visao}"]`)?.focus(); return; }
+    if (b.dataset.visao) { abas.ir(b.dataset.visao as Visao); root.querySelector<HTMLElement>(`[data-visao="${visao}"]`)?.focus(); return; }
     if (b.dataset.ag) { const a = m.agencias.find((x) => x.nome === b.dataset.ag); if (a) abrirAgencia(a, b); return; }
     if (b.id === 'mkCSV') baixar();
   });
@@ -227,5 +228,5 @@ export function montar(root: HTMLElement): () => void {
     offs.push(db.collection<Movimento>('movimentos').onSnapshot((s) => { novos = s.docs.map(comId); recalcular(); }, () => {}));
     offs.push(db.collection<{ nome: string }>('alvos').onSnapshot((s) => { alvos = s.docs.map(comId); }, () => {}));
   })();
-  return () => { offs.forEach((x) => { try { x(); } catch { /* já cancelado */ } }); };
+  return () => { abas.parar(); offs.forEach((x) => { try { x(); } catch { /* já cancelado */ } }); };
 }

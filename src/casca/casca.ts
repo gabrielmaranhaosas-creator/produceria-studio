@@ -6,6 +6,7 @@ import { banco, type Banco } from '../lib/db';
 import { buscar, rotulo } from '../lib/servicos';
 import { nomeProprio } from '../lib/arquivos';
 import { abrirDialogo, devolverFoco, type DialogoComRetorno } from '../componentes';
+import { ouvirHistorico, desfazerUltimo, refazerUltimo, podeDesfazer, podeRefazer } from '../lib/historico';
 import type { Montar } from '../paginas/dom';
 
 export interface Item { h: string; l: string; rotas: string[] }
@@ -13,19 +14,20 @@ export interface Nicho { id: string; l: string; home: string; itens: Item[] }
 export const NICHOS: Nicho[] = [
   { id: 'oficina', l: 'Oficina', home: 'ferramentas', itens: [{ h: 'ferramentas', l: 'Bancada', rotas: ['ferramentas'] }, { h: 'grafica', l: 'Gráfica', rotas: ['grafica'] }, { h: 'plugins', l: 'Plugins', rotas: ['plugins'] }, { h: 'agentes', l: 'Agentes', rotas: ['agentes'] }, { h: 'biblioteca', l: 'Biblioteca', rotas: ['biblioteca'] }, { h: 'casos', l: 'Casos', rotas: ['casos'] }] },
   { id: 'comercial', l: 'Comercial', home: 'central', itens: [{ h: 'central', l: 'Central de notícias', rotas: ['central'] }, { h: 'agenda', l: 'Agenda de contatos', rotas: ['agenda'] }, { h: 'captacao', l: 'Captação', rotas: ['captacao'] }, { h: 'mercado', l: 'Contas e agências', rotas: ['mercado'] }, { h: 'b2g', l: 'Licitações', rotas: ['b2g'] }, { h: 'vencedores', l: 'Vencedores', rotas: ['vencedores'] }, { h: 'contas', l: 'Mapa de contas', rotas: ['contas'] }, { h: 'estrategia', l: 'Estratégia e funil', rotas: ['estrategia', 'funil'] }] },
-  { id: 'gestao', l: 'Gestão', home: 'rotinas', itens: [{ h: 'rotinas', l: 'Rotinas do Claude', rotas: ['rotinas'] }, { h: 'tabela', l: 'Tabela de serviços', rotas: ['tabela'] }, { h: 'ajustes', l: 'Ajustes e dados', rotas: ['ajustes'] }] },
+  { id: 'gestao', l: 'Gestão', home: 'rotinas', itens: [{ h: 'rotinas', l: 'Rotinas do Claude', rotas: ['rotinas'] }, { h: 'tabela', l: 'Tabela de serviços', rotas: ['tabela'] }, { h: 'lixeira', l: 'Lixeira', rotas: ['lixeira'] }, { h: 'ajustes', l: 'Ajustes e dados', rotas: ['ajustes'] }] },
 ];
 /** Rota → página registrada. */
 export const PAGINA: Record<string, string> = {
   painel: 'inicio', central: 'central', agenda: 'agenda', casos: 'casos', captacao: 'captacao', mercado: 'mercado', b2g: 'licitacoes', vencedores: 'vencedores',
   contas: 'contas', estrategia: 'estrategia', funil: 'funil', rotinas: 'rotinas', tabela: 'tabela', ajustes: 'ajustes', ferramentas: 'bancada', grafica: 'grafica',
-  plugins: 'plugins', agentes: 'agentes', biblioteca: 'biblioteca',
+  plugins: 'plugins', agentes: 'agentes', biblioteca: 'biblioteca', lixeira: 'lixeira',
 };
 const APELIDOS: Record<string, string> = { diversificacao: 'funil', mapa: 'funil', frentes: 'estrategia', swot: 'estrategia', ia: 'estrategia', agencias: 'mercado', personas: 'agentes', receitas: 'funil' };
 /** Cabeçalho das telas do Comercial que não trazem o próprio. */
 export const CABECALHOS: Record<string, { e: string; t: string; d: string }> = {
   central: { e: 'Comercial · Central', t: 'Notícias e leads', d: 'Tudo o que se move no mercado publicitário num lugar só: contas que trocaram de agência, contratos públicos vencidos, licitações abertas e notícias de negócio. Cada sinal pode virar alvo da Captação com um clique.' },
   agenda: { e: 'Comercial · Agenda', t: 'Quem contatar hoje', d: 'A cadência de cada alvo em ordem de prazo e prioridade. Registre cada contato aqui: a etapa avança sozinha, o próximo toque é sugerido pela cadência e a conversão por origem passa a ser medida.' },
+  lixeira: { e: 'Gestão · Lixeira', t: 'O que foi apagado', d: 'Tudo o que é apagado no Studio fica aqui e pode ser restaurado por qualquer pessoa da equipe.' },
   casos: { e: 'Oficina · Casos', t: 'Casos da casa', d: 'O portfólio que vira argumento de venda. Cada caso diz o que a Produceria fez, para quem e com que resultado.' },
   contas: { e: 'Comercial · Mapa de contas', t: 'Quem detém cada conta', d: 'Empresas e agências que detêm contas públicas e privadas, com cliente, serviço, valor e vigência. Filtre e veja os dashboards.' },
   captacao: { e: 'Comercial · Captação', t: 'Novos negócios', d: 'Quem procurar, por que agora e o que dizer. Os sinais saem dos seus dados; os alvos, de textos reais que você cola; a abordagem, da IA com as provas da casa. Nada é enviado sem você.' },
@@ -48,7 +50,7 @@ const IR = [
   ['Início · o que fazer agora', 'painel'], ['Oficina · bancada, agentes, biblioteca', 'ferramentas'], ['Central de notícias e leads', 'central'], ['Agenda · quem contatar hoje', 'agenda'],
   ['Casos da casa (portfólio)', 'casos'], ['Captação de novos negócios', 'captacao'], ['Contas e agências do mercado', 'mercado'], ['Vencedores de licitações', 'vencedores'],
   ['Funil comercial', 'funil'], ['Gráfica · ficha técnica e fechamento', 'grafica'], ['Plugins · Photoshop, Magnific, Firefly', 'plugins'], ['Licitações', 'b2g'],
-  ['Estratégia · SWOT', 'estrategia'], ['Rotinas do Claude · rodar, pausar', 'rotinas'], ['Tabela de serviços', 'tabela'], ['Ajustes e dados', 'ajustes'],
+  ['Estratégia · SWOT', 'estrategia'], ['Rotinas do Claude · rodar, pausar', 'rotinas'], ['Tabela de serviços', 'tabela'], ['Lixeira · restaurar o que foi apagado', 'lixeira'], ['Ajustes e dados', 'ajustes'], ['Atalhos de teclado', '?'],
 ].map(([titulo, h]) => ({ tipo: 'Ir', titulo, href: '#' + h }));
 const sem = (s: unknown) => String(s ?? '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
 const casa = (q: string, ...t: unknown[]) => { const termos = sem(q).split(/\s+/).filter(Boolean), alvo = sem(t.join(' ')); return termos.length > 0 && termos.every((x) => alvo.includes(x)); };
@@ -83,9 +85,21 @@ export function iniciarCasca(raiz: HTMLElement, paginas: Record<string, Montar>,
     <div class="nichos" role="tablist" aria-label="Nicho de trabalho" id="csN"></div>
     <nav id="csNav" aria-label="Telas"></nav>
     <button type="button" class="rail-busca" id="csBusca"><span>Buscar ou ir para…</span><span class="k">Ctrl K</span></button>
+    <button type="button" class="rail-busca cs-ajuda-b" id="csAjB"><span>Atalhos e como voltar</span><span class="k">?</span></button>
     <div class="cs-pe"><span class="caption" id="csDados">Conectando…</span><button type="button" class="btn ghost sm" id="csFechar" hidden>Fechar menu</button></div>
   </aside><main class="main" id="conteudo" tabindex="-1"></main></div>
   <div class="mc cs-camadas"><dialog id="csAvD" class="cs-avisos" aria-labelledby="csAvT"></dialog></div>
+  <div class="undo-bar" role="status" aria-live="polite" id="csUndo" hidden><span class="undo-ok" aria-hidden="true">✓</span><span id="csUndoT"></span><button type="button" id="csDesf">Desfazer</button><button type="button" id="csRef" hidden>Refazer</button><button type="button" class="x" id="csUndoX" aria-label="Fechar">×</button></div>
+  <div class="mc cs-camadas"><dialog id="csAjuda" aria-labelledby="csAjT"><div class="dh"><div><span class="lab">Studio</span><h2 class="d d-sub" id="csAjT">Atalhos e como voltar</h2></div><button type="button" class="x" id="csAjX" aria-label="Fechar">×</button></div>
+    <table class="vc-t cs-atalhos"><tbody>
+      <tr><th scope="row"><kbd>Ctrl</kbd> <kbd>K</kbd></th><td>Buscar ou ir para qualquer tela</td></tr>
+      <tr><th scope="row"><kbd>Ctrl</kbd> <kbd>Z</kbd></th><td>Desfazer a última alteração (fora de um campo de texto)</td></tr>
+      <tr><th scope="row"><kbd>Ctrl</kbd> <kbd>Shift</kbd> <kbd>Z</kbd></th><td>Refazer</td></tr>
+      <tr><th scope="row">Voltar do navegador</th><td>Volta para a tela ou aba anterior</td></tr>
+      <tr><th scope="row"><kbd>Esc</kbd></th><td>Fecha janela, busca ou menu</td></tr>
+      <tr><th scope="row"><kbd>?</kbd></th><td>Mostra esta ajuda</td></tr>
+    </tbody></table>
+    <p class="note">Apagou algo sem querer? Use Desfazer logo em seguida, ou abra <a class="cn-f" href="#lixeira">Gestão › Lixeira</a>: tudo o que é apagado fica lá e pode ser restaurado. Descartes (alvos, licitações, oportunidades perdidas) não apagam: aparecem nos filtros "Descartados" ou "Perdidas" de cada tela, com Reabrir.</p></dialog></div>
   <div class="toast" role="status" id="csToast" hidden></div><div class="aviso-fixo" role="alert" id="csOff" hidden>Sem conexão. As alterações não serão salvas até voltar.</div>
   <div class="paleta-fundo" id="csPal" hidden><div class="paleta" role="dialog" aria-modal="true" aria-label="Buscar e ir"><input class="paleta-inp" id="csPalQ" placeholder="Buscar serviço, alvo, licitação, frente… ou ir para uma tela" aria-label="Buscar" aria-controls="csPalL" role="combobox" aria-expanded="true" autocomplete="off"><div class="paleta-lista" role="listbox" id="csPalL"></div><div class="paleta-pe caption">↑↓ escolher · Enter abrir · Esc fechar</div></div></div>`;
   const $ = <T extends HTMLElement = HTMLElement>(s: string) => raiz.querySelector(s) as T;
@@ -152,6 +166,29 @@ export function iniciarCasca(raiz: HTMLElement, paginas: Record<string, Montar>,
     if (t.closest('[data-fecha]')) D.close();
   });
 
+  // ---------------------------------------------------------------- desfazer
+  let undoT: ReturnType<typeof setTimeout> | null = null;
+  function barra(texto: string) {
+    $('#csUndoT').textContent = texto;
+    $<HTMLButtonElement>('#csDesf').disabled = !podeDesfazer();
+    $('#csRef').hidden = !podeRefazer();
+    $('#csUndo').hidden = false;
+    if (undoT) clearTimeout(undoT);
+    undoT = setTimeout(() => { $('#csUndo').hidden = true; }, 8000);
+  }
+  ouvirHistorico((p, tipo) => barra(tipo === 'novo' ? p!.rotulo : tipo === 'desfeito' ? `Desfeito: ${p!.rotulo}` : `Refeito: ${p!.rotulo}`));
+  async function voltar(refaz = false) {
+    try { const p = refaz ? await refazerUltimo() : await desfazerUltimo(); if (!p) barra(refaz ? 'Nada para refazer' : 'Nada para desfazer nesta sessão. Veja a Lixeira.'); }
+    catch { barra('Não foi possível desfazer agora. Tente de novo.'); }
+  }
+  $('#csDesf').addEventListener('click', () => voltar());
+  $('#csRef').addEventListener('click', () => voltar(true));
+  $('#csUndoX').addEventListener('click', () => { $('#csUndo').hidden = true; });
+  const A = $<DialogoComRetorno>('#csAjuda');
+  devolverFoco(A, () => $('#csAjB'));
+  const ajuda = () => abrirDialogo(A, A.innerHTML, document.activeElement as HTMLElement, '#csAjX');
+  A.addEventListener('click', (ev) => { const t = ev.target as HTMLElement; if (t.closest('#csAjX') || t.closest('a')) A.close(); });
+
   // ---------------------------------------------------------------- busca
   function paleta(aberta: boolean) {
     const p = $('#csPal');
@@ -165,7 +202,7 @@ export function iniciarCasca(raiz: HTMLElement, paginas: Record<string, Montar>,
     $('#csPalQ').setAttribute('aria-activedescendant', achados.length ? 'csOp' + sel : '');
     $(`#csOp${sel}`)?.scrollIntoView({ block: 'nearest' });
   }
-  const ir = (a: Achado) => { paleta(false); location.hash = a.href.slice(1); };
+  const ir = (a: Achado) => { paleta(false); if (a.href === '#?') { ajuda(); return; } location.hash = a.href.slice(1); };
   $('#csPalQ').addEventListener('input', () => { sel = 0; resultados(); });
   $('#csPalQ').addEventListener('keydown', (ev) => {
     if (ev.key === 'Escape') { ev.preventDefault(); paleta(false); }
@@ -186,11 +223,16 @@ export function iniciarCasca(raiz: HTMLElement, paginas: Record<string, Montar>,
     if (t.closest('#csMenu')) { menu(true); return; }
     if (t.closest('#csFechar')) { menu(false); $('#csMenu').focus(); return; }
     if (t.closest('#csBusca')) { paleta(true); return; }
+    if (t.closest('#csAjB')) { ajuda(); return; }
     if (t.closest('#csAv')) abrirAvisos();
   });
   window.addEventListener('hashchange', navegar);
   window.addEventListener('keydown', (ev) => {
+    const alvo = ev.target as HTMLElement, digitando = !!alvo && (alvo.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(alvo.tagName));
     if ((ev.metaKey || ev.ctrlKey) && ev.key.toLowerCase() === 'k') { ev.preventDefault(); paleta($('#csPal').hidden); }
+    else if ((ev.metaKey || ev.ctrlKey) && ev.key.toLowerCase() === 'z' && !digitando) { ev.preventDefault(); voltar(ev.shiftKey); }
+    else if ((ev.metaKey || ev.ctrlKey) && ev.key.toLowerCase() === 'y' && !digitando) { ev.preventDefault(); voltar(true); }
+    else if (ev.key === '?' && !digitando && !ev.metaKey && !ev.ctrlKey) { ev.preventDefault(); ajuda(); }
     else if (ev.key === 'Escape' && rail.classList.contains('open')) { menu(false); $('#csMenu').focus(); }
   });
   const conexao = () => { $('#csOff').hidden = navigator.onLine !== false; };

@@ -5,7 +5,7 @@ import { banco, type Banco } from '../lib/db';
 import { perguntar, aceitaImagens, ErroIA } from '../lib/ia';
 import { SERVICOS, rotulo, type Servico } from '../lib/servicos';
 import { CATEGORIAS } from './tabela';
-import { seletor, comId } from './dom';
+import { seletor, comId, abaNoEndereco } from './dom';
 import { confirmarNoBotao } from '../componentes';
 import { navOficina, cabecalho, baixarArquivo } from './oficina';
 
@@ -50,7 +50,8 @@ export function montar(root: HTMLElement): () => void {
   let busca = '', cat = '', imagem: File | null = null, urlImg = '';
   let forn = [{ nome: '', valor: '' }, { nome: '', valor: '' }, { nome: '', valor: '' }];
   const offs: (() => void)[] = [];
-  try { aba = (localStorage.getItem('bc.aba') as Aba | null) || 'desdobrar'; } catch { /* sem armazenamento */ }
+  const navAba = abaNoEndereco<Aba>(['desdobrar', 'revisao', 'precheck', 'cotacao'], 'desdobrar', (a) => { aba = a; render(); });
+  aba = navAba.inicial;
   const avisar = (t: string) => { $('#bcLive').textContent = t; };
 
   function abas() {
@@ -143,7 +144,7 @@ Responda só com JSON: [{"item": "", "status": "ok|ajustar|conferir no arquivo",
   root.addEventListener('click', async (ev) => {
     const b = (ev.target as HTMLElement).closest<HTMLButtonElement>('button');
     if (!b || !root.contains(b)) return;
-    if (b.dataset.aba) { aba = b.dataset.aba as Aba; render(); $<HTMLElement>('#bc-tab-' + aba).focus(); return; }
+    if (b.dataset.aba) { navAba.ir(b.dataset.aba as Aba); $<HTMLElement>('#bc-tab-' + aba).focus(); return; }
     if (b.id === 'rvB') { revisar(b); return; }
     if (b.id === 'pcB') { checar(b); return; }
     if (b.id === 'bdLimpar') { for (const k of Object.keys(q)) delete q[k]; linhas(); total(); return; }
@@ -190,5 +191,5 @@ Responda só com JSON: [{"item": "", "status": "ok|ajustar|conferir no arquivo",
     offs.push(db.collection<{ valores?: Record<string, number> }>('config').onSnapshot((s) => { descontos = s.docs.find((d) => d.id === 'descontos')?.data().valores || {}; if (aba === 'desdobrar') { linhas(); total(); } }, () => {}));
     offs.push(db.collection<Cotacao>('cotacoes').onSnapshot((s) => { cotacoes = s.docs.map(comId); historico(); }, () => {}));
   })();
-  return () => { if (urlImg) URL.revokeObjectURL(urlImg); offs.forEach((x) => { try { x(); } catch { /* já cancelado */ } }); };
+  return () => { navAba.parar(); if (urlImg) URL.revokeObjectURL(urlImg); offs.forEach((x) => { try { x(); } catch { /* já cancelado */ } }); };
 }

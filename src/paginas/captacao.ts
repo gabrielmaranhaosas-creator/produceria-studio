@@ -7,7 +7,7 @@ import { banco, type Colecao } from '../lib/db';
 import { perguntar, ErroIA } from '../lib/ia';
 import { buscar, calcular, itemDe, rotulo, SERVICOS, type ItemProposta } from '../lib/servicos';
 import type { Alvo, Caso, Oportunidade } from '../lib/tipos';
-import { seletor, comId, type Dialogo } from './dom';
+import { seletor, comId, abaNoEndereco, type Dialogo } from './dom';
 import { vazio, abrirDialogo, devolverFoco, confirmarNoBotao } from '../componentes';
 
 // ---------------------------------------------------------------- perfis e atração (da tela antiga)
@@ -75,7 +75,8 @@ export function montar(root: HTMLElement): () => void {
   let carregando = true, perfil = '', novo = false, aba: Aba = 'alvos', ultimoAberto = '';
   const expandidas = new Set<string>();
   const offs: (() => void)[] = [];
-  try { aba = (localStorage.getItem('cp.aba') as Aba | null) || 'alvos'; } catch { /* sem armazenamento */ }
+  const abas = abaNoEndereco<Aba>(['alvos', 'achar', 'atracao'], 'alvos', (a) => { aba = a; render(); });
+  aba = abas.inicial;
   const avisar = (t: string) => { $('#cpLive').textContent = t; };
   const D = $<Dialogo>('#cpD');
   D.addEventListener('close', () => render());
@@ -137,6 +138,7 @@ export function montar(root: HTMLElement): () => void {
   }
 
   function alvos(vivos: AlvoDoc[]): string {
+    const desc = A.filter((a) => a.status === 'Descartado').sort((a, b) => (b.triadoEm || '').localeCompare(a.triadoEm || ''));
     const venc = vivos.filter((a) => vencido(a)).length;
     const conversa = vivos.filter((a) => ['Abordado', 'Conversa', 'Proposta'].includes(a.status || '')).length;
     const clientes = vivos.filter((a) => a.status === 'Cliente').length;
@@ -152,9 +154,17 @@ export function montar(root: HTMLElement): () => void {
       <p class="erro" id="n_e" role="alert"></p><div class="dacts"><button type="submit">Registrar alvo</button><button type="button" class="ghost" id="cpNovoX">Cancelar</button></div></form>` : '';
     return `<section class="cp-resumo"><p class="note"><b>${int(vivos.length)}</b> alvos · <b>${int(conversa)}</b> em abordagem ou conversa · <b>${int(clientes)}</b> viraram cliente${venc ? ` · <b>${int(venc)}</b> com próximo passo vencido` : ''}</p>
       <div class="acts"><button type="button" class="chip" data-pf="" aria-pressed="${!perfil}">Todos</button>${PERFIS.map((p) => { const n = vivos.filter((a) => a.perfil === p.id).length; return n ? `<button type="button" class="chip" data-pf="${p.id}" aria-pressed="${perfil === p.id}">${p.curto} · ${int(n)}</button>` : ''; }).join('')}
+      ${desc.length ? `<button type="button" class="chip cp-desc-chip" data-pf="__descartados" aria-pressed="${perfil === '__descartados'}">Descartados · ${int(desc.length)}</button>` : ''}
       <button type="button" class="sm" id="cpN" aria-expanded="${novo}">${novo ? 'Fechar' : 'Novo alvo'}</button></div></section>
       ${form}
-      ${carregando ? '<p class="note">Carregando alvos…</p>' : L.length ? quadro(L) : vazio({ titulo: perfil ? 'Nenhum alvo neste perfil' : 'Nenhum alvo ainda', texto: 'Em Achar novos, use os sinais, cole um texto ou adicione à mão.', acao: '<button type="button" class="ghost sm" data-aba="achar">Achar novos</button>' })}`;
+      ${carregando ? '<p class="note">Carregando alvos…</p>' : perfil === '__descartados' ? descartados(desc) : L.length ? quadro(L) : vazio({ titulo: perfil ? 'Nenhum alvo neste perfil' : 'Nenhum alvo ainda', texto: 'Em Achar novos, use os sinais, cole um texto ou adicione à mão.', acao: '<button type="button" class="ghost sm" data-aba="achar">Achar novos</button>' })}`;
+  }
+
+  /** Alvos descartados: ficam guardados, com o motivo, e podem voltar para o quadro. */
+  function descartados(L: AlvoDoc[]): string {
+    return `<p class="note">Descartar não apaga: o alvo sai do quadro e fica aqui, com o motivo. Reabrir devolve para a coluna Mapeado.</p>
+    <ul class="vc-l">${L.map((a) => `<li class="cp-desc"><span class="vc-c"><b>${esc(a.nome)}</b><span class="note">${esc(perfilDe(a.perfil)?.curto || a.perfil || '')}${a.motivoDescarte ? ' · ' + esc(a.motivoDescarte) : ''}${a.triadoEm ? ' · descartado em ' + dt(a.triadoEm) : ''}</span></span>
+      <button type="button" class="ghost sm" data-reabre="${esc(a.id)}">Reabrir</button></li>`).join('')}</ul>`;
   }
 
   function quadro(L: AlvoDoc[]): string {
@@ -403,8 +413,9 @@ Escreva só três seções em markdown, sem valores (os valores entram numa tabe
     const b = (e.target as HTMLElement).closest<HTMLElement>('button');
     if (!b || !root.contains(b) || D.contains(b)) return;
     const d = b.dataset;
-    if (d.aba) { aba = d.aba as Aba; render(); $<HTMLElement>('#cp-tab-' + aba).focus(); return; }
+    if (d.aba) { abas.ir(d.aba as Aba); $<HTMLElement>('#cp-tab-' + aba).focus(); return; }
     if (d.pf !== undefined) { perfil = d.pf; render(); return; }
+    if (d.reabre) { const a = A.find((x) => x.id === d.reabre); if (a && await atualizar(a.id, { status: 'Mapeado', triagem: '', motivoDescarte: '', triadoEm: agora() }, `${a.nome} voltou para Mapeado.`)) { if (!col) render(); } return; }
     if (d.verpf) { perfil = d.verpf; aba = 'alvos'; render(); return; }
     if (b.id === 'cpN') { novo = !novo; render(); if (novo) $<HTMLInputElement>('#n_nome').focus(); return; }
     if (b.id === 'cpNovoX') { novo = false; render(); $<HTMLElement>('#cpN').focus(); return; }
@@ -469,5 +480,5 @@ ${txt.slice(0, 20000)}`, { json: true });
     offs.push(db.collection<{ titulo?: string }>('pipeline').onSnapshot((s) => ver(() => { funil = s.docs.map(comId); })(), () => {}));
     offs.push(db.collection<{ valores?: Record<string, number> }>('config').onSnapshot((s) => { descontos = s.docs.find((d) => d.id === 'descontos')?.data().valores || {}; }, () => {}));
   })();
-  return () => { offs.forEach((f) => { try { f(); } catch { /* já cancelado */ } }); };
+  return () => { abas.parar(); offs.forEach((f) => { try { f(); } catch { /* já cancelado */ } }); };
 }

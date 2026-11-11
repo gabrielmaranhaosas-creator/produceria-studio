@@ -19,3 +19,5 @@
 .mc .cp-etapas{flex-wrap:wrap}
 @media (max-width:640px){.mc .cp-sinal{grid-template-columns:minmax(0,1fr)}}
 .mc .cp-quadro .lc-mv button{white-space:nowrap}
+.mc .cp-desc{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:12px;align-items:center;padding:10px 4px}
+.mc .cp-desc-chip{border-style:dashed}

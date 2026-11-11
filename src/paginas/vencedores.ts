@@ -3,7 +3,7 @@
 import { esc, int, brl, brk, dt } from '../lib/formato';
 import { banco, lerArquivo, type Banco } from '../lib/db';
 import { chave } from '../lib/nomes';
-import { seletor, comId, type Dialogo } from './dom';
+import { seletor, comId, abaNoEndereco, type Dialogo } from './dom';
 import { kpis, vazio, abrirDialogo, devolverFoco } from '../componentes';
 
 // ---------------------------------------------------------------- dados
@@ -131,7 +131,8 @@ export function montar(root: HTMLElement): () => void {
   const f: Filtros = { segmento: 'Agência com conta pública', frente: '', uf: '', busca: '', soVigentes: true };
   let porRaiz = new Map<string, Contrato[]>(), porOrgao = new Map<string, Contrato[]>();
   const offs: (() => void)[] = [];
-  try { visao = (localStorage.getItem('vc.visao') as Visao | null) || 'empresas'; } catch { /* sem armazenamento */ }
+  const abas = abaNoEndereco<Visao>(['empresas', 'orgaos', 'precos', 'contratos'], 'empresas', (a) => { visao = a; limite = 60; if (m) { filtros(); lista(); } });
+  visao = abas.inicial;
   const avisar = (t: string) => { $('#vcLive').textContent = t; };
   const fr = (k: string) => m?.precos[k]?.nome || k;
   devolverFoco(D, () => $<HTMLElement>('#vcF [aria-pressed=true]'));
@@ -325,7 +326,7 @@ export function montar(root: HTMLElement): () => void {
     const b = (ev.target as HTMLElement).closest<HTMLElement>('button');
     if (!b || !root.contains(b) || D.contains(b) || !m) return;
     const d = b.dataset;
-    if (d.visao) { visao = d.visao as Visao; limite = 60; filtros(); lista(); root.querySelector<HTMLElement>(`[data-visao="${visao}"]`)?.focus(); return; }
+    if (d.visao) { abas.ir(d.visao as Visao); root.querySelector<HTMLElement>(`[data-visao="${visao}"]`)?.focus(); return; }
     if (d.seg) { f.segmento = d.seg; limite = 60; lista(); root.querySelector<HTMLElement>(`[data-seg="${CSS.escape(d.seg)}"]`)?.focus(); return; }
     if (d.mais) { limite += Number(d.mais); lista(); return; }
     if (d.emp) { const e = m.empresas.find((x) => x.cnpj === d.emp); if (e) abrirEmpresa(e, b); return; }
@@ -354,5 +355,5 @@ export function montar(root: HTMLElement): () => void {
     offs.push(db.collection<{ nome: string }>('alvos').onSnapshot((s) => { alvos = s.docs.map(comId); }, () => {}));
     offs.push(db.collection<{ titulo?: string }>('pipeline').onSnapshot((s) => { funil = s.docs.map(comId); }, () => {}));
   })();
-  return () => { offs.forEach((x) => { try { x(); } catch { /* já cancelado */ } }); };
+  return () => { abas.parar(); offs.forEach((x) => { try { x(); } catch { /* já cancelado */ } }); };
 }
