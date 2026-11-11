@@ -11,6 +11,7 @@ Horários em America/Sao_Paulo.
 | Cérebro de licitações · varredura diária | todo dia 06:17 | Varre o PNCP (`jobs/cerebro`), grava o radar `b2g`, arquiva vencidas há 60+ dias | ativa |
 | Licitações · triagem semanal | segunda 08:23 | Candidatas da semana e retorno da equipe | ativa |
 | Vencedores · atualização mensal | dia 2, 05:47 | Contratos novos do PNCP (`jobs/vencedores`) → `contratos_novos` | ativa |
+| PCA · coleta mensal | dia 5, 06:00 | Planos de Contratações Anuais do PNCP por classe CATSER (`jobs/pca`) → `pca`, aviso no sino | ativa |
 | Studio · publicação automática do main | todo dia 06:30 | Publica o Studio a partir do `main` se o código mudou e os testes passam; aviso no sino | ativa |
 | Studio · backup semanal do banco | segunda 07:30 | Exporta todas as coleções, empacota (`jobs/backup`) e copia para o Google Drive; status em `cerebro/backup` | ativa (local: roda neste Mac com o app aberto) |
 | Produção · rotina diária do estúdio | — | Distribuía tarefas da produção | pausada (produção fora do escopo) |
