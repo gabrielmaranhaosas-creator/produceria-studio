@@ -1,0 +1,5 @@
+{
+  "private": true,
+  "type": "commonjs",
+  "description": "Plugins da casa para Photoshop (UXP) e After Effects. CommonJS, como o UXP espera; os testes ficam em tests/plugins.test.ts."
+}

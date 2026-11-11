@@ -1,0 +1,20 @@
+{
+  "manifestVersion": 5,
+  "id": "br.com.produceria.exportador",
+  "name": "Produceria Exportador",
+  "version": "1.0.0",
+  "main": "index.html",
+  "host": { "app": "PS", "minVersion": "23.3.0" },
+  "requiredPermissions": { "localFileSystem": "request" },
+  "entrypoints": [
+    {
+      "type": "panel",
+      "id": "exportadorPanel",
+      "label": { "default": "Exportador" },
+      "minimumSize": { "width": 230, "height": 240 },
+      "maximumSize": { "width": 2000, "height": 2000 },
+      "preferredDockedSize": { "width": 300, "height": 380 },
+      "preferredFloatingSize": { "width": 300, "height": 440 }
+    }
+  ]
+}

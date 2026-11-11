@@ -634,6 +634,26 @@ describe('Ferramentas da casa (Oficina)', () => {
     (desmontar as () => void)();
   });
 
+  it('Plugins: abas de download, tutorial e roteiro que salva no banco', async () => {
+    const db = bancoFalso({});
+    location.hash = '#plugins';
+    const { raiz, desmontar } = await montar('plugins', db);
+    expect(raiz.querySelectorAll('.pl-card').length).toBe(10);
+    raiz.querySelector<HTMLButtonElement>('[data-aba="instalar"]')!.click();
+    expect(raiz.querySelectorAll('.pl-parte').length).toBe(8);
+    expect(raiz.querySelector('.pl-cmd code')?.textContent).toContain('UnifiedPluginInstallerAgent');
+    raiz.querySelector<HTMLButtonElement>('[data-aba="teste"]')!.click();
+    expect(location.hash).toBe('#plugins/teste');
+    raiz.querySelector<HTMLButtonElement>('[data-plugin="guias"]')!.click();
+    raiz.querySelector<HTMLButtonElement>('[data-res="ok"][data-i="0"]')!.click();
+    await espera(30);
+    expect((db.dados.testes_plugins as any)['guias-v1.0.0'].passos).toEqual({ 0: 'ok' });
+    const nota = raiz.querySelector<HTMLInputElement>('[data-nota="1"]')!; nota.value = 'guia em 270'; nota.dispatchEvent(new Event('change', { bubbles: true }));
+    await espera(30);
+    expect((db.dados.testes_plugins as any)['guias-v1.0.0'].notas['1']).toBe('guia em 270');
+    (desmontar as () => void)();
+  });
+
   it('Conferência: checa o arquivo, gera nomes e só entrega no padrão', async () => {
     location.hash = '#entrega/checar';
     const { raiz, desmontar } = await montar('entrega', bancoFalso({}));

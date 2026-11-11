@@ -140,3 +140,39 @@
 .mc .ag-anexo{display:flex;gap:10px;align-items:center}
 .mc .ag-anexo img{width:56px;height:56px;object-fit:cover;border:1px solid var(--line);border-radius:2px}
 .mc .ag-anexo .lnk,.mc .ag-clipe{padding:0;min-height:0;font-size:13px;cursor:pointer}
+/* Plugins */
+.mc .pl-sec{display:flex;flex-direction:column;gap:20px}
+.mc .pl-kit h2{margin:0}
+.mc .pl-grade{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,300px),1fr));gap:14px}
+.mc .pl-card{display:flex;flex-direction:column;gap:6px;padding:16px;border:1px solid var(--line-strong);border-radius:4px}
+.mc .pl-card p{margin:0;font-size:14px}
+.mc .pl-cab{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.mc .pl-card .acts{margin-top:auto;padding-top:6px}
+.mc .pl-card .lnk{padding:0;min-height:0;font-size:13px}
+.mc .pl-tut{display:grid;grid-template-columns:minmax(200px,260px) minmax(0,1fr);gap:32px;align-items:start}
+.mc .pl-indice{position:sticky;top:12px;display:flex;flex-direction:column;gap:8px;font-size:14px}
+.mc .pl-indice ol{margin:0;padding-left:0;list-style:none;display:grid;gap:6px}
+.mc .pl-partes{display:flex;flex-direction:column;gap:36px;min-width:0}
+.mc .pl-parte{display:flex;flex-direction:column;gap:14px;scroll-margin-top:16px}
+.mc .pl-parte h2{margin:0}
+.mc .pl-etapa{border-left:2px solid var(--line-strong);padding-left:16px;display:flex;flex-direction:column;gap:8px}
+.mc .pl-etapa h3{margin:0;font-size:16px}
+.mc .pl-etapa ol{margin:0;padding-left:20px;display:grid;gap:6px;font-size:14px;line-height:1.5}
+.mc .pl-cmd{list-style:none;margin-left:-20px;display:flex;flex-direction:column;gap:6px}
+.mc .pl-cmd code{display:block;background:var(--surface-100);padding:10px 12px;border-radius:2px;font-size:12.5px;word-break:break-all}
+.mc .pl-cmd .lnk{align-self:flex-start;padding:0;min-height:0;font-size:13px}
+.mc .pl-ver,.mc .pl-atencao{margin:0;font-size:14px;padding:8px 12px;background:var(--surface-100);border-radius:2px}
+.mc .pl-ver .lab,.mc .pl-atencao .lab{display:block;margin-bottom:2px}
+.mc .pl-atencao{border-left:3px solid var(--aviso,var(--sinal))}
+.mc .pl-amb{display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end}
+.mc .pl-amb label{display:flex;flex-direction:column;gap:4px;flex:0 1 180px}
+.mc .pl-teste{display:grid;grid-template-columns:minmax(200px,240px) minmax(0,1fr);gap:28px;align-items:start}
+.mc .pl-lista{display:flex;flex-direction:column;gap:4px}
+.mc .pl-passos-t{display:flex;flex-direction:column;gap:10px;min-width:0}
+.mc .pl-passos-t h2{margin:0}
+.mc .pl-roteiro{margin:0;padding-left:22px;display:grid;gap:18px}
+.mc .pl-roteiro li{display:flex;flex-direction:column;gap:6px;font-size:14px}
+.mc .pl-roteiro p{margin:0;line-height:1.5}
+.mc .pl-roteiro .chip[aria-pressed=true][data-res=ok]{background:var(--ok,var(--ink));border-color:var(--ok,var(--ink));color:#fff}
+.mc .pl-roteiro .chip[aria-pressed=true][data-res=falhou]{background:var(--erro,var(--ink));border-color:var(--erro,var(--ink));color:#fff}
+@media (max-width:860px){.mc .pl-tut,.mc .pl-teste{grid-template-columns:1fr}.mc .pl-indice{position:static}}

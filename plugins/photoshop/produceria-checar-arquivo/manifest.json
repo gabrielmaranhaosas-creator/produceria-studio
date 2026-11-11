@@ -1,0 +1,19 @@
+{
+  "manifestVersion": 5,
+  "id": "br.com.produceria.checararquivo",
+  "name": "Produceria Checar Arquivo",
+  "version": "1.0.0",
+  "main": "index.html",
+  "host": { "app": "PS", "minVersion": "23.3.0" },
+  "entrypoints": [
+    {
+      "type": "panel",
+      "id": "checarArquivoPanel",
+      "label": { "default": "Checar Arquivo" },
+      "minimumSize": { "width": 230, "height": 200 },
+      "maximumSize": { "width": 2000, "height": 2000 },
+      "preferredDockedSize": { "width": 300, "height": 300 },
+      "preferredFloatingSize": { "width": 300, "height": 400 }
+    }
+  ]
+}

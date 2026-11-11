@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <style>
+    body { font-size: 12px; padding: 8px; }
+    button { width: 100%; margin-bottom: 6px; }
+    .linha { margin: 4px 0; }
+    #resumo { margin: 8px 0; font-weight: bold; }
+    .item { margin: 3px 0; padding: 3px 0; border-bottom: 1px solid #77777755; }
+    .nota { margin: 6px 0; opacity: 0.8; }
+  </style>
+</head>
+<body>
+  <div><b>1. Exportar para revisão</b></div>
+  <div class="linha"><input type="checkbox" id="todos"> <label style="display:inline" for="todos">Todos os documentos abertos</label></div>
+  <button id="btnExportar">Exportar textos (CSV)</button>
+
+  <div style="margin-top:10px"><b>2. Aplicar texto revisado</b></div>
+  <div class="nota">Trabalhe numa cópia do arquivo. Abra o PSD (ou os PSDs) antes de aplicar.</div>
+  <button id="btnImportar">Aplicar CSV revisado</button>
+
+  <div id="resumo"></div>
+  <div id="resultado"></div>
+</body>
+</html>

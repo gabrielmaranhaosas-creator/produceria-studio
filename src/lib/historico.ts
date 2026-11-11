@@ -19,7 +19,7 @@ const FORA = new Set(['notificacoes', 'conversas', 'lixeira', 'cerebro']);
 const NOMES: Record<string, string> = {
   alvos: 'Captação', b2g: 'Licitações', habilitacao: 'Habilitação', pca: 'PCA', pipeline: 'Funil', linhas: 'Mapa de receitas',
   swot: 'SWOT', tows: 'Estratégias', frentes: 'Frentes', ofertas: 'Ofertas', casos: 'Casos', contas: 'Mapa de contas',
-  central: 'Central', biblioteca: 'Biblioteca', fichas: 'Gráfica', cotacoes: 'Cotações', config: 'Tabela de serviços',
+  central: 'Central', biblioteca: 'Biblioteca', fichas: 'Gráfica', cotacoes: 'Cotações', config: 'Tabela de serviços', testes_plugins: 'Teste de plugins',
 };
 export const nomeColecao = (c: string) => NOMES[c] || c;
 const JANELA = 800; // escritas mais próximas que isso viram um passo só (ex.: desconto em lote)

@@ -97,3 +97,17 @@
     leitura da imagem do Retoque. Fazem contas pela ferramenta `calcular_pixels` e seguem as regras do kit.
   - Upscale com IA continua fora do navegador: a chave do Magnific não pode ficar no Studio. O caminho é o
     `magnific_lote.py` do Kit; o especialista de Upscale monta o plano e os parâmetros de partida.
+- ~~Plugins da casa para download, com tutorial e roteiro de teste~~ Feito em 11/11/2026, a partir de um levantamento
+  da Adobe Exchange (4.406 plugins de Photoshop; buscas por retoque, exportação, lote, renomear, mockup, impressão,
+  redimensionar, camadas, cor e guias). Os painéis do Kit saíram de `~/Documents/produceria-kit` para `plugins/`
+  (CommonJS, como o UXP espera; testes em `tests/plugins.test.ts`):
+  - Já existiam: Desdobra KV, Retoque (v1.1 ganhou separação de frequência, experimental), Checar Arquivo,
+    Exportador, Textos. Novos: **Guias** (sangria, margem, stories, colunas), **Camadas** (renomear em lote, prefixos
+    da casa, relatório) e **Prova** (JPG de aprovação com marca d'água e rodapé). Mais o Bridge e o script de
+    variações do After Effects.
+  - Oficina › Plugins ganhou as abas Plugins (kit completo em .zip com .ccx, código-fonte, After Effects e tutorial,
+    ou um plugin por vez), Instalar (três caminhos: duplo clique no .ccx, Terminal com o instalador da Adobe e UXP
+    Developer Tool), Roteiro de teste (Passou/Falhou e nota por passo, na coleção `testes_plugins`, com relatório
+    .md) e Integrações.
+  - Nenhum painel foi aberto ainda dentro do Photoshop (não há Photoshop nesta máquina): a primeira rodada de
+    testes é da equipe.

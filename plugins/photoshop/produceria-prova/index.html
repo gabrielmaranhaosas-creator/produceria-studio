@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <style>
+    body { font-size: 12px; padding: 8px; }
+    label { display: block; margin: 6px 0 2px; }
+    input, button { width: 100%; margin-bottom: 6px; box-sizing: border-box; }
+    input[type=checkbox] { width: auto; margin: 0 6px 0 0; }
+    .linha { display: flex; align-items: center; margin: 4px 0; }
+    .duas { display: flex; gap: 6px; }
+    .duas > div { flex: 1; }
+    .nota { opacity: 0.8; margin: 4px 0; }
+    #resumo { margin: 8px 0; font-weight: bold; }
+    .item { margin: 3px 0; padding: 3px 0; border-bottom: 1px solid #77777755; }
+  </style>
+</head>
+<body>
+  <div class="nota">Gera um JPG de prova para aprovação, com marca d'água e identificação no rodapé. O documento aberto não muda.</div>
+  <label for="cliente">Cliente</label><input type="text" id="cliente" placeholder="SICREDI">
+  <label for="campanha">Campanha</label><input type="text" id="campanha" placeholder="Natal 2026">
+  <label for="marca">Marca d'água (vazio = sem marca)</label><input type="text" id="marca" value="PROVA · NÃO APROVADO">
+  <div class="duas">
+    <div><label for="opacidade">Opacidade (%)</label><input type="number" id="opacidade" value="25" min="5" max="100"></div>
+    <div><label for="maxLado">Maior lado (px, 0 = original)</label><input type="number" id="maxLado" value="2000" min="0"></div>
+    <div><label for="qualidade">Qualidade JPG (1-12)</label><input type="number" id="qualidade" value="10" min="1" max="12"></div>
+  </div>
+  <div class="linha"><input type="checkbox" id="diagonal" checked><label for="diagonal" style="display:inline">Marca d'água na diagonal</label></div>
+  <div class="linha"><input type="checkbox" id="todos"><label for="todos" style="display:inline">Todos os documentos abertos</label></div>
+  <button id="btnPasta">Escolher pasta das provas</button>
+  <div id="pasta" class="nota"></div>
+  <button id="btnProva">Gerar prova</button>
+  <div id="resumo"></div>
+  <div id="resultado"></div>
+</body>
+</html>

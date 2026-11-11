@@ -1,0 +1,20 @@
+{
+  "manifestVersion": 5,
+  "id": "br.com.produceria.retoque",
+  "name": "Produceria Retoque Rápido",
+  "version": "1.1.0",
+  "main": "index.html",
+  "host": { "app": "PS", "minVersion": "23.3.0" },
+  "requiredPermissions": { "localFileSystem": "request" },
+  "entrypoints": [
+    {
+      "type": "panel",
+      "id": "retoquePanel",
+      "label": { "default": "Retoque Rápido" },
+      "minimumSize": { "width": 230, "height": 220 },
+      "maximumSize": { "width": 2000, "height": 2000 },
+      "preferredDockedSize": { "width": 300, "height": 340 },
+      "preferredFloatingSize": { "width": 300, "height": 400 }
+    }
+  ]
+}

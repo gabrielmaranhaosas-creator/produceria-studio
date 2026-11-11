@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <style>
+    body { font-size: 12px; padding: 8px; }
+    label { display: block; margin: 6px 0 2px; }
+    input, select, button { width: 100%; margin-bottom: 6px; box-sizing: border-box; }
+    input[type=checkbox] { width: auto; margin: 0 6px 0 0; }
+    .linha { display: flex; align-items: center; margin: 4px 0; }
+    .duas { display: flex; gap: 6px; }
+    .duas > div { flex: 1; }
+    fieldset { border: 1px solid #77777755; padding: 6px; margin: 6px 0; }
+    legend { font-weight: bold; }
+    .nota { opacity: 0.8; margin: 4px 0; }
+    #resumo { margin: 8px 0; font-weight: bold; }
+    .item { margin: 3px 0; padding: 3px 0; border-bottom: 1px solid #77777755; word-break: break-all; }
+  </style>
+</head>
+<body>
+  <div class="nota">Organiza os nomes das camadas para a entrega. Tudo pode ser desfeito com Ctrl/Cmd + Z.</div>
+  <label for="escopo">Aplicar em</label>
+  <select id="escopo">
+    <option value="selecionadas">Camadas selecionadas no painel Camadas</option>
+    <option value="todas">Todas as camadas do documento (menos o Plano de fundo)</option>
+  </select>
+
+  <fieldset><legend>Renomear em lote</legend>
+    <label for="padrao">Padrão ({nome} = nome atual, {n} = número)</label>
+    <input type="text" id="padrao" value="{nome}_{n}">
+    <div class="duas">
+      <div><label for="inicio">Começa em</label><input type="number" id="inicio" value="1" min="0"></div>
+      <div><label for="digitos">Dígitos</label><input type="number" id="digitos" value="2" min="1" max="5"></div>
+    </div>
+    <button id="btnPadrao">Renomear</button>
+  </fieldset>
+
+  <fieldset><legend>Localizar e substituir</legend>
+    <label for="de">Localizar</label><input type="text" id="de" placeholder="cópia">
+    <label for="para">Substituir por (vazio apaga)</label><input type="text" id="para">
+    <div class="linha"><input type="checkbox" id="maiusc"><label for="maiusc" style="display:inline">Diferenciar maiúsculas</label></div>
+    <button id="btnSubstituir">Substituir nos nomes</button>
+  </fieldset>
+
+  <fieldset><legend>Padrão da casa</legend>
+    <div class="nota">TXT_ texto, IMG_ imagem, GRP_ grupo, SO_ objeto inteligente, VET_ vetor, COR_ preenchimento, AJ_ ajuste.</div>
+    <button id="btnPrefixos">Aplicar prefixos por tipo</button>
+    <button id="btnRelatorio">Relatório de camadas (nome padrão, vazias, ocultas)</button>
+  </fieldset>
+
+  <div id="resumo"></div>
+  <div id="resultado"></div>
+</body>
+</html>

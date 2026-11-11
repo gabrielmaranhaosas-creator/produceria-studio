@@ -24,7 +24,7 @@ export const FERRAMENTAS: Ferramenta[] = [
 ];
 
 export const MESA: [string, string][] = [
-  ['Photoshop', 'Painéis UXP do Kit: desdobra, retoque com versão, checar arquivo, exportador e textos. E o Produceria Bridge, que liga o Photoshop ao Studio.'],
+  ['Photoshop', 'Oito painéis da casa (desdobra, retoque com separação de frequência, checar arquivo, exportador, textos, guias, camadas e prova) e o Produceria Bridge, que liga o Photoshop ao Studio. Download, tutorial e roteiro de teste em Plugins.'],
   ['After Effects e Blender', 'Variações de template a partir de uma planilha (uma composição por linha) e render do produto em vários ângulos, já com o nome da casa.'],
   ['Magnific e custos de IA', 'Ampliação em lote sem tocar nos originais, com registro de cada imagem, e o custo das IAs somado por trabalho e por mês.'],
   ['Claude', 'Servidor "produceria" com as mesmas regras: gerar nomes, criar a pasta do job, checar imagem, desdobrar e montar a entrega.'],
@@ -42,5 +42,5 @@ export function montar(root: HTMLElement): void {
   <section class="lc-box" aria-labelledby="at-k"><span class="lab">Kit Produceria v1.0</span><h2 class="d d-sub" id="at-k">Na mesa do arte-finalista</h2>
     <p class="measure">As mesmas regras, nos programas onde a arte-final acontece. Um nome gerado aqui é igual ao do painel do Photoshop e ao do Claude.</p>
     <dl class="at-mesa">${MESA.map(([t, d]) => `<div><dt>${esc(t)}</dt><dd>${esc(d)}</dd></div>`).join('')}</dl>
-    <div class="acts"><a class="lnk" href="#plugins">Plugins e instalação →</a></div></section></div>`;
+    <div class="acts"><a class="lnk" href="#plugins">Baixar os plugins →</a> <a class="lnk" href="#plugins/instalar">Como instalar →</a></div></section></div>`;
 }

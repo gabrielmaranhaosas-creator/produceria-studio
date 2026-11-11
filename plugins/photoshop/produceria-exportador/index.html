@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <style>
+    body { font-size: 12px; padding: 8px; }
+    label { display: block; margin: 6px 0 2px; }
+    .linha { margin: 3px 0; }
+    select, input[type=text], input[type=number], button { width: 100%; margin-bottom: 6px; }
+    #pasta { margin: 4px 0 8px; word-break: break-all; }
+    #resumo { margin: 8px 0; font-weight: bold; }
+    .item { margin: 3px 0; padding: 3px 0; border-bottom: 1px solid #77777755; }
+  </style>
+</head>
+<body>
+  <div>Formatos</div>
+  <div class="linha"><input type="checkbox" id="fPng" checked> <label style="display:inline" for="fPng">PNG (tela)</label></div>
+  <div class="linha"><input type="checkbox" id="fJpg" checked> <label style="display:inline" for="fJpg">JPG (tela)</label></div>
+  <div class="linha"><input type="checkbox" id="fPdf"> <label style="display:inline" for="fPdf">PDF (impressão)</label></div>
+
+  <label for="qualidade">Qualidade do JPG (1 a 12)</label>
+  <input type="number" id="qualidade" min="1" max="12" value="10">
+
+  <div class="linha"><input type="checkbox" id="todos"> <label style="display:inline" for="todos">Todos os documentos abertos</label></div>
+
+  <button id="btnPasta">Escolher pasta de saída</button>
+  <div id="pasta">Nenhuma pasta escolhida.</div>
+
+  <button id="btnExportar">Exportar</button>
+  <div id="resumo"></div>
+  <div id="resultado"></div>
+</body>
+</html>

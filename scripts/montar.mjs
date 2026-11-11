@@ -125,7 +125,9 @@ for (const f of frentesFora) {
 
 const marca = '<script type="module">';
 if (html.split(marca).length - 1 !== 1) throw new Error('Esperava exatamente um script module no legado.');
-html = html.replace(marca, `<script type="module" data-studio="modulos">${modulos}</script>\n${marca}`);
+// Função como substituição: o pacote pode conter $& ou $' (expressões regulares dos plugins), que num texto de
+// substituição seriam padrões especiais e corromperiam o script.
+html = html.replace(marca, () => `<script type="module" data-studio="modulos">${modulos}</script>\n${marca}`);
 
 // O legado é um script só: confere a sintaxe dele depois dos cortes, antes de gravar.
 {

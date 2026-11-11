@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <style>
+    body { font-size: 12px; padding: 8px; }
+    label { display: block; margin: 6px 0 2px; }
+    input[type=text], select, textarea, button { width: 100%; margin-bottom: 6px; box-sizing: border-box; }
+    textarea { height: 150px; font-family: monospace; }
+    .linha { margin: 3px 0; }
+    #resumo { margin: 8px 0; font-weight: bold; }
+    .item { margin: 3px 0; padding: 3px 0; border-bottom: 1px solid #77777755; }
+    .nota { opacity: 0.8; margin: 4px 0; }
+  </style>
+</head>
+<body>
+  <div class="nota">Cria uma cópia do documento aberto para cada formato. O arquivo original não é alterado.</div>
+  <label for="cliente">Cliente</label><input type="text" id="cliente" placeholder="SICREDI">
+  <label for="campanha">Campanha</label><input type="text" id="campanha" placeholder="natal">
+  <label for="versao">Versão</label><input type="text" id="versao" value="1">
+
+  <label for="modo">Como encaixar</label>
+  <select id="modo">
+    <option value="cobrir">Cobrir (preenche o formato e corta o excesso)</option>
+    <option value="conter">Conter (mostra tudo; sobra área vazia)</option>
+  </select>
+  <label for="ancora">Ponto de foco do corte</label>
+  <select id="ancora">
+    <option value="MIDDLECENTER">Centro</option>
+    <option value="TOPCENTER">Topo</option>
+    <option value="BOTTOMCENTER">Base</option>
+    <option value="MIDDLELEFT">Esquerda</option>
+    <option value="MIDDLERIGHT">Direita</option>
+  </select>
+
+  <label for="formatos">Formatos (um por linha: nome;largura;altura)</label>
+  <textarea id="formatos"></textarea>
+
+  <div class="linha"><input type="checkbox" id="salvar"> <label style="display:inline" for="salvar">Salvar um PSD de cada formato</label></div>
+  <button id="btnPasta">Escolher pasta para os PSD</button>
+  <div id="pasta" class="nota"></div>
+
+  <button id="btnDesdobrar">Desdobrar</button>
+  <div id="resumo"></div>
+  <div id="resultado"></div>
+</body>
+</html>

@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <style>
+    body { font-size: 12px; padding: 8px; }
+    label { display: block; margin: 6px 0 2px; }
+    input, button { width: 100%; margin-bottom: 6px; box-sizing: border-box; }
+    input[type=checkbox] { width: auto; margin: 0 6px 0 0; }
+    .linha { display: flex; align-items: center; margin: 8px 0 2px; font-weight: bold; }
+    .duas { display: flex; gap: 6px; }
+    .duas > div { flex: 1; }
+    fieldset { border: 1px solid #77777755; padding: 6px; margin: 6px 0; }
+    .nota { opacity: 0.8; margin: 4px 0; }
+    #resumo { margin: 8px 0; font-weight: bold; }
+    .item { margin: 3px 0; padding: 3px 0; border-bottom: 1px solid #77777755; }
+  </style>
+</head>
+<body>
+  <div class="nota">Cria guias de arte-final no documento aberto. Não mexe nos pixels; Ctrl/Cmd + Z desfaz.</div>
+
+  <fieldset>
+    <div class="linha"><input type="checkbox" id="gImpresso" checked><label for="gImpresso" style="display:inline">Impresso: corte e margem de segurança</label></div>
+    <div class="duas">
+      <div><label for="sangria">Sangria (mm)</label><input type="number" id="sangria" value="3" min="0" step="0.5"></div>
+      <div><label for="margem">Margem de segurança (mm)</label><input type="number" id="margem" value="5" min="0" step="0.5"></div>
+    </div>
+    <div class="linha"><input type="checkbox" id="temSangria" checked><label for="temSangria" style="display:inline">O documento já inclui a sangria</label></div>
+  </fieldset>
+
+  <fieldset>
+    <div class="linha"><input type="checkbox" id="gCentro"><label for="gCentro" style="display:inline">Centro</label></div>
+    <div class="linha"><input type="checkbox" id="gTercos"><label for="gTercos" style="display:inline">Terços</label></div>
+  </fieldset>
+
+  <fieldset>
+    <div class="linha"><input type="checkbox" id="gStories"><label for="gStories" style="display:inline">Stories e reels: área segura</label></div>
+    <label for="pctStories">Faixa no topo e na base (% da altura)</label>
+    <input type="number" id="pctStories" value="14" min="1" max="30">
+    <div class="nota">14% é a recomendação de mercado para a interface do app. Confira o spec vigente do veículo.</div>
+  </fieldset>
+
+  <fieldset>
+    <div class="linha"><input type="checkbox" id="gColunas"><label for="gColunas" style="display:inline">Colunas</label></div>
+    <div class="duas">
+      <div><label for="colunas">Colunas</label><input type="number" id="colunas" value="6" min="1" max="24"></div>
+      <div><label for="calha">Calha (px)</label><input type="number" id="calha" value="20" min="0"></div>
+      <div><label for="margemCol">Margem (px)</label><input type="number" id="margemCol" value="60" min="0"></div>
+    </div>
+  </fieldset>
+
+  <div class="linha"><input type="checkbox" id="limpar" checked><label for="limpar" style="display:inline">Apagar as guias que já existem antes</label></div>
+  <button id="btnAplicar">Criar guias</button>
+  <button id="btnRemover">Remover todas as guias</button>
+  <div id="resumo"></div>
+  <div id="resultado"></div>
+</body>
+</html>

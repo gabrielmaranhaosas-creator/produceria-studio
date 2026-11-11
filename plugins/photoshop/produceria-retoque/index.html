@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <style>
+    body { font-size: 12px; padding: 8px; }
+    button, input { width: 100%; margin-bottom: 6px; box-sizing: border-box; }
+    label { display: block; margin: 8px 0 2px; }
+    .nota { opacity: 0.8; margin: 4px 0 10px; }
+    #resumo { margin: 8px 0; font-weight: bold; }
+    .item { margin: 3px 0; padding: 3px 0; border-bottom: 1px solid #77777755; }
+  </style>
+</head>
+<body>
+  <div class="nota">Atalhos do dia a dia do retoque, sempre não destrutivos.</div>
+  <button id="btnEstrutura">1. Montar estrutura de retoque</button>
+  <div class="nota">Cria o grupo RETOQUE com camadas de Limpeza, Dodge, Burn e Cor, prontas para pintar.</div>
+  <button id="btnAntesDepois">2. Ver antes / depois</button>
+  <div class="nota">Liga e desliga o grupo RETOQUE para comparar com a imagem original.</div>
+  <button id="btnVersao">3. Salvar nova versão (v+1)</button>
+  <div class="nota">Salva uma cópia PSD com o número de versão seguinte. O arquivo aberto não muda.</div>
+  <label for="raio">Raio da separação de frequência (px)</label>
+  <input type="number" id="raio" value="6" min="1" max="60">
+  <button id="btnFrequencia">4. Separação de frequência (experimental)</button>
+  <div class="nota">Duplica a camada ativa em duas: Baixa (cor e tom, desfocada) e Alta (textura, em Luz Linear), dentro do grupo SEPARAÇÃO DE FREQUÊNCIA. A camada original fica intacta, embaixo. Só em documentos RGB. Raio de partida: 4 a 8 px para pele em retrato; maior em fotos de alta resolução.</div>
+  <div id="resumo"></div>
+  <div id="resultado"></div>
+</body>
+</html>
