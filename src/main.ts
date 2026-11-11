@@ -35,6 +35,7 @@ import * as pBancada from './paginas/bancada';
 import * as pGrafica from './paginas/grafica';
 import * as pPlugins from './paginas/plugins';
 import * as pBiblioteca from './paginas/biblioteca';
+import * as pAgentes from './paginas/agentes';
 
 import type { Montar } from './paginas/dom';
 
@@ -56,6 +57,7 @@ const paginas: Record<string, Montar> = {
   grafica: pGrafica.montar,
   plugins: pPlugins.montar,
   biblioteca: pBiblioteca.montar,
+  agentes: pAgentes.montar,
 };
 
 function estilos() {

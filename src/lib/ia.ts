@@ -59,3 +59,24 @@ export async function aceitaImagens(): Promise<boolean> {
   const s = await amostra();
   try { return !!(await s?.limits?.())?.images; } catch { return false; }
 }
+
+/** Ferramenta que o Claude pode chamar durante uma conversa de agente. */
+export interface Ferramenta { name: string; description: string; inputSchema?: object; execute: (args: Record<string, unknown>) => unknown }
+export interface Mensagem { role: 'user' | 'assistant'; content: string }
+/**
+ * Conversa com ferramentas (agentes). Devolve o texto final; em falha lança ErroIA com a mensagem e,
+ * se houver, o texto parcial em `parcial`.
+ */
+export async function conversar(mensagens: Mensagem[], o: { ferramentas: Ferramenta[]; aoEscrever?: (t: string) => void; signal?: AbortSignal; tier?: 'default' | 'complex' }): Promise<string> {
+  const s = await amostra();
+  if (!s) throw new ErroIA('Os agentes precisam do Studio aberto no Claude.');
+  try {
+    const r = await (s as unknown as (m: Mensagem[], x: object) => Promise<{ text: string }>)(mensagens, { tools: o.ferramentas, signal: o.signal, modelTier: o.tier ?? 'default', onText: ({ text }: { text: string }) => o.aoEscrever?.(text) });
+    return r.text;
+  } catch (e) {
+    const code = (e as { code?: string })?.code || '';
+    const err = new ErroIA(code === 'cancelled' ? 'Conversa interrompida.' : MENSAGENS[code] || 'A consulta foi interrompida por uma falha temporária. Tente de novo.') as ErroIA & { parcial?: string; cancelada?: boolean };
+    err.parcial = (e as { text?: string })?.text; err.cancelada = code === 'cancelled';
+    throw err;
+  }
+}

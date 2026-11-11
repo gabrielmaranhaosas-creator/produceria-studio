@@ -587,3 +587,40 @@ describe('Oficina', () => {
     expect(JSON.parse(ARQUIVOS_BRIDGE[0][1]).id).toBe('br.com.produceria.bridge');
   });
 });
+
+describe('Agentes', () => {
+  it('ferramentas leem a memória, a tabela e o radar, e registram no funil', async () => {
+    const { ferramentas } = await import('../src/paginas/agentes');
+    const gravados: Record<string, unknown>[] = [], log: string[] = [];
+    const d = { biblioteca: [{ id: 'b', nome: 'guia-sicredi.pdf', categoria: 'Guia de marca', cliente: 'Sicredi' }], swot: [{ id: 's', q: 'S', texto: 'Ouro em Cannes', evidencia: 'x' }], tows: [], alvos: [],
+      b2g: [{ id: 'o1', score: 80, objeto: 'Comunicação visual', prazo: '2099-01-01' }, { id: 'o2', score: 90, objeto: 'Vencida', prazo: '2000-01-01' }], pipeline: [], descontos: { '1': 10 } };
+    const fs = Object.fromEntries(ferramentas(d as never, async (x) => { gravados.push(x); }, (t) => log.push(t)).map((f) => [f.name, f]));
+    const mem = (await fs.memoria_da_casa.execute({ termo: 'sicredi' })) as { biblioteca: unknown[]; swot: unknown[] };
+    expect(mem.biblioteca.length).toBe(1); expect(mem.swot.length).toBe(0);
+    const tab = (await fs.buscar_tabela.execute({ termo: 'anuncio jornal 1 pagina', etapa: 'ADAPTAÇÃO' })) as { id: number; desconto: number }[];
+    expect(tab[0]).toMatchObject({ id: 1, desconto: 10 });
+    const op = (await fs.oportunidades.execute({ tipo: 'b2g' })) as { b2g: { nota: number }[] };
+    expect(op.b2g.map((o) => o.nota)).toEqual([80]);
+    await fs.registrar_oportunidade.execute({ eixo: 'Público', titulo: 'Cadastro SP', proximo_passo: 'Ligar' });
+    expect(gravados[0]).toMatchObject({ eixo: 'Público', titulo: 'Cadastro SP', estagio: 'Identificada', origem: 'Agente' });
+    expect(log[0]).toContain('Cadastro SP');
+  });
+
+  it('conversa com o agente, mostra a resposta e salva a conversa', async () => {
+    const db = bancoFalso({});
+    vi.resetModules();
+    const sample = Object.assign(async (msgs: { content: string }[], o: { tools: { name: string; execute: (a: object) => unknown }[] }) => {
+      expect(msgs[0].content).toContain('Orçamentista SINAPRO');
+      expect(o.tools.map((t) => t.name)).toContain('buscar_tabela');
+      return { text: 'Resposta de teste' };
+    }, { json: async () => ({}) });
+    (window as any).claude = { use: async (n: string) => (n === 'db' ? db.banco : n === 'sample' ? sample : null) };
+    const mod = await import('../src/paginas/agentes');
+    const raiz = document.createElement('div'); document.body.appendChild(raiz);
+    mod.montar(raiz); await espera();
+    expect(raiz.querySelectorAll('.ag-btn').length).toBe(24);
+    raiz.querySelector<HTMLButtonElement>('[data-sug]')!.click(); await espera(40);
+    expect(raiz.querySelector('.ag-msgs')?.textContent).toContain('Resposta de teste');
+    expect(Object.values(db.dados.conversas || {})[0]).toMatchObject({ agente: 'orcamentista' });
+  });
+});

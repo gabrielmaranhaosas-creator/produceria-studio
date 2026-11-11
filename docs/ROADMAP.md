@@ -47,7 +47,9 @@
   `grafica.ts` (ficha técnica sem depender de projeto, aproveitamento de folha, fechamento de arquivo, pacote do job,
   formatos de OOH), `plugins.ts` (o Produceria Bridge agora vive como arquivos em `src/oficina/bridge/`) e
   `biblioteca.ts` (envio e remoção de arquivos com `src/lib/arquivos.ts`). Os componentes antigos ficam de reserva.
-- Agentes.
+- ~~Agentes~~ Feito em 11/11/2026: `src/paginas/agentes.ts`, com 24 agentes (os de tráfego e produção executiva saíram
+  com a produção), ferramentas de memória da casa, tabela, radar e funil (`conversar` em `src/lib/ia.ts`), conversas
+  salvas e lista de ações. O componente antigo fica de reserva. A Oficina está toda em código-fonte.
 - Shell próprio (navegação, busca Ctrl K, avisos, tema). O legado sai.
 
 ## Fase 4 · operação

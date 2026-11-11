@@ -46,6 +46,7 @@ for (const [fn, nome] of Object.entries(montagens)) {
     ['grafica', 'grafica', 'GR', '(0,l.jsxs)(l.Fragment,{children:[(0,l.jsx)(ns,{atual:"grafica"}),(0,l.jsx)(nn,'],
     ['plugins', 'plugins', 'PL', '(0,l.jsxs)(l.Fragment,{children:[(0,l.jsx)(ns,{atual:"plugins"}),(0,l.jsx)(nn,'],
     ['biblioteca', 'biblioteca', 'BI', '(0,l.jsxs)(l.Fragment,{children:[(0,l.jsx)(ns,{atual:"biblioteca"}),(0,l.jsx)(sE,'],
+    ['agentes', 'agentes', 'AGT', '(0,l.jsxs)(l.Fragment,{children:[(0,l.jsx)(ns,{atual:"agentes"}),(0,l.jsx)(st,'],
   ]) {
     const ini = `"${rota}"===e.page&&`;
     if (html.split(ini).length - 1 !== 1) throw new Error(`Esperava 1 rota ${rota} no legado.`);
