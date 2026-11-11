@@ -24,3 +24,9 @@
 @media (max-width:980px){.mc .ini-k{grid-template-columns:repeat(2,minmax(0,1fr))}.mc .ini-grid{grid-template-columns:1fr}}
 .pular{position:absolute;left:-9999px;top:8px;z-index:200;background:var(--surface-000);color:var(--ink);padding:10px 14px;border:1px solid var(--ink)}
 .pular:focus{left:8px}
+.mc .ini-lado{display:flex;flex-direction:column;gap:20px;min-width:0}
+.mc .ini-alerta{border-left:3px solid var(--erro)}
+.mc .ini-alerta p{margin:0}
+.mc .ini-al{list-style:none;margin:0;padding:0;display:grid;gap:6px;font-size:14px}
+.mc .ini-al a{color:var(--ink);text-decoration:none;display:grid;grid-template-columns:86px minmax(0,1fr);gap:10px}
+.mc .ini-al a:hover{text-decoration:underline}

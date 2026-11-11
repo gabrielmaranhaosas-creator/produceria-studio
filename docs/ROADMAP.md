@@ -66,3 +66,7 @@
   (todo dia 06h30, `rotinas/studio-publicacao-automatica-do-main.md`). Compara o commit carimbado no Studio publicado
   com o `main`, só publica se mudou código (`src`, `scripts`, `legacy`, `package*.json`, configs), roda o
   `npm run check` antes e deixa aviso no sino (publicou, testes falharam ou conflito). **Fase 4 concluída.**
+
+## Depois do roteiro
+- ~~Alerta de habilitação e prazos no Início~~ Feito em 11/11/2026: certidões vencidas ou que vencem em 30 dias e
+  propostas da carteira que vencem em 7 dias aparecem no Início, com link para Licitações.

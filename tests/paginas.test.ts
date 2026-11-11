@@ -681,3 +681,20 @@ describe('Início', () => {
     expect(k[1].textContent).toContain('1 viraram cliente');
   });
 });
+
+describe('Início · alerta de licitações', () => {
+  it('mostra certidões vencidas ou vencendo e propostas da semana', async () => {
+    const { alertasHabilitacao } = await import('../src/paginas/licitacoes');
+    const hab = [{ id: 'cria', req: { fgts: { status: 'ok' as const, validade: '2026-11-01' }, rfb: { status: 'ok' as const, validade: '2026-11-20' }, cndt: { status: 'ok' as const, validade: '2027-06-01' }, municipal: { status: 'pendente' as const } } }];
+    const a = alertasHabilitacao(hab, '2026-11-11');
+    expect(a.map((x) => [x.requisito.slice(0, 5), x.situacao])).toEqual([['CRF ·', 'vencida'], ['Certi', 'vence']]);
+    const d = (n: number) => new Date(Date.now() + n * 864e5).toISOString().slice(0, 10);
+    const db = bancoFalso({ habilitacao: { producoes: { req: { fgts: { status: 'ok', validade: d(-2) } } } }, b2g: { o: { objeto: 'Ata de comunicação visual', carteira: true, prazo: d(3) } } });
+    const { raiz } = await montar('inicio', db);
+    const al = raiz.querySelector<HTMLElement>('#inA')!;
+    expect(al.hidden).toBe(false);
+    expect(al.textContent).toContain('1 proposta(s) da carteira vencem em 7 dias');
+    expect(al.textContent).toContain('1 certidão(ões) vencida(s)');
+    expect(al.textContent).toContain('Produções');
+  });
+});

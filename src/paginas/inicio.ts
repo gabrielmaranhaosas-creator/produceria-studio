@@ -7,6 +7,8 @@ import { banco } from '../lib/db';
 import type { Alvo } from '../lib/tipos';
 import { seletor, comId } from './dom';
 import { kpis, vazio } from '../componentes';
+import { alertasHabilitacao } from './licitacoes';
+import type { Habilitacao } from '../lib/tipos';
 
 type Doc = Record<string, unknown> & { id: string };
 export interface Passo { d: string; txt: string; onde: string; href: string }
@@ -35,10 +37,11 @@ export function montar(root: HTMLElement): () => void {
     <section aria-labelledby="in-p"><div class="ph"><h2 class="d d-sub" id="in-p">Próximos passos comerciais</h2><a class="cn-f" href="#funil">Funil →</a></div><div id="inP"></div></section>
     <section aria-labelledby="in-v"><div class="ph"><h2 class="d d-sub" id="in-v">Da Oficina para a venda</h2></div>
       <ul class="vc-l">${VENDA.map(([h, t, d]) => `<li><a class="ini-link" href="${h}"><span class="vc-c"><b>${t}</b><span class="note">${d}</span></span><span aria-hidden="true">→</span></a></li>`).join('')}</ul></section></div>
+  <div class="ini-lado"><section class="lc-box ini-alerta" id="inA" aria-labelledby="in-a" hidden></section>
   <section class="lc-box ini-of" aria-labelledby="in-o"><span class="lab">Oficina</span><h2 class="d d-sub" id="in-o">Onde o craft acontece</h2>
-    <ul>${OFICINA.map(([h, t, d]) => `<li><a href="#${h}"><b>${t} →</b><span class="note">${d}</span></a></li>`).join('')}</ul></section></div></div>`;
+    <ul>${OFICINA.map(([h, t, d]) => `<li><a href="#${h}"><b>${t} →</b><span class="note">${d}</span></a></li>`).join('')}</ul></section></div></div></div>`;
   const $ = seletor(root);
-  const D: Record<string, Doc[]> = { pipeline: [], alvos: [], b2g: [], biblioteca: [], fichas: [] };
+  const D: Record<string, Doc[]> = { pipeline: [], alvos: [], b2g: [], biblioteca: [], fichas: [], habilitacao: [] };
   const offs: (() => void)[] = [];
 
   function render() {
@@ -57,6 +60,13 @@ export function montar(root: HTMLElement): () => void {
     ])}</div>`;
     const hojeL = (D.alvos as unknown as Alvo[]).filter((a) => ativo(a) && a.status !== 'Descartado').map((a) => ({ a, d: devido(a) })).filter((x) => x.d && x.d <= h).sort((x, y) => x.d.localeCompare(y.d));
     $('#inH').innerHTML = hojeL.length ? `<ul class="vc-l">${hojeL.slice(0, 5).map(({ a, d }) => `<li><a class="ini-passo" href="#agenda"><span class="num${d < h ? ' cp-venc' : ' note'}">${d < h ? 'atrasado' : 'hoje'}</span><span class="vc-c"><b>${esc(a.nome)}</b><span class="note">${esc(a.proximoToque?.texto || a.proximoPasso || 'Definir próximo passo')}</span></span></a></li>`).join('')}</ul>` : '<p class="note">Nenhum contato vencendo hoje.</p>';
+    const hab = alertasHabilitacao(D.habilitacao as unknown as Habilitacao[], h);
+    const prazos = D.b2g.filter((o) => o.carteira && o.prazo && String(o.prazo).slice(0, 10) >= h && String(o.prazo).slice(0, 10) <= sem).sort((a, b) => String(a.prazo).localeCompare(String(b.prazo)));
+    const al = $('#inA');
+    al.hidden = !hab.length && !prazos.length;
+    al.innerHTML = `<span class="lab" id="in-a">Licitações · atenção</span>
+      ${prazos.length ? `<p><b>${prazos.length} proposta(s) da carteira vencem em 7 dias</b></p><ul class="ini-al">${prazos.slice(0, 4).map((o) => `<li><a href="#b2g"><span class="num">${dt(String(o.prazo))}</span> ${esc(String(o.objeto || '').slice(0, 90))}</a></li>`).join('')}</ul>` : ''}
+      ${hab.length ? `<p><b>${hab.filter((x) => x.situacao === 'vencida').length} certidão(ões) vencida(s) · ${hab.filter((x) => x.situacao === 'vence').length} vencem em 30 dias</b></p><ul class="ini-al">${hab.slice(0, 6).map((x) => `<li><a href="#b2g"><span class="num${x.situacao === 'vencida' ? ' cp-venc' : ''}">${x.situacao === 'vencida' ? 'vencida' : dt(x.validade)}</span> ${esc(x.requisito)} · ${esc(x.empresa.replace('Produceria ', ''))}</a></li>`).join('')}</ul><p class="note">Certidão vencida inabilita na sessão. Atualize em Licitações › Habilitação do hub.</p>` : ''}`;
     $('#inP').innerHTML = P.length ? `<ul class="vc-l">${P.slice(0, 8).map((p) => `<li><a class="ini-passo" href="${p.href}"><span class="num${p.d < h ? ' cp-venc' : ' note'}">${dt(p.d)}</span><span class="vc-c"><span>${esc(p.txt)}</span><span class="note">${esc(p.onde)}</span></span></a></li>`).join('')}</ul>`
       : vazio({ titulo: 'Nenhum próximo passo com data', texto: 'Dê prazo aos próximos passos de alvos, oportunidades do funil e licitações da carteira para que apareçam aqui.', acao: '<a class="btn sm" href="#captacao">Mapear alvos →</a>' });
   }

@@ -52,6 +52,21 @@ export function situacao(r?: Requisito): 'pendente' | 'ok' | 'vence' | 'vencida'
   if (r.validade && r.validade <= addDias(hoje(), 30)) return 'vence';
   return 'ok';
 }
+/** Certidões e cadastros vencidos ou que vencem em 30 dias, por empresa do hub (para o Início e avisos). */
+export function alertasHabilitacao(hab: Habilitacao[], h = hoje()): { empresa: string; requisito: string; situacao: 'vencida' | 'vence'; validade: string }[] {
+  const out: { empresa: string; requisito: string; situacao: 'vencida' | 'vence'; validade: string }[] = [];
+  for (const e of EMPRESAS) {
+    const doc = hab.find((x) => x.id === e.id);
+    for (const r of REQUISITOS) {
+      const q = doc?.req?.[r.id];
+      if (!q || q.status !== 'ok' || !q.validade) continue;
+      const s = q.validade < h ? 'vencida' : q.validade <= addDias(h, 30) ? 'vence' : null;
+      if (s) out.push({ empresa: e.nome, requisito: r.nome, situacao: s, validade: q.validade });
+    }
+  }
+  return out.sort((a, b) => a.validade.localeCompare(b.validade));
+}
+
 const SIT_TXT = { pendente: 'Pendente', ok: 'Em dia', vence: 'Vence em 30 dias', vencida: 'Vencida', na: 'Não se aplica' } as const;
 const SIT_CLS = { pendente: 'erro', ok: 'ok', vence: 'aviso', vencida: 'erro', na: '' } as const;
 const PROX_STATUS = { pendente: 'ok', ok: 'na', na: 'pendente' } as const;
