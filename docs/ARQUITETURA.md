@@ -31,7 +31,8 @@ telas novas injetadas. Se algo der errado, basta publicar a versão anterior do 
 
 O CSS global (classes `page-head`, `rail`, `chip`, `tag`, `paleta`...) e o reset do `<head>` estão em
 `src/estilos/studio.css` e `src/estilos/reset.css` desde 11/11/2026 (Fase 4). Do legado, o Studio publicado só usa
-as 4 fontes (`@font-face`), lidas no build; isso sai quando a licença das fontes for resolvida.
+as 4 fontes (`@font-face`), lidas no build. A equipe tem licença da ABC Whyte (confirmado em 11/11/2026), então elas
+ficam; se um dia saírem do legado, o lugar delas é um arquivo próprio em `src/estilos/`.
 
 ## Regras de negócio (src/lib)
 

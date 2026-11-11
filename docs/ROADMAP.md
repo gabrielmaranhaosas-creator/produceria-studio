@@ -60,6 +60,6 @@
 - ~~Prompts das tarefas agendadas versionados em `rotinas/`, com script que confere se o que está agendado
   bate com o repositório.~~ Feito em 10/11/2026 (`rotinas/conferir.py`), com vigia de rotina parada e backup semanal.
 - ~~CSS global do legado para `src/estilos/`~~ Feito em 11/11/2026 (`studio.css` e `reset.css`, conferidos regra a regra).
-- Fontes com licença resolvida: ABC Whyte é comercial e hoje está embutida em `legacy/studio.html`, que é público no
-  repositório. Decidir entre manter (se a licença permitir), tirar do repositório público ou trocar a fonte.
+- ~~Fontes com licença resolvida~~ Decidido em 11/11/2026: a equipe tem licença da ABC Whyte e ela fica. As fontes
+  seguem embutidas (lidas de `legacy/studio.html` no build). Falta confirmar a licença da PTYPE (títulos).
 - Publicação automática a partir do `main`.
