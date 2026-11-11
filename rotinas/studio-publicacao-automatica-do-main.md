@@ -1,5 +1,5 @@
 ---
-id: "trig_01YMWm5m5RsHNxfv3UEqxWE5"
+id: "trig_01VgrFKiad5u8Ndcq7PWfqdY"
 nome: "Studio · publicação automática do main"
 cron: "30 9 * * *"
 ativa: true
