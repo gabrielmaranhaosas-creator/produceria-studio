@@ -53,12 +53,13 @@
 - ~~Início e shell próprio~~ Feito em 11/11/2026: `src/paginas/inicio.ts` e `src/casca/casca.ts` (menu, rotas,
   busca Ctrl K, avisos com "para mim", tema, aviso de conexão). O app React do legado saiu do Studio publicado
   (`dist/index.html` caiu de ~1,6 MB para ~0,8 MB); `dist/legado.html` fica como reserva. **Fase 3 concluída.**
-- Pendências: o CSS global e as fontes ainda vêm de `legacy/studio.html` (ver Fase 4); a barra "Desfazer" do
+- Pendências: as fontes ainda vêm de `legacy/studio.html` (ver Fase 4); a barra "Desfazer" do
   legado não foi trazida (as telas novas gravam direto e confirmam exclusões no próprio botão).
 
 ## Fase 4 · operação
 - ~~Prompts das tarefas agendadas versionados em `rotinas/`, com script que confere se o que está agendado
   bate com o repositório.~~ Feito em 10/11/2026 (`rotinas/conferir.py`), com vigia de rotina parada e backup semanal.
-- CSS global do legado para `src/estilos/` e fontes com licença resolvida (ABC Whyte é comercial; hoje ela está
-  embutida em `legacy/studio.html`, que é público no repositório).
+- ~~CSS global do legado para `src/estilos/`~~ Feito em 11/11/2026 (`studio.css` e `reset.css`, conferidos regra a regra).
+- Fontes com licença resolvida: ABC Whyte é comercial e hoje está embutida em `legacy/studio.html`, que é público no
+  repositório. Decidir entre manter (se a licença permitir), tirar do repositório público ou trocar a fonte.
 - Publicação automática a partir do `main`.

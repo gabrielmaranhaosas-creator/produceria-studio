@@ -29,8 +29,9 @@ tudo de uma vez tiraria o Studio do ar e arriscaria o banco. Então:
 tela vem do registro de páginas. `dist/legado.html` continua sendo gerado como reserva: é o Studio antigo com as
 telas novas injetadas. Se algo der errado, basta publicar a versão anterior do artifact.
 
-O que ainda vem do legado: o CSS global (classes `page-head`, `rail`, `chip`, `tag`, `paleta`...) e as fontes
-embutidas. Tirar isso é o próximo passo (Fase 4): passar o CSS para `src/estilos/` e resolver a licença das fontes.
+O CSS global (classes `page-head`, `rail`, `chip`, `tag`, `paleta`...) e o reset do `<head>` estão em
+`src/estilos/studio.css` e `src/estilos/reset.css` desde 11/11/2026 (Fase 4). Do legado, o Studio publicado só usa
+as 4 fontes (`@font-face`), lidas no build; isso sai quando a licença das fontes for resolvida.
 
 ## Regras de negócio (src/lib)
 

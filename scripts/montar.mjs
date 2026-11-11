@@ -146,9 +146,13 @@ writeFileSync('dist/legado.html', html);
 // estilos (fontes + CSS); a casca própria (src/casca) monta menu, rotas, busca, avisos e todas as telas.
 // dist/legado.html continua sendo gerado como reserva (o mesmo Studio de antes, com as telas novas injetadas).
 {
-  const estilos = [...legado.matchAll(/<style[^>]*>[\s\S]*?<\/style>/g)].map((m) => m[0]);
-  const reset = estilos[0], studio = estilos.find((e) => e.includes('@font-face') && e.includes('.rail'));
-  if (!reset || !studio) throw new Error('Não achei os estilos do legado (reset e fontes + CSS).');
+  // Fase 4: o CSS global e o reset vêm de src/estilos; do legado só saem as fontes (@font-face), até a licença
+  // delas ser resolvida (ver docs/ROADMAP.md).
+  const enxuto = (css) => css.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\s+/g, ' ').trim();
+  const fontes = legado.match(/@font-face\{[^}]*\}/g) || [];
+  if (fontes.length !== 4) throw new Error(`Esperava 4 fontes no legado, achei ${fontes.length}.`);
+  const reset = `<style>${enxuto(readFileSync('src/estilos/reset.css', 'utf8'))}</style>`;
+  const studio = `<style>${fontes.join('')}${enxuto(readFileSync('src/estilos/studio.css', 'utf8'))}</style>`;
   const novo = `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">${reset}<title>PRODUCERia Studio</title><meta name="claude:viewport-fit-sides" content="cover">${studio}</head>`
     + `<body><a class="sr pular" href="#conteudo">Pular para o conteúdo</a><div id="root" data-casca="propria"></div><script type="module" data-studio="modulos">${modulos}</script></body></html>`;
   if (/<script(?![^>]*data-studio)/i.test(novo.replace(modulos, ''))) throw new Error('O Studio novo não deve ter outro script além dos módulos.');
