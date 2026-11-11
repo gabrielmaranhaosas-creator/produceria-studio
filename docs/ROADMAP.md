@@ -74,3 +74,16 @@
   CATSER (escolha em `docs/DADOS.md`), filtra pelo perfil do cérebro e agrupa por órgão; aba "PCA dos órgãos" em
   Licitações, com "Levar ao funil". Rotina mensal "PCA · coleta mensal".
 
+- ~~Oficina com ferramentas da casa~~ Feito em 11/11/2026: o Kit Produceria v1.0 (núcleo Python, painéis do Photoshop,
+  servidor do Claude) ganhou as mesmas regras no Studio (`src/oficina/kit.ts`) e três telas novas, todas lendo os
+  arquivos no navegador, sem enviar nada:
+  - **Ateliê** (`#atelie`), nova porta da Oficina: princípios da casa (ofício e vanguarda) e o mapa das ferramentas,
+    no Studio e na mesa do arte-finalista.
+  - **Desdobra de KV** (`#desdobra`): peça-mãe em todos os formatos (digital, mídia exterior, impresso e próprios),
+    ponto de foco clicado no KV, cobrir ou conter, aviso de ampliação acima de 2x, zip com nomes no padrão e
+    `manifesto_entrega.csv`. É rascunho para aprovar layout; a arte-final continua à mão.
+  - **Conferência e entrega** (`#entrega/checar|nomes|entrega`): checar arquivo (medidas, ppi, CMYK, perfil ICC,
+    nome; JPG, PNG, PSD, WebP, GIF), nomes e estrutura do job em zip, e montar entrega com sha256 e manifesto.
+  - A aba "Desdobramento de KV" da Bancada virou "Orçar desdobramento" (é o orçamento pela tabela).
+  - Divergência conhecida: no Studio o ponto de foco fica no centro do recorte; no núcleo Python é a posição do
+    recorte na sobra. Com foco no meio, o resultado é igual.

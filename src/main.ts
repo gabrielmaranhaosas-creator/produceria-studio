@@ -38,6 +38,9 @@ import * as pBiblioteca from './paginas/biblioteca';
 import * as pAgentes from './paginas/agentes';
 import * as pInicio from './paginas/inicio';
 import * as pLixeira from './paginas/lixeira';
+import * as pAtelie from './paginas/atelie';
+import * as pDesdobra from './paginas/desdobra';
+import * as pEntrega from './paginas/entrega';
 import casca from './estilos/casca.css?inline';
 import { iniciarCasca } from './casca/casca';
 
@@ -64,6 +67,9 @@ const paginas: Record<string, Montar> = {
   agentes: pAgentes.montar,
   inicio: pInicio.montar,
   lixeira: pLixeira.montar,
+  atelie: pAtelie.montar,
+  desdobra: pDesdobra.montar,
+  entrega: pEntrega.montar,
 };
 
 function estilos() {

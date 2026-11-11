@@ -10,7 +10,7 @@ import { confirmarNoBotao } from '../componentes';
 import { navOficina, cabecalho, baixarArquivo } from './oficina';
 
 type Aba = 'desdobrar' | 'revisao' | 'precheck' | 'cotacao';
-const ABAS: [Aba, string][] = [['desdobrar', 'Desdobramento de KV'], ['revisao', 'Revisão de texto'], ['precheck', 'Pré-checagem de peça'], ['cotacao', 'Cotação de fornecedor']];
+const ABAS: [Aba, string][] = [['desdobrar', 'Orçar desdobramento'], ['revisao', 'Revisão de texto'], ['precheck', 'Pré-checagem de peça'], ['cotacao', 'Cotação de fornecedor']];
 const sem = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
 const ADAPTACOES = SERVICOS.filter((s) => s.etapa === 'ADAPTAÇÃO');
 const indice = ADAPTACOES.map((s) => sem(`${s.id} ${s.cat} ${s.sub} ${s.esp} ${s.sinaproNome || ''}`));

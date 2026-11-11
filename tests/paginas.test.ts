@@ -589,6 +589,85 @@ describe('Oficina', () => {
   });
 });
 
+describe('Ferramentas da casa (Oficina)', () => {
+  const pngMin = (w: number, h: number) => {
+    const u32 = (n: number) => [(n >>> 24) & 255, (n >>> 16) & 255, (n >>> 8) & 255, n & 255];
+    const ch = (t: string, d: number[]) => [...u32(d.length), ...[...t].map((c) => c.charCodeAt(0)), ...d, 0, 0, 0, 0];
+    return new Uint8Array([0x89, 80, 78, 71, 13, 10, 26, 10, ...ch('IHDR', [...u32(w), ...u32(h), 8, 2, 0, 0, 0]), ...ch('pHYs', [...u32(2835), ...u32(2835), 1]), ...ch('IEND', [])]);
+  };
+  const soltar = (el: Element, files: File[]) => { const ev = new Event('drop', { bubbles: true }) as any; ev.dataTransfer = { files }; el.dispatchEvent(ev); };
+
+  it('Ateliê abre a Oficina com os princípios e leva às ferramentas', async () => {
+    const { raiz } = await montar('atelie', bancoFalso({}));
+    expect(raiz.querySelector('nav.oficina [aria-current="page"]')?.textContent).toBe('Ateliê');
+    expect(raiz.querySelectorAll('.at-prin li').length).toBe(4);
+    const links = [...raiz.querySelectorAll<HTMLAnchorElement>('.at-card')].map((a) => a.getAttribute('href'));
+    expect(links).toEqual(expect.arrayContaining(['#desdobra', '#entrega/checar', '#entrega/nomes', '#entrega/entrega', '#grafica']));
+  });
+
+  it('Desdobra lista os formatos, nomeia no padrão e aceita formato próprio', async () => {
+    try { localStorage.clear(); } catch { /* */ }
+    const { raiz, desmontar } = await montar('desdobra', bancoFalso({}));
+    expect(raiz.querySelectorAll('#ddFmts input[type=checkbox]').length).toBe(15);
+    expect(raiz.querySelectorAll('#ddFmts input:checked').length).toBe(4);
+    expect(raiz.querySelector<HTMLButtonElement>('#ddZip')!.disabled).toBe(true);
+    const cli = raiz.querySelector<HTMLInputElement>('#ddCli')!; cli.value = 'Sicredi'; cli.dispatchEvent(new Event('input'));
+    const camp = raiz.querySelector<HTMLInputElement>('#ddCamp')!; camp.value = 'Natal Feliz 2026'; camp.dispatchEvent(new Event('input'));
+    expect(raiz.querySelector('#ddEx')?.textContent).toBe('Ex.: Sicredi_Natal-Feliz-2026_stories_v01.png');
+    raiz.querySelector<HTMLInputElement>('#ddNovoT')!.value = 'capa face:820x312';
+    raiz.querySelector<HTMLFormElement>('#ddNovo')!.dispatchEvent(new Event('submit', { cancelable: true }));
+    expect(raiz.querySelector('#ddFmts')?.textContent).toContain('capa-face');
+    raiz.querySelector<HTMLInputElement>('#ddNovoT')!.value = '20000x100';
+    raiz.querySelector<HTMLFormElement>('#ddNovo')!.dispatchEvent(new Event('submit', { cancelable: true }));
+    expect(raiz.querySelector('#ddLive')?.textContent).toContain('8000 px');
+    (desmontar as () => void)();
+  });
+
+  it('Conferência: checa o arquivo, gera nomes e só entrega no padrão', async () => {
+    location.hash = '#entrega/checar';
+    const { raiz, desmontar } = await montar('entrega', bancoFalso({}));
+    soltar(raiz.querySelector('#etCZ')!, [new File([pngMin(1080, 1920)], 'arte final.png', { type: 'image/png' })]);
+    await espera(60);
+    const it1 = raiz.querySelector('#etCL .et-it')!.textContent!;
+    expect(it1).toContain('1.080 × 1.920 px');
+    expect(it1).toContain('72 ppi');
+    expect(it1).toContain('Nome fora do padrão');
+    expect(it1).toContain('arte final_v02.png');
+
+    raiz.querySelector<HTMLButtonElement>('[data-aba="nomes"]')!.click();
+    expect(location.hash).toBe('#entrega/nomes');
+    const f = raiz.querySelector<HTMLFormElement>('#etN')!;
+    (f.elements.namedItem('cliente') as HTMLInputElement).value = 'Sicredi';
+    (f.elements.namedItem('campanha') as HTMLInputElement).value = 'Natal';
+    f.dispatchEvent(new Event('input'));
+    expect(raiz.querySelectorAll('#etNL li').length).toBe(8);
+    expect(raiz.querySelector('#etNL li')?.textContent).toBe('Sicredi_Natal_stories_v01.psd');
+    expect(raiz.querySelector('#etArv')?.textContent).toContain('Sicredi_Natal/');
+
+    raiz.querySelector<HTMLButtonElement>('[data-aba="entrega"]')!.click();
+    soltar(raiz.querySelector('#etEZ')!.closest('.et-sec')!.querySelector('label.bi-zona')!, [
+      new File([pngMin(1080, 1920)], 'Sicredi_Natal_stories_v01.png', { type: 'image/png' }),
+      new File(['x'], 'rascunho.png', { type: 'image/png' }),
+    ]);
+    await espera(60);
+    expect(raiz.querySelectorAll('#etEL li').length).toBe(2);
+    expect(raiz.querySelector<HTMLButtonElement>('#etEZ')!.disabled).toBe(true);
+    expect(raiz.querySelector('#etES')?.textContent).toContain('1 fora do padrão');
+    raiz.querySelector<HTMLButtonElement>('[data-tira="rascunho.png"]')!.click();
+    expect(raiz.querySelector<HTMLButtonElement>('#etEZ')!.disabled).toBe(false);
+    const salvos: { filename: string; data: unknown }[] = [];
+    (window as any).claude = { use: async (n: string) => (n === 'downloads' ? { save: async (o: any) => { salvos.push(o); return { status: 'saved' }; } } : null) };
+    raiz.querySelector<HTMLInputElement>('#etEN')!.value = 'Sicredi_Natal_entrega_v01';
+    raiz.querySelector<HTMLButtonElement>('#etEZ')!.click();
+    await espera(120);
+    expect(salvos[0]?.filename).toBe('Sicredi_Natal_entrega_v01.zip');
+    const z = salvos[0].data as Uint8Array;
+    expect(new TextDecoder().decode(z)).toContain('manifesto_entrega.csv');
+    expect(new TextDecoder().decode(z)).toContain('Sicredi_Natal_stories_v01.png;1080x1920;');
+    (desmontar as () => void)();
+  });
+});
+
 describe('Agentes', () => {
   it('ferramentas leem a memória, a tabela e o radar, e registram no funil', async () => {
     const { ferramentas } = await import('../src/paginas/agentes');
@@ -638,7 +717,7 @@ describe('Casca própria', () => {
   it('busca Ctrl K acha telas, serviços, alvos e licitações', async () => {
     const { buscarTudo } = await import('../src/casca/casca');
     const d = { alvos: [{ id: 'a', nome: 'Agência Outdoor Brasil', status: 'Mapeado' }], b2g: [{ id: 'b', objeto: 'Locação de outdoor', orgao: 'Prefeitura' }], frentes: [], swot: [] };
-    expect(buscarTudo('', d).length).toBe(18);
+    expect(buscarTudo('', d).length).toBe(23);
     const r = buscarTudo('outdoor', d);
     expect(r.some((x) => x.tipo === 'Serviço')).toBe(true);
     expect(r.find((x) => x.tipo === 'Alvo')?.href).toBe('#captacao');
