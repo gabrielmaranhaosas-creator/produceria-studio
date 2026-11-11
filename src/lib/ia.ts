@@ -2,8 +2,8 @@
  * Pedido de texto ao Claude dentro do Studio (capability `sample` do claude.ai).
  * Fora do claude.ai, ou sem autorização, devolve um erro legível em vez de travar a página.
  */
-export interface OpcoesIA { json?: boolean; tier?: 'default' | 'complex'; aoEscrever?: (texto: string) => void; signal?: AbortSignal }
-type Amostra = ((p: string, o: object) => Promise<{ text: string }>) & { json?: (p: string, o: object) => Promise<unknown> };
+export interface OpcoesIA { json?: boolean; tier?: 'default' | 'complex'; aoEscrever?: (texto: string) => void; signal?: AbortSignal; imagens?: Blob[] }
+type Amostra = ((p: string, o: object) => Promise<{ text: string }>) & { json?: (p: string, o: object) => Promise<unknown>; limits?: () => Promise<{ images?: unknown } | null> };
 
 let promessa: Promise<Amostra | null> | null = null;
 function amostra(): Promise<Amostra | null> {
@@ -28,7 +28,7 @@ export class ErroIA extends Error {}
 export async function perguntar(prompt: string, o: OpcoesIA = {}): Promise<string | unknown> {
   const s = await amostra();
   if (!s) throw new ErroIA('A IA não está disponível nesta visualização. Abra o Studio no Claude para usar.');
-  const opts = { signal: o.signal, modelTier: o.tier ?? 'default', onText: ({ text }: { text: string }) => o.aoEscrever?.(text) };
+  const opts = { signal: o.signal, modelTier: o.tier ?? 'default', onText: ({ text }: { text: string }) => o.aoEscrever?.(text), ...(o.imagens?.length ? { images: o.imagens, cache: false } : {}) };
   try {
     if (o.json) {
       if (!s.json) throw new ErroIA(MENSAGENS.invalid_json);
@@ -53,3 +53,9 @@ Regras:
 
 /** A IA está disponível nesta visualização? (não consome consulta) */
 export async function iaDisponivel(): Promise<boolean> { return !!(await amostra()); }
+
+/** A consulta aceita imagens nesta visualização? */
+export async function aceitaImagens(): Promise<boolean> {
+  const s = await amostra();
+  try { return !!(await s?.limits?.())?.images; } catch { return false; }
+}

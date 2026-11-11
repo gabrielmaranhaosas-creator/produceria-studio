@@ -534,3 +534,56 @@ describe('Ajustes e dados', () => {
     expect(db.dados.projetos.p2).toBeTruthy();
   });
 });
+
+describe('Oficina', () => {
+  it('Gráfica calcula aproveitamento, salva a ficha e monta o pacote do job', async () => {
+    const { aproveitamento, folhasNecessarias, pacoteJob, novaFicha } = await import('../src/paginas/grafica');
+    // A4 com sangria (216×303) numa BB 660×960 com 10 mm de pinça: 3 × 3 = 9
+    expect(aproveitamento(216, 303, 660, 960, 10)).toEqual({ n: 9, girado: false });
+    expect(folhasNecessarias(1000, 9, 5)).toBe(117);
+    const f = { ...novaFicha(), peca: 'Outdoor', substrato: 'lona' };
+    expect(pacoteJob(f).ficha.dpiMin).toBe(100);
+    const db = bancoFalso({});
+    const { raiz } = await montar('grafica', db);
+    expect(raiz.querySelector('nav.oficina [aria-current="page"]')?.textContent).toBe('Gráfica');
+    const p = raiz.querySelector<HTMLInputElement>('#gf-peca')!;
+    p.value = 'Folder A4'; p.dispatchEvent(new Event('input', { bubbles: true }));
+    raiz.querySelector<HTMLButtonElement>('#grSalvar')!.click(); await espera();
+    expect(Object.values(db.dados.fichas)[0]).toMatchObject({ peca: 'Folder A4', larguraMm: 210, tiragem: 1000 });
+    expect(raiz.querySelector('#grS')?.textContent).toContain('Folder A4');
+  });
+
+  it('Bancada orça o desdobramento com o desconto da tabela e registra cotação', async () => {
+    const { adaptacoes, totalDesdobramento } = await import('../src/paginas/bancada');
+    const a = adaptacoes('', '')[0];
+    expect(a.etapa).toBe('ADAPTAÇÃO');
+    expect(totalDesdobramento({ [a.id]: 2 }, { [a.id]: 10 }).total).toBeCloseTo(a.ref * 2 * 0.9, 2);
+    try { localStorage.clear(); } catch { /* */ }
+    const db = bancoFalso({});
+    const { raiz } = await montar('bancada', db);
+    raiz.querySelector<HTMLButtonElement>('[data-aba="cotacao"]')!.click();
+    raiz.querySelector<HTMLInputElement>('#ctI')!.value = '500 folders';
+    for (const [i, n, v] of [[0, 'Gráfica A', '2,50'], [1, 'Gráfica B', '1,90']] as const) {
+      const nn = raiz.querySelector<HTMLInputElement>(`#ctN${i}`)!; nn.value = n; nn.dispatchEvent(new Event('input', { bubbles: true }));
+      const vv = raiz.querySelector<HTMLInputElement>(`#ctV${i}`)!; vv.value = v; vv.dispatchEvent(new Event('input', { bubbles: true }));
+    }
+    expect(raiz.querySelector('#ctT')?.textContent).toContain('Gráfica B');
+    raiz.querySelector<HTMLButtonElement>('#ctB')!.click(); await espera();
+    expect(Object.values(db.dados.cotacoes)[0]).toMatchObject({ item: '500 folders', escolhido: 'Gráfica B' });
+  });
+
+  it('Biblioteca lista e filtra por cliente; Plugins oferece os 4 arquivos do Bridge', async () => {
+    const db = bancoFalso({ biblioteca: {
+      a: { nome: 'guia.pdf', categoria: 'Guia de marca', cliente: 'Cliente X', em: '2026-11-01', url: 'https://x/a' },
+      b: { nome: 'certidao.pdf', categoria: 'Certidões e habilitação', em: '2026-11-02', url: 'https://x/b' },
+    } });
+    const { raiz } = await montar('biblioteca', db);
+    expect(raiz.querySelectorAll('.bi-it').length).toBe(2);
+    raiz.querySelector<HTMLButtonElement>('[data-fcli="Hub Produceria"]')!.click();
+    expect(raiz.querySelectorAll('.bi-it').length).toBe(1);
+    expect(raiz.querySelector('#biU')?.textContent).toContain('quem edita o Studio');
+    const { ARQUIVOS_BRIDGE } = await import('../src/paginas/plugins');
+    expect(ARQUIVOS_BRIDGE.map(([n]) => n)).toEqual(['manifest.json', 'index.html', 'main.js', 'LEIAME.md']);
+    expect(JSON.parse(ARQUIVOS_BRIDGE[0][1]).id).toBe('br.com.produceria.bridge');
+  });
+});

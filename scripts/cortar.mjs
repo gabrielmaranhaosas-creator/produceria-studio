@@ -20,3 +20,15 @@ export function cortarFuncao(src, nome, substituto) {
   }
   throw new Error(`Não achei o fim de ${nome}.`);
 }
+
+/**
+ * Fim de uma expressão que começa em `ini` (por exemplo um fragmento JSX compilado `(0,l.jsxs)(...)`),
+ * dentro de uma lista de argumentos: a primeira ")" seguida de "," ou "]" com a qual o trecho compila.
+ */
+export function fimDaExpressao(src, ini) {
+  for (let i = src.indexOf(')', ini); i >= 0; i = src.indexOf(')', i + 1)) {
+    if (!/[,\]]/.test(src[i + 1])) continue;
+    if (compila(src.slice(ini, i + 1))) return i + 1;
+  }
+  throw new Error('Não achei o fim da expressão.');
+}

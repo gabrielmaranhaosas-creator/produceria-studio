@@ -42,7 +42,12 @@
 - ~~Rotinas do Claude e Ajustes~~ Feito em 11/11/2026: `src/paginas/rotinas.ts` (lista pelo conector, rodar agora,
   pausar, instrução, último resultado do radar e do backup; descrições das rotinas atuais) e `src/paginas/ajustes.ts`
   (tema, contagens, exportação, remover exemplos com confirmação, estado da IA). Os componentes antigos ficam de reserva.
-- Bancada, Gráfica, Plugins, Agentes, Biblioteca.
+- ~~Bancada, Gráfica, Plugins e Biblioteca~~ Feito em 11/11/2026: `src/paginas/bancada.ts` (desdobramento de KV pela
+  tabela com desconto, revisão de texto e pré-checagem de peça por IA, cotação de fornecedor registrada em `cotacoes`),
+  `grafica.ts` (ficha técnica sem depender de projeto, aproveitamento de folha, fechamento de arquivo, pacote do job,
+  formatos de OOH), `plugins.ts` (o Produceria Bridge agora vive como arquivos em `src/oficina/bridge/`) e
+  `biblioteca.ts` (envio e remoção de arquivos com `src/lib/arquivos.ts`). Os componentes antigos ficam de reserva.
+- Agentes.
 - Shell próprio (navegação, busca Ctrl K, avisos, tema). O legado sai.
 
 ## Fase 4 · operação

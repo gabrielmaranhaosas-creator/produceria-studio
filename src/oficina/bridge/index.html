@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  body { font-family: sans-serif; font-size: 12px; color: var(--uxp-host-text-color); padding: 10px; }
+  h2 { font-size: 13px; margin: 14px 0 6px; text-transform: uppercase; letter-spacing: .08em; }
+  .tabs { display: flex; gap: 4px; flex-wrap: wrap; margin-bottom: 8px; }
+  .tabs sp-action-button[selected] { font-weight: bold; }
+  .sec { display: none; } .sec.on { display: block; }
+  .linha { display: flex; justify-content: space-between; gap: 8px; padding: 4px 0; border-bottom: 1px solid rgba(127,127,127,.25); }
+  .ajustar { font-weight: bold; }
+  .muted { opacity: .7; }
+  textarea, input { width: 100%; box-sizing: border-box; }
+  #log { white-space: pre-wrap; font-size: 11px; opacity: .85; margin-top: 8px; }
+</style>
+</head>
+<body>
+  <div class="tabs">
+    <sp-action-button id="t-check" selected>Pré-checagem</sp-action-button>
+    <sp-action-button id="t-desd">Desdobrar</sp-action-button>
+    <sp-action-button id="t-exp">Exportar</sp-action-button>
+    <sp-action-button id="t-up">Upscale</sp-action-button>
+  </div>
+
+  <section id="s-check" class="sec on">
+    <p class="muted">Confere o documento ativo contra a ficha técnica do pacote do job (ou só as regras gerais, sem pacote).</p>
+    <sp-button id="carregar">Carregar pacote do job (.json)</sp-button>
+    <p id="pacote" class="muted">Nenhum pacote carregado.</p>
+    <sp-button id="checar" variant="cta">Checar documento ativo</sp-button>
+    <div id="res-check"></div>
+  </section>
+
+  <section id="s-desd" class="sec">
+    <p class="muted">Gera uma base de cada formato do pacote a partir do documento ativo (ajuste de tela, sem distorcer). A arte-final de cada formato continua manual: é um ponto de partida, não a peça final.</p>
+    <sp-button id="desdobrar" variant="cta">Gerar formatos do pacote</sp-button>
+    <div id="res-desd"></div>
+  </section>
+
+  <section id="s-exp" class="sec">
+    <p class="muted">Salva a prova em JPG com o nome no padrão do Studio, pronta para arrastar em Aprovação.</p>
+    <sp-textfield id="peca" placeholder="Nome da peça (ex.: KV feed)"></sp-textfield>
+    <sp-textfield id="versao" placeholder="Versão (ex.: 1)"></sp-textfield>
+    <sp-button id="exportar" variant="cta">Exportar prova</sp-button>
+  </section>
+
+  <section id="s-up" class="sec">
+    <p class="muted">Amplia a imagem ativa com o Magnific (custo por imagem, cobrado na sua conta Magnific). O resultado abre como documento novo.</p>
+    <sp-textfield id="chave" type="password" placeholder="Chave da API Magnific"></sp-textfield>
+    <sp-button id="salvar-chave">Guardar chave neste computador</sp-button>
+    <sp-picker id="fator" label="Fator"><sp-menu slot="options"><sp-menu-item value="2x" selected>2x</sp-menu-item><sp-menu-item value="4x">4x</sp-menu-item></sp-menu></sp-picker>
+    <sp-picker id="otim" label="Tipo"><sp-menu slot="options">
+      <sp-menu-item value="standard" selected>Padrão</sp-menu-item>
+      <sp-menu-item value="films_n_photography">Foto</sp-menu-item>
+      <sp-menu-item value="soft_portraits">Retrato suave</sp-menu-item>
+      <sp-menu-item value="art_n_illustration">Ilustração</sp-menu-item>
+    </sp-menu></sp-picker>
+    <sp-textfield id="criatividade" placeholder="Criatividade -10 a 10 (padrão 0; para retoque fiel use 0 ou menos)"></sp-textfield>
+    <sp-button id="upscale" variant="cta">Ampliar</sp-button>
+  </section>
+
+  <div id="log"></div>
+  <script src="main.js"></script>
+</body>
+</html>
