@@ -50,3 +50,6 @@ Regras:
 - Marque cada afirmação relevante como [CONFIRMADO], [HIPÓTESE], [FALTA EVIDÊNCIA] ou [AGUARDA APROVAÇÃO].
 - Normas, tributos e regras de licitação precisam de verificação da fonte vigente antes de uso.
 - O Studio não envia e-mails, não compra mídia e não aprova despesas: suas respostas são propostas para revisão humana.`;
+
+/** A IA está disponível nesta visualização? (não consome consulta) */
+export async function iaDisponivel(): Promise<boolean> { return !!(await amostra()); }

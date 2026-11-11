@@ -21,7 +21,7 @@
 .mc .lc-desc{width:auto;min-height:36px;padding:4px 8px;font-size:13px}
 .mc .tag.ok{color:var(--ok);border-color:currentColor}
 .mc .tag.aviso{color:var(--aviso,var(--ink-muted));border-color:currentColor}
-.mc .tag.erro{color:var(--erro);border-color:currentColor}
+.mc .tag.erro{background:var(--ink);color:var(--surface-000,#fff);border-color:var(--ink)}
 .mc .lc-kanban{display:grid;grid-template-columns:repeat(5,minmax(220px,1fr));gap:16px;overflow-x:auto;padding-bottom:8px}
 .mc .lc-col{display:flex;flex-direction:column;gap:10px;border-top:1px solid var(--line-strong);padding-top:10px;min-width:0}
 .mc .lc-col.quente{border-top-color:var(--sinal)}

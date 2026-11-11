@@ -480,3 +480,57 @@ describe('Tabela de serviços', () => {
     expect(v['1']).toBe(10);
   });
 });
+
+describe('Rotinas do Claude', () => {
+  it('lista as rotinas pelo conector, roda e pausa', async () => {
+    const chamadas: [string, Record<string, unknown>][] = [];
+    const rotinas = [
+      { id: 'r1', name: 'Cérebro de licitações · varredura diária', enabled: true, cron_expression: 'CRON_TZ=America/Sao_Paulo 17 6 * * *', last_run: { status: 'ROUTINE_RUN_STATUS_SUCCEEDED', fired_at: '2026-11-10T09:17:00Z' } },
+      { id: 'r2', name: 'Relatório de craft · mensal', enabled: false, cron_expression: 'CRON_TZ=America/Sao_Paulo 13 8 1 * *' },
+    ];
+    const mcp = { callTool: async (_s: string, f: string, a: Record<string, unknown>) => { chamadas.push([f, a]); return { payload: f === 'list_triggers' ? { data: rotinas } : {} }; } };
+    const db = bancoFalso({ cerebro: { status: { ultimaVarredura: '2026-11-10T06:21:15-03:00', lidos: 5926, novos: 121 } } });
+    vi.resetModules();
+    (window as any).claude = { use: async (n: string) => (n === 'db' ? db.banco : n === 'mcp' ? mcp : null) };
+    const mod = await import('../src/paginas/rotinas');
+    const raiz = document.createElement('div'); document.body.appendChild(raiz);
+    mod.montar(raiz); await espera();
+    const its = raiz.querySelectorAll('.ro-it');
+    expect(its.length).toBe(2);
+    expect(its[0].textContent).toContain('Todo dia às 06:17');
+    expect(its[0].textContent).toContain('Última: deu certo');
+    expect(its[1].textContent).toContain('Dia 1 às 08:13');
+    expect(raiz.querySelector('#roR')?.textContent).toContain('121');
+    raiz.querySelector<HTMLButtonElement>('[data-rodar="r1"]')!.click(); await espera();
+    expect(chamadas.some(([f, a]) => f === 'fire_trigger' && a.trigger_id === 'r1')).toBe(true);
+    expect(Object.values(db.dados.notificacoes || {})[0]?.titulo).toContain('foi acionada');
+    raiz.querySelector<HTMLButtonElement>('[data-pausa="r2"]')!.click(); await espera();
+    expect(chamadas.some(([f, a]) => f === 'update_trigger' && a.trigger_id === 'r2' && a.enabled === true)).toBe(true);
+  });
+
+  it('sem o conector, explica onde as rotinas aparecem', async () => {
+    const { raiz } = await montar('rotinas', bancoFalso({}));
+    expect(raiz.querySelector('#roE')?.textContent).toContain('Studio aberto no Claude');
+  });
+});
+
+describe('Ajustes e dados', () => {
+  it('conta as coleções, troca o tema e remove exemplos com confirmação', async () => {
+    const db = bancoFalso({ alvos: { a: { nome: 'A' }, b: { nome: 'B' } }, projetos: { p1: { exemplo: true }, p2: {} } });
+    const { raiz } = await montar('ajustes', db);
+    expect(raiz.querySelector('#ajModo')?.textContent).toBe('Compartilhados');
+    const ks = [...raiz.querySelectorAll('#ajN .k')];
+    expect(ks.find((k) => k.textContent?.includes('Alvos'))?.querySelector('b')?.textContent).toBe('2');
+    raiz.querySelector<HTMLButtonElement>('[data-tema="dark"]')!.click();
+    expect(document.documentElement.getAttribute('data-theme')).toBe('dark');
+    raiz.querySelector<HTMLButtonElement>('[data-tema="sistema"]')!.click();
+    expect(document.documentElement.hasAttribute('data-theme')).toBe(false);
+    const ex = raiz.querySelector<HTMLButtonElement>('#ajEx')!;
+    expect(ex.hidden).toBe(false);
+    ex.click(); await espera();
+    expect(db.dados.projetos.p1).toBeTruthy();
+    ex.click(); await espera();
+    expect(db.dados.projetos.p1).toBeUndefined();
+    expect(db.dados.projetos.p2).toBeTruthy();
+  });
+});

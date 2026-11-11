@@ -40,6 +40,13 @@ for (const [fn, nome] of Object.entries(montagens)) {
     html = html.slice(0, p0) + `(window.__studio&&window.__studio.paginas.includes("funil")?(0,l.jsx)(FN,{}):${frag})` + html.slice(p1);
     html = html.replace(mc, 'function FN(){let r=(0,c.useRef)(null);(0,c.useEffect)(()=>{r.current.dataset.th=document.documentElement.getAttribute("data-theme")||"";return window.__studio.montar("funil",r.current)||void 0},[]);return(0,l.jsx)("div",{ref:r,className:"mc cn"})}' + mc);
   }
+  // Rotinas do Claude e Ajustes (Fase 3): trocam `s7` e `sl`, que ficam de reserva.
+  for (const [nome, fn, w] of [['rotinas', 's7', 'RO'], ['ajustes', 'sl', 'AJ']]) {
+    const uso = `"${nome}"===e.page&&(0,l.jsx)(${fn},{})`;
+    if (html.split(uso).length - 1 !== 1) throw new Error(`Esperava 1 uso de ${uso} no legado.`);
+    html = html.replace(uso, `"${nome}"===e.page&&(0,l.jsx)(window.__studio&&window.__studio.paginas.includes("${nome}")?${w}:${fn},{})`);
+    html = html.replace(mc, `function ${w}(){let r=(0,c.useRef)(null);(0,c.useEffect)(()=>{r.current.dataset.th=document.documentElement.getAttribute("data-theme")||"";return window.__studio.montar("${nome}",r.current)||void 0},[]);return(0,l.jsx)("div",{ref:r,className:"mc cn"})}` + mc);
+  }
   // Tabela de serviços (Fase 3): troca o componente `sI`, que fica de reserva.
   {
     const uso = '"tabela"===e.page&&(0,l.jsx)(sI,{})';

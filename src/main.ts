@@ -16,6 +16,7 @@ import mercado from './estilos/mercado.css?inline';
 import funil from './estilos/funil.css?inline';
 import estrategia from './estilos/estrategia.css?inline';
 import tabela from './estilos/tabela.css?inline';
+import gestao from './estilos/gestao.css?inline';
 import * as pCentral from './paginas/central';
 import * as pAgenda from './paginas/agenda';
 import * as pCasos from './paginas/casos';
@@ -27,6 +28,8 @@ import * as pMercado from './paginas/mercado';
 import * as pFunil from './paginas/funil';
 import * as pEstrategia from './paginas/estrategia';
 import * as pTabela from './paginas/tabela';
+import * as pRotinas from './paginas/rotinas';
+import * as pAjustes from './paginas/ajustes';
 
 import type { Montar } from './paginas/dom';
 
@@ -42,13 +45,15 @@ const paginas: Record<string, Montar> = {
   funil: pFunil.montar,
   estrategia: pEstrategia.montar,
   tabela: pTabela.montar,
+  rotinas: pRotinas.montar,
+  ajustes: pAjustes.montar,
 };
 
 function estilos() {
   if (document.getElementById('studio-src-css')) return;
   const el = document.createElement('style');
   el.id = 'studio-src-css';
-  el.textContent = base + central + agenda + licitacoes + captacao + vencedores + mercado + funil + estrategia + tabela;
+  el.textContent = base + central + agenda + licitacoes + captacao + vencedores + mercado + funil + estrategia + tabela + gestao;
   document.head.appendChild(el);
 }
 

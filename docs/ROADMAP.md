@@ -39,7 +39,10 @@
 ## Fase 3 · Oficina e casca
 - ~~Tabela de serviços~~ Feito em 10/11/2026: `src/paginas/tabela.ts`, com filtros, desconto por linha e em lote
   (zerar pede confirmação), situação frente ao SINAPRO e CSV. O componente antigo fica de reserva.
-- Bancada, Gráfica, Plugins, Agentes, Biblioteca, Rotinas, Ajustes.
+- ~~Rotinas do Claude e Ajustes~~ Feito em 11/11/2026: `src/paginas/rotinas.ts` (lista pelo conector, rodar agora,
+  pausar, instrução, último resultado do radar e do backup; descrições das rotinas atuais) e `src/paginas/ajustes.ts`
+  (tema, contagens, exportação, remover exemplos com confirmação, estado da IA). Os componentes antigos ficam de reserva.
+- Bancada, Gráfica, Plugins, Agentes, Biblioteca.
 - Shell próprio (navegação, busca Ctrl K, avisos, tema). O legado sai.
 
 ## Fase 4 · operação
