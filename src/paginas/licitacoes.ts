@@ -6,6 +6,7 @@ import { perguntar, CONTEXTO, ErroIA } from '../lib/ia';
 import type { Oportunidade, Habilitacao, Requisito } from '../lib/tipos';
 import { seletor, comId, type Dialogo } from './dom';
 import { kpis, numero, vazio, abrirDialogo, devolverFoco } from '../componentes';
+import { montarPca } from './pca';
 
 // ---------------------------------------------------------------- dados fixos do hub
 export const EMPRESAS = [
@@ -92,7 +93,7 @@ export function filtrarRadar(L: Oportunidade[], f: FiltroRadar): Oportunidade[] 
       : (b.publicado || '').localeCompare(a.publicado || ''));
 }
 
-type Aba = 'radar' | 'carteira' | 'habilitacao' | 'vias';
+type Aba = 'radar' | 'carteira' | 'habilitacao' | 'pca' | 'vias';
 interface Status { ultimaVarredura?: string; lidos?: number; novos?: number; erro?: string; perfil?: string }
 
 export function montar(root: HTMLElement): () => void {
@@ -106,6 +107,7 @@ export function montar(root: HTMLElement): () => void {
   let col: Colecao<Oportunidade> | null = null, colH: Colecao<Habilitacao> | null = null;
   const offs: (() => void)[] = [];
   let carregando = true, limite = 60;
+  let desPca: (() => void) | null = null;
   let aba: Aba = 'radar';
   try { aba = (localStorage.getItem('lc.aba') as Aba | null) || 'radar'; } catch { /* sem armazenamento */ }
   const F: FiltroRadar = { frente: '', aderencia: '', nota60: true, abertas: true, estudio: false, descartadas: false, q: '', ordem: 'nota' };
@@ -129,11 +131,14 @@ export function montar(root: HTMLElement): () => void {
   function render() {
     try { localStorage.setItem('lc.aba', aba); } catch { /* sem armazenamento */ }
     const cart = O.filter((o) => o.carteira).length;
-    const abas: [Aba, string][] = [['radar', `Radar (${int(O.filter((o) => o.triagem !== 'Descartar').length)})`], ['carteira', `Carteira (${int(cart)})`], ['habilitacao', 'Habilitação do hub'], ['vias', 'Vias de contratação']];
+    const abas: [Aba, string][] = [['radar', `Radar (${int(O.filter((o) => o.triagem !== 'Descartar').length)})`], ['carteira', `Carteira (${int(cart)})`], ['habilitacao', 'Habilitação do hub'], ['pca', 'PCA dos órgãos'], ['vias', 'Vias de contratação']];
     $('#lcA').innerHTML = abas.map(([v, t]) => `<button type="button" role="tab" id="lc-tab-${v}" aria-selected="${aba === v}" aria-pressed="${aba === v}" aria-controls="lcO" data-aba="${v}">${t}</button>`).join('');
     const o = $('#lcO');
     o.setAttribute('role', 'tabpanel');
     o.setAttribute('aria-labelledby', 'lc-tab-' + aba);
+    // a aba do PCA é um módulo com estado próprio: monta uma vez e não é refeita quando o radar muda
+    if (aba === 'pca') { if (!desPca) { o.innerHTML = '<div class="lc-pca"></div>'; desPca = montarPca(o.firstElementChild as HTMLElement, avisar); } return; }
+    if (desPca) { desPca(); desPca = null; }
     o.innerHTML = aba === 'radar' ? radar() : aba === 'carteira' ? carteira() : aba === 'habilitacao' ? habilitacao() : vias();
   }
 
@@ -461,5 +466,5 @@ ${txt.slice(0, 30000)}`, { json: true })) as Record<string, unknown> | null;
       if (aba === 'radar' && !D.open) render();
     }, () => {}));
   })();
-  return () => { offs.forEach((f) => { try { f(); } catch { /* já cancelado */ } }); };
+  return () => { if (desPca) desPca(); offs.forEach((f) => { try { f(); } catch { /* já cancelado */ } }); };
 }

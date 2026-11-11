@@ -50,3 +50,8 @@
 .mc .lc-acts{justify-content:flex-start}
 }
 .mc .lc-varr{font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+.mc .pca-it .lnk{align-self:flex-start;padding:0;min-height:0;font-size:13px}
+.mc .pca-itens{list-style:none;margin:6px 0 0;padding:0;display:grid;gap:8px;border-left:2px solid var(--line-strong);padding-left:12px}
+.mc .pca-itens li{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:2px 12px;font-size:14px}
+.mc .pca-itens li .note{grid-column:1}
+.mc .pca-itens li .num{grid-row:1;grid-column:2;white-space:nowrap}

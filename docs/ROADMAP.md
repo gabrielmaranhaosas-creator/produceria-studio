@@ -70,3 +70,7 @@
 ## Depois do roteiro
 - ~~Alerta de habilitação e prazos no Início~~ Feito em 11/11/2026: certidões vencidas ou que vencem em 30 dias e
   propostas da carteira que vencem em 7 dias aparecem no Início, com link para Licitações.
+- ~~PCA dos órgãos~~ Feito em 11/11/2026: `jobs/pca` coleta os Planos de Contratações Anuais do PNCP por classe
+  CATSER (escolha em `docs/DADOS.md`), filtra pelo perfil do cérebro e agrupa por órgão; aba "PCA dos órgãos" em
+  Licitações, com "Levar ao funil". Rotina mensal "PCA · coleta mensal".
+

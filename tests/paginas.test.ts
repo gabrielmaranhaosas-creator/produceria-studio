@@ -698,3 +698,31 @@ describe('Início · alerta de licitações', () => {
     expect(al.textContent).toContain('Produções');
   });
 });
+
+describe('PCA dos órgãos', () => {
+  const pca = (id: string, o: Record<string, unknown> = {}) => ({ id, ano: 2027, cnpj: '11111111000111', orgao: 'Prefeitura Exemplo', unidades: ['Secretaria de Comunicação'], codigoUnidade: '1', idPca: '11111111000111-0-000003/2027', atualizadoNoPncp: '2026-11-01', uf: 'SP', municipio: 'Campinas', esfera: 'Municipal',
+    itens: [{ numero: 1, descricao: 'Produção de vídeo institucional', frente: 'Produção audiovisual e filmes', classe: '9614', valor: 50000, quantidade: 1, unidadeFornecimento: 'serviço', dataDesejada: '2027-03-01' }], total: 50000, frentes: ['Produção audiovisual e filmes'], primeiraData: '2027-03-01', ...o });
+
+  it('link do PNCP e filtros', async () => {
+    const { linkPca, filtrarPca } = await import('../src/paginas/pca');
+    expect(linkPca('04665345000115-0-000001/2027')).toBe('https://pncp.gov.br/app/pca/04665345000115/2027/1');
+    const L = [pca('a'), pca('b', { uf: 'RJ', total: 90000, frentes: ['Fotografia e cobertura de imagem'] })] as never[];
+    expect(filtrarPca(L, { frente: '', uf: '', q: '', ordem: 'valor' }).map((p: { id: string }) => p.id)).toEqual(['b', 'a']);
+    expect(filtrarPca(L, { frente: 'Fotografia e cobertura de imagem', uf: '', q: '', ordem: 'valor' }).length).toBe(1);
+    expect(filtrarPca(L, { frente: '', uf: 'SP', q: 'video', ordem: 'valor' }).length).toBe(1);
+  });
+
+  it('aba em Licitações lista os órgãos e leva ao funil', async () => {
+    const db = bancoFalso({ pca: { a: pca('a') }, b2g: {} });
+    const { raiz } = await montar('licitacoes', db);
+    raiz.querySelector<HTMLButtonElement>('[data-aba="pca"]')!.click();
+    await espera(40);
+    expect(raiz.querySelector('#lc-tab-pca')?.getAttribute('aria-selected')).toBe('true');
+    expect(raiz.querySelectorAll('.pca-it').length).toBe(1);
+    raiz.querySelector<HTMLButtonElement>('[data-pca-abre="a"]')!.click();
+    expect(raiz.querySelector('.pca-itens')?.textContent).toContain('Produção de vídeo institucional');
+    raiz.querySelector<HTMLButtonElement>('[data-pca-funil="a"]')!.click();
+    await espera();
+    expect(Object.values(db.dados.pipeline)[0]).toMatchObject({ eixo: 'Público', origem: 'PCA', estagio: 'Identificada', valor: 50000 });
+  });
+});

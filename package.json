@@ -7,7 +7,7 @@
   "scripts": {
     "build": "vite build && node scripts/montar.mjs",
     "test": "vitest run",
-    "test:cerebro": "python3 -B -m unittest discover -s jobs/cerebro && python3 -B -m unittest discover -s jobs/vencedores -p 'test_*.py'",
+    "test:cerebro": "python3 -B -m unittest discover -s jobs/cerebro && python3 -B -m unittest discover -s jobs/vencedores -p 'test_*.py' && python3 -B -m unittest discover -s jobs/pca -p 'test_*.py'",
     "typecheck": "tsc --noEmit",
     "check": "npm run typecheck && npm test && npm run test:cerebro && npm run build"
   },
