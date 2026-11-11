@@ -10,16 +10,28 @@ function limpar(txt) {
     .replace(/[^A-Za-z0-9-]+/g, "-").replace(/^-+|-+$/g, "");
 }
 
-// Lê as linhas "nome;largura;altura". Devolve { formatos, erros }.
-function lerFormatos(texto) {
-  const formatos = [], erros = [], vistos = new Set();
+// Lê uma linha por formato. Aceita:
+//   stories;1080;1920        (nome;largura;altura, em pixels)
+//   1920x1080  ou  1920 x 1080 px   (o nome vira 1920x1080)
+//   capa: 29,7x32 cm  ou  210x297 mm   (centímetros e milímetros viram pixels pelo ppi do documento)
+// Devolve { formatos, erros }.
+function lerFormatos(texto, ppi) {
+  const formatos = [], erros = [], vistos = new Set(), res = Number(ppi) > 0 ? Number(ppi) : 72;
   String(texto || "").split(/\r?\n/).forEach((linha, i) => {
-    if (!linha.trim()) return;
-    const p = linha.split(";").map((x) => x.trim());
-    const w = parseInt(p[1], 10), h = parseInt(p[2], 10);
-    const nome = limpar(p[0]);
-    if (p.length !== 3 || !nome || !(w > 0) || !(h > 0) || w > 30000 || h > 30000) {
-      erros.push("Linha " + (i + 1) + ": use nome;largura;altura (ex.: stories;1080;1920).");
+    const t = linha.trim();
+    if (!t) return;
+    let nome, w, h;
+    const p = t.split(";").map((x) => x.trim());
+    const m = /^(?:([^:;]+):\s*)?(\d+(?:[.,]\d+)?)\s*[x×X]\s*(\d+(?:[.,]\d+)?)\s*(px|pixels?|mm|cm)?$/i.exec(t);
+    if (p.length === 3) { nome = limpar(p[0]); w = parseInt(p[1], 10); h = parseInt(p[2], 10); }
+    else if (m) {
+      const un = (m[4] || "px").toLowerCase(), num = (s) => parseFloat(s.replace(",", "."));
+      const fator = un === "mm" ? res / 25.4 : un === "cm" ? res / 2.54 : 1;
+      w = Math.round(num(m[2]) * fator); h = Math.round(num(m[3]) * fator);
+      nome = limpar(m[1] || (un === "mm" || un === "cm" ? m[2] + "x" + m[3] + un : w + "x" + h));
+    }
+    if (!nome || !(w > 0) || !(h > 0) || w > 30000 || h > 30000) {
+      erros.push("Linha " + (i + 1) + " (\"" + t + "\"): use nome;largura;altura (ex.: stories;1080;1920) ou medidas (ex.: 1920x1080 ou 29,7x32 cm).");
       return;
     }
     if (vistos.has(nome.toLowerCase())) { erros.push("Linha " + (i + 1) + ": nome repetido (" + nome + ")."); return; }

@@ -118,6 +118,9 @@ describe('Plugins que já existiam', () => {
     const r = D.lerFormatos(D.PADRAO_FORMATOS);
     expect(r.erros).toEqual([]);
     expect(r.formatos.length).toBeGreaterThan(3);
+    const x = D.lerFormatos('1920x1080 pixels\ncapa: 29,7x32 cm\n210 x 297 mm\nlixo', 300);
+    expect(x.formatos).toEqual([{ nome: '1920x1080', largura: 1920, altura: 1080 }, { nome: 'capa', largura: 3508, altura: 3780 }, { nome: '210x297mm', largura: 2480, altura: 3508 }]);
+    expect(x.erros).toHaveLength(1);
   });
   it('checagem marca CMYK como erro em digital e sem nome de pessoa', () => {
     const K = req('plugins/photoshop/produceria-checar-arquivo/checks.js');
