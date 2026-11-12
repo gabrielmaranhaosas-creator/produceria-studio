@@ -120,7 +120,7 @@ class Cerebro:
         for x in perfil.get("exclusoes", []):
             ex = x.get("exceto") or {}
             self.exc.append({**x, "_rx": re.compile("|".join(f"(?:{p})" for p in x["padroes"])),
-                             "_exf": set(ex.get("frentes", [])), "_exse": re.compile(ex["se"]) if ex.get("se") else None})
+                             "_exf": set(ex.get("frentes", [])), "_alerta": set(ex.get("alerta") or []), "_exse": re.compile(ex["se"]) if ex.get("se") else None})
         self.w = perfil["pesos"]
         self.assunto = perfil.get("assunto_chars", 200)
 
@@ -152,6 +152,10 @@ class Cerebro:
             if pos <= pos_forte:
                 return frente, outras, nome, ""
             return frente, outras, "", nome
+        # exceção com alerta: a frente segura o objeto no radar, mas a mistura pesa na nota (ex.: gráfica + comunicação visual)
+        alertas = [x["nome"] for x in self.exc if x["tipo"] == "branda" and frente["nome"] in x["_alerta"] and self._exceto(x, nomes, t) and x["_rx"].search(t)]
+        if alertas:
+            return frente, outras, "", alertas[0]
         return frente, outras, "", ""
 
     @staticmethod

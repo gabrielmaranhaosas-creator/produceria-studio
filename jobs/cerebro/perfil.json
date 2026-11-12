@@ -1,5 +1,5 @@
 {
-  "versao": "2026-11-12a",
+  "versao": "2026-11-12b",
   "manifesto": "A PRODUCERIA disputa onde o craft decide: filme, fotografia, transmissão, som, conteúdo, direção de arte, comunicação visual e mídia exterior. Entra no radar só o que o próprio objeto da licitação pede. Gráfica em massa, agência de publicidade, shows, decoração e eventos ficam fora.",
   "modalidades": {
     "6": "Pregão - Eletrônico",
@@ -555,6 +555,9 @@
         "frentes": [
           "Comunicação visual e sinalização",
           "Mídia exterior OOH/DOOH"
+        ],
+        "alerta": [
+          "Comunicação visual e sinalização"
         ]
       }
     },

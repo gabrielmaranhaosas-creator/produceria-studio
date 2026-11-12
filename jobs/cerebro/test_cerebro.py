@@ -141,5 +141,15 @@ class FalsosPositivos(unittest.TestCase):
             self.assertGreater(nota(obj)["score"], 0, obj)
 
 
+class GraficaComComunicacaoVisual(unittest.TestCase):
+    def test_fica_com_alerta_e_nota_menor(self):
+        misto = nota("Registro de preços para serviços gráficos e de comunicação visual, compreendendo a confecção e impressão de materiais")
+        puro = nota("Registro de preços para serviços de comunicação visual, compreendendo a confecção e instalação de placas e letreiros")
+        self.assertGreater(misto["score"], 0)
+        self.assertIn("atenção: o objeto também envolve gráfica em massa", misto["motivo"])
+        self.assertLess(misto["score"], puro["score"])
+        self.assertEqual(misto["aderencia"], "condicionada")
+
+
 if __name__ == "__main__":
     unittest.main()
