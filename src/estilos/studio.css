@@ -378,8 +378,9 @@ video {
   --ok: #171717;
   --erro: #171717;
   --aviso: #6b6b68;
-  --font-display: "PTYPE", Arial, sans-serif;
-  --font-text: "ABC Whyte", Arial, sans-serif;
+  /* Fontes da marca primeiro (quem as tem instaladas vê o original); depois as do Google Fonts carregadas pela página. */
+  --font-display: "PTYPE", "Oswald", Arial, sans-serif;
+  --font-text: "ABC Whyte", "Instrument Sans", Arial, sans-serif;
   --gutter: clamp(16px, 3.4vw, 56px);
 }
 @media (prefers-color-scheme: dark) {
@@ -469,7 +470,9 @@ select {
 }
 .d {
   font-family: var(--font-display);
-  letter-spacing: -0.02em;
+  /* a PTYPE só tem caixa-alta; a Oswald (substituta do Google Fonts) precisa da transformação para o mesmo visual */
+  text-transform: uppercase;
+  letter-spacing: -0.01em;
   text-wrap: balance;
   margin: 0;
   font-weight: 400;

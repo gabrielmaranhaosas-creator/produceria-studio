@@ -153,22 +153,15 @@ writeFileSync('dist/legado.html', html);
   const enxuto = (css) => css.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\s+/g, ' ').trim();
   const embutidas = legado.match(/@font-face\{[^}]*\}/g) || [];
   if (embutidas.length !== 4) throw new Error(`Esperava 4 fontes no legado, achei ${embutidas.length}.`);
-  // As fontes saem da página para dist/fontes/*.woff2 (publicadas junto, como arquivos): a revisão de
-  // compartilhamento do claude.ai recusa fonte embutida em data: URI (aceita só imagem, vídeo e áudio).
-  mkdirSync('dist/fontes', { recursive: true });
-  const fontes = embutidas.map((f) => {
-    const familia = /font-family:([^;]+);/.exec(f)[1].replace(/["']/g, '').trim();
-    const peso = (/font-weight:(\d+)/.exec(f) || [, '400'])[1];
-    const italico = /font-style:italic/.test(f);
-    const nome = `${familia.toLowerCase().replace(/[^a-z0-9]+/g, '-')}-${peso}${italico ? '-italic' : ''}.woff2`;
-    const b64 = /base64,([A-Za-z0-9+/=]+)/.exec(f)[1];
-    writeFileSync(join('dist/fontes', nome), Buffer.from(b64, 'base64'));
-    return f.replace(/url\(data:font\/woff2;base64,[A-Za-z0-9+/=]+\)/, `url("fontes/${nome}")`);
-  });
-  if (fontes.some((f) => f.includes('data:'))) throw new Error('Sobrou fonte embutida em data: URI.');
+  // As fontes da marca não vão mais com a página: a revisão de compartilhamento do claude.ai recusa fonte embutida
+  // (data: URI) e também em arquivo publicado. A página carrega Instrument Sans e Oswald do Google Fonts; quem tem
+  // ABC Whyte e PTYPE instaladas no computador continua vendo as originais (ver --font-text e --font-display).
+  const fontes = [];
+  const googleFonts = '<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>'
+    + '<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:ital,wght@0,400;0,500;0,600;1,400&family=Oswald:wght@400;500&display=swap">';
   const reset = `<style>${enxuto(readFileSync('src/estilos/reset.css', 'utf8'))}</style>`;
   const studio = `<style>${fontes.join('')}${enxuto(readFileSync('src/estilos/studio.css', 'utf8'))}</style>`;
-  const novo = `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">${reset}<title>PRODUCERia Studio</title><meta name="claude:viewport-fit-sides" content="cover">${studio}</head>`
+  const novo = `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">${reset}<title>PRODUCERia Studio</title><meta name="claude:viewport-fit-sides" content="cover">${googleFonts}${studio}</head>`
     + `<body><a class="sr pular" href="#conteudo">Pular para o conteúdo</a><div id="root" data-casca="propria"></div><script type="module" data-studio="modulos">${modulos}</script></body></html>`;
   if (/<script(?![^>]*data-studio)/i.test(novo.replace(modulos, ''))) throw new Error('O Studio novo não deve ter outro script além dos módulos.');
   if (/data:(?!image\/(png|jpeg|gif|webp))[a-z]+\//i.test(novo.replace(modulos, ''))) throw new Error('A página não pode embutir data: URI que não seja imagem: a revisão de compartilhamento recusa.');
