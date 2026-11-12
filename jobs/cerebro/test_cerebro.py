@@ -112,5 +112,34 @@ class Nota(unittest.TestCase):
         self.assertIn("CNAE", n["motivo"])
 
 
+class FalsosPositivos(unittest.TestCase):
+    """Casos reais de 12/11/2026 que entravam no radar sem ser trabalho do hub."""
+    def zero(self, objeto):
+        n = nota(objeto)
+        self.assertTrue(n is None or n["score"] == 0, objeto)
+
+    def test_saem(self):
+        for obj in ("Televisão Smart 65 polegadas (TV) Televisão Smart com tela mínima de 65 polegadas, com conteúdos digitais",
+                    "Prestação de serviços de ativação e disponibilização de plano de comunicação e rastreamento satelital para equipamentos SPOT X",
+                    "Registro de preços visando à contratação de solução de comunicação digital, abrangendo plataforma de mensagens, atendimento multicanal ao cidadão",
+                    "Fornecimento de solução integrada de implementação e monitoramento de sinal ISDB-Tb, incluindo controle de loudness, gravação e gestão de conteúdo audiovisual",
+                    "Prestação de serviços de propaganda volante por meio de carro de som, destinados à divulgação de campanhas educativas",
+                    "Contratação de empresas de Rádio FM e Emissoras de TV para prestação de serviços de comunicação, mediante transmissão ao vivo da Temporada de Verão",
+                    "Implantação integral do espetáculo temporário na Lagoa do Parque, incluindo produção audiovisual",
+                    "Preparação de originais (revisão e padronização) e revisão de provas diagramadas; elaboração de projeto gráfico",
+                    "Locação de Painéis e Totens de LED (indoor e outdoor), incluindo infraestrutura de processamento de vídeo",
+                    "Fornecimento e instalação de policarbonato, vidros, acm, brise e placa cimentícia nas unidades",
+                    "Mapeamento georreferenciado, vetorização, cadastramento digital, fornecimento e instalação de placas de identificação",
+                    "- KIT DE FOTOGRAFIA PROFISSIONAL",
+                    "Credenciamento de prestadoras de serviços de comunicação institucional por meio da veiculação de spots de até 60 segundos em emissoras de rádio AM e/ou FM"):
+            self.zero(obj)
+
+    def test_misto_com_servico_do_hub_fica(self):
+        for obj in ("Prestação de serviços de cobertura fotográfica e cronometragem de corridas de rua",
+                    "Prestação de serviços de gravação de spots e propaganda volante",
+                    "Prestação de serviços de produção de áudio (spot institucional) e divulgação via propaganda volante (carro de som)"):
+            self.assertGreater(nota(obj)["score"], 0, obj)
+
+
 if __name__ == "__main__":
     unittest.main()

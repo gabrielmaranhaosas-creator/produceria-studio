@@ -56,7 +56,8 @@ function itens(): Item[]{const out: Item[]=[];const vistos=new Set<string>();
    lead:{nome:inh?m.anunciante:m.agencia,perfil,gatilho:`${inh?'Montou estrutura interna para':'Ganhou a conta de'} ${inh?m.agencia:m.anunciante} em ${dt(m.data)}${m.escopo?': '+String(m.escopo).slice(0,160):''}`,fonte:m.fonte||''}})}
  for(const c of S.contratos){if((c.valor||0)<50000)continue;out.push({k:'cv:'+c.id,tipo:'venceu',cat:c.segmento||c.frente||'',data:String(c.publicado||c.inicio||'').slice(0,10),titulo:`${nomeLegivel(c.fornecedor)} venceu contrato com ${nomeLegivel(c.orgao)}`,resumo:nomeLegivel(c.objeto||''),empresas:[c.fornecedor,c.orgao].filter(Boolean),fonte:'PNCP',url:c.link||'',valor:c.valor,uf:c.uf,fim:c.fim,
    lead:{nome:nomeLegivel(c.fornecedor),perfil:/publicidade|propaganda|comunica/i.test((c.tipoEmpresa||'')+' '+(c.frente||''))?'publica':'independente',gatilho:`Venceu contrato de ${brk(c.valor||0)} com ${nomeLegivel(c.orgao)}${c.uf?' ('+c.uf+')':''}, publicado em ${dt(c.publicado)}${c.fim?', vigente até '+dt(c.fim):''}.`,fonte:c.link||''}})}
- for(const b of S.b2g){if((b.score||0)<60||(b.prazo&&b.prazo<hoje))continue;out.push({k:'lb:'+(b.ref||b.objeto),tipo:'aberta',cat:b.frente||'',data:String(b.publicado||'').slice(0,10),titulo:String(b.objeto||'').slice(0,140),resumo:`${nomeLegivel(b.orgao||'')}${b.uf?' · '+b.uf:''}${b.modalidade?' · '+b.modalidade:''}${b.prazo?' · proposta até '+dt(b.prazo):''}`,empresas:[b.orgao].filter(Boolean),fonte:'PNCP · nota '+b.score,url:b.url||'',valor:b.valor,uf:b.uf,score:b.score,prazo:b.prazo,lead:null})}
+ const lic=new Set<string>();
+ for(const b of S.b2g){if((b.score||0)<60||(b.prazo&&b.prazo<hoje))continue;const kl=chave(b.orgao||'')+'|'+chave(b.objeto||'')+'|'+(b.valor||'');if(lic.has(kl))continue;lic.add(kl);out.push({k:'lb:'+(b.ref||b.objeto),tipo:'aberta',cat:b.frente||'',data:String(b.publicado||'').slice(0,10),titulo:String(b.objeto||'').slice(0,140),resumo:`${nomeLegivel(b.orgao||'')}${b.uf?' · '+b.uf:''}${b.modalidade?' · '+b.modalidade:''}${b.prazo?' · proposta até '+dt(b.prazo):''}`,empresas:[b.orgao].filter(Boolean),fonte:'PNCP · nota '+b.score,url:b.url||'',valor:b.valor,uf:b.uf,score:b.score,prazo:b.prazo,lead:null})}
  for(const c of renov){const pub=/publicidade|propaganda|comunica/i.test((c.frente||'')+' '+(c.fornecedor||''));out.push({k:'rn:'+c.id,tipo:'renova',cat:c.frente||'',data:c.fim,titulo:`Contrato de ${nomeLegivel(c.fornecedor)} com ${nomeLegivel(c.orgao)} vence em ${dt(c.fim)}`,resumo:nomeLegivel(c.objeto||''),empresas:[c.fornecedor,c.orgao].filter(Boolean),fonte:'PNCP',url:c.link||'',valor:c.valor,uf:c.uf,
    lead:{nome:nomeLegivel(c.fornecedor),perfil:pub?'publica':'independente',gatilho:`Contrato de ${brk(c.valor||0)} com ${nomeLegivel(c.orgao)}${c.uf?' ('+c.uf+')':''} vence em ${dt(c.fim)}: renovação ou nova licitação à vista.`,fonte:c.link||''}})}
  return out}
@@ -129,6 +130,6 @@ lerBase<{movimentos?: Movimento[]}>('mercado').then((m)=>{if(m&&m.movimentos){es
  sub('noticias',b.collection('noticias').orderBy('data','desc').limit(500),'noticias');
  sub('movimentos',null,'movimentos');
  sub('contratos_novos',b.collection('contratos_novos').orderBy('publicado','desc').limit(400),'contratos');
- sub('b2g',b.collection('b2g').orderBy('publicado','desc').limit(400),'b2g');
+ sub('b2g',b.collection('b2g').orderBy('publicado','desc').limit(3000),'b2g');
  sub('alvos',null,'alvos');sub('central',null,'central')})();
 return()=>{clearTimeout(timer);for(const o of offs){try{typeof o==='function'&&o()}catch(e){}}}}

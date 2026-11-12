@@ -24,7 +24,11 @@ for (const col of readdirSync(pasta)) {
   if (!statSync(dir).isDirectory() || !COLECOES.has(col)) continue;
   const docs = readdirSync(dir).filter((f) => f.endsWith('.json') && !f.startsWith('.')).map((f) => {
     const d = JSON.parse(readFileSync(join(dir, f), 'utf8'));
-    return { id: d.id ?? f.slice(0, -5), dados: d.data ?? d };
+    // O ArtifactData grava o próprio documento; só desembrulha o formato {id, data: {...}, version}. Notícias e
+    // movimentos têm um campo "data" (a data do fato), que não pode ser confundido com o envelope.
+    const envelope = d && typeof d.data === 'object' && d.data !== null && !Array.isArray(d.data)
+      && Object.keys(d).every((k) => k === 'id' || k === 'data' || k === 'version');
+    return { id: (envelope ? d.id : null) ?? f.slice(0, -5), dados: envelope ? d.data : d };
   });
   await cli.query('begin');
   try {

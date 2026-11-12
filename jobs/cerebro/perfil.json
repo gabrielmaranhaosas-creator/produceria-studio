@@ -1,5 +1,5 @@
 {
-  "versao": "2026-11-10e",
+  "versao": "2026-11-12a",
   "manifesto": "A PRODUCERIA disputa onde o craft decide: filme, fotografia, transmissão, som, conteúdo, direção de arte, comunicação visual e mídia exterior. Entra no radar só o que o próprio objeto da licitação pede. Gráfica em massa, agência de publicidade, shows, decoração e eventos ficam fora.",
   "modalidades": {
     "6": "Pregão - Eletrônico",
@@ -294,7 +294,12 @@
         "\\binformatica",
         "contratacao de ferramentas",
         "ferramentas (graficas|digitais|de edicao)",
-        "solucao de gestao"
+        "solucao de gestao",
+        "plataforma (digital )?de (mensagens|atendimento|comunicacao digital)",
+        "atendimento multicanal",
+        "omnichannel",
+        "chatbot",
+        "integracao (a|com|aos) sistemas"
       ]
     },
     {
@@ -305,7 +310,12 @@
         "compra de",
         "fornecimento de (equipamento|camera|filmadora|materia)",
         "filmadora",
-        "material de consumo"
+        "material de consumo",
+        "televisao smart",
+        "smart tv",
+        "televisores?",
+        "polegadas",
+        "\\bkits? (de )?(fotografia|filmagem|video|iluminacao)"
       ]
     },
     {
@@ -320,7 +330,15 @@
         "pedreiro",
         "azulej",
         "alvenaria",
-        "pintura predial"
+        "pintura predial",
+        "policarbonato",
+        "placas? cimenticia",
+        "\\bpastilhas?\\b",
+        "\\bbrises?\\b",
+        "\\bmuretas?\\b",
+        "esquadria",
+        "marcenaria",
+        "mobiliario sob medida"
       ]
     },
     {
@@ -332,7 +350,9 @@
         "montagem de evento",
         "(montagem|desmontagem|locacao|cota) de (estande|stand)",
         "(estande|stands?) (institucional|de feira|em feira|no evento)",
-        "cerimonial"
+        "cerimonial",
+        "coordenacao logistica",
+        "(execucao|realizacao) d[ao] (corrida|maratona|caminhada)"
       ]
     },
     {
@@ -381,7 +401,20 @@
         "luminarias?",
         "outsourcing",
         "\\bcopias\\b",
-        "reprografi"
+        "reprografi",
+        "rastreamento",
+        "satelit",
+        "\\bgps\\b",
+        "\\bisdb",
+        "loudness",
+        "monitoramento de sinal",
+        "sinal de (tv|televisao)",
+        "georreferenc",
+        "vetorizacao",
+        "cadastramento",
+        "emplacamento",
+        "numeracao (predial|de imoveis)",
+        "iluminacao (para|das|dos) (as |os )?(lonas|empenas|fachadas|predios)"
       ]
     },
     {
@@ -398,7 +431,9 @@
         "formatura",
         "futsal",
         "\\bcopa\\b",
-        "torneio"
+        "torneio",
+        "espetaculos?",
+        "cronometragem"
       ]
     },
     {
@@ -448,7 +483,9 @@
         "marketing promocional",
         "\\bclipping",
         "fixacao (mensal )?de banner",
-        "agencia(s)? de marketing"
+        "agencia(s)? de marketing",
+        "emissoras? de (radio|tv|televisao)",
+        "\\bradios? fm\\b"
       ],
       "exceto": {
         "frentes": [
@@ -457,11 +494,42 @@
       }
     },
     {
+      "nome": "propaganda volante (carro de som)",
+      "tipo": "branda",
+      "padroes": [
+        "propaganda volante",
+        "carros? de som",
+        "som (automotivo|volante)"
+      ],
+      "exceto": {
+        "frentes": [
+          "Som, trilha e locução",
+          "Produção audiovisual e filmes"
+        ],
+        "se": "(gravacao|producao) de (spots?|audio|jingle)"
+      }
+    },
+    {
       "nome": "assessoria de imprensa",
       "tipo": "branda",
       "padroes": [
         "assessoria de imprensa",
         "relacoes publicas"
+      ]
+    },
+    {
+      "nome": "revisão de textos",
+      "tipo": "branda",
+      "padroes": [
+        "revisao (de )?(textos|originais|provas|ortografica|gramatical)",
+        "preparacao de originais"
+      ]
+    },
+    {
+      "nome": "locação de painel ou totem de LED",
+      "tipo": "branda",
+      "padroes": [
+        "locacao de (paineis|telas|totens|paineis e totens) (de )?led"
       ]
     },
     {
