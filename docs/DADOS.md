@@ -22,7 +22,7 @@ Tipos completos em `src/lib/tipos.ts`.
 | `notificacoes` | tarefas agendadas | Avisos que aparecem no Studio |
 | `projetos`, `pecas` | (desativado) | Produção, fora do escopo atual. Dados guardados, sem tela |
 
-Arquivos publicados junto da página: `vencedores.bin.wasm` (contratos públicos, gzip), `mercado.json`
+Arquivos publicados junto da página: `vencedores.json` (contratos públicos), `mercado.json`
 (movimentos de conta curados), `jobs/*`.
 
 ## Backup

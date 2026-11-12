@@ -123,7 +123,7 @@ $<HTMLInputElement>('#cnQ').oninput=e=>{F.q=(e.target as HTMLInputElement).value
 $<HTMLSelectElement>('#cnP').onchange=e=>{F.p=(e.target as HTMLSelectElement).value;lim=40;render()};$<HTMLSelectElement>('#cnE').onchange=e=>{F.e=(e.target as HTMLSelectElement).value;lim=40;render()};
 render();
 fetch('mercado.json').then(r=>r.ok?r.json():null).then((m: {movimentos?: Movimento[]}|null)=>{if(m&&m.movimentos){estatico=m.movimentos;render()}}).catch(()=>{});
-(async()=>{try{const v=await lerArquivo<{contratos?: ContratoPublico[]}>('vencedores.bin.wasm','vencedores.json');const lim=addDias(hoje,180);renov=(v.contratos||[]).filter((c): c is ContratoComFim=>!!c.fim&&c.fim>=hoje&&c.fim<=lim&&(c.valor||0)>=100000);render()}catch(e){}})();
+(async()=>{try{const v=await lerArquivo<{contratos?: ContratoPublico[]}>('vencedores.json');const lim=addDias(hoje,180);renov=(v.contratos||[]).filter((c): c is ContratoComFim=>!!c.fim&&c.fim>=hoje&&c.fim<=lim&&(c.valor||0)>=100000);render()}catch(e){}})();
 (async()=>{const b=db=await banco();if(!b){mode='local';render();return}mode='db';
  const sub=(nome: string,q: Consulta<unknown>|null,key: keyof Fontes)=>{const c=col[nome]=b.collection(nome);const t=setTimeout(()=>{mode='local';render()},10000);offs.push((q||c).onSnapshot(s=>{clearTimeout(t);(S as unknown as Record<string,unknown[]>)[key]=s.docs.map(comId);render()},()=>{clearTimeout(t)}))};
  sub('noticias',b.collection('noticias').orderBy('data','desc').limit(500),'noticias');

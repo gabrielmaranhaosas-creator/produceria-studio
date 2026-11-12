@@ -347,7 +347,7 @@ export function montar(root: HTMLElement): () => void {
   });
 
   (async () => {
-    try { base = await lerArquivo<Mapa>('vencedores.bin.wasm', 'vencedores.json'); recalcular(); }
+    try { base = await lerArquivo<Mapa>('vencedores.json'); recalcular(); }
     catch (e) { $('#vcK').innerHTML = `<div class="lc-box"><p>Não consegui abrir o mapa de vencedores (${esc(e instanceof Error ? e.message : String(e))}).</p></div>`; }
     db = await banco();
     if (!db) return;

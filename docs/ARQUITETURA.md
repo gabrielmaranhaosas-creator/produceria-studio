@@ -91,7 +91,7 @@ produção gráfica, comunicação visual e mídia exterior são o núcleo da PR
 ficam (núcleo). O ruído sai por regras rígidas no início do objeto (curso, software, compra de equipamento, obra,
 eventos, fora do ramo) e brandas que cedem a filmagem, foto ou transmissão citadas antes (shows, Natal, locação de
 palco e som, veiculação em jornal/rádio/site, assessoria de imprensa). Rádio, TV e jornal que vendem veiculação também
-saem. `jobs/vencedores/limpar.py` aplica isso ao `vencedores.json` publicado e regrava o `.bin.wasm`; a rotina mensal
+saem. `jobs/vencedores/limpar.py` aplica isso ao `vencedores.json` publicado; a rotina mensal
 usa o mesmo `classes.py` publicado em `vencedores/`. Limpeza de 10/11/2026: 15.318 → 7.978 contratos no arquivo.
 
 Desde o `2026-11-10e`, comunicação visual e sinalização (letreiros, totens, fachadas em ACM, placas de
@@ -107,6 +107,7 @@ ou decisão).
 ## Publicação
 
 `npm run build` gera `dist/index.html`. Publicar = Artifact `publish` com esse arquivo na URL do Studio,
-mantendo os arquivos de apoio já publicados (`vencedores.bin.wasm`, `mercado.json`, scripts de `jobs/`).
-O arquivo `vencedores.bin.wasm` é o `vencedores.json` comprimido com gzip: o claude.ai não serve `.gz`,
-e a extensão `.wasm` é só o tipo binário aceito.
+mantendo os arquivos de apoio já publicados (`vencedores.json`, `mercado.json`, scripts de `jobs/`).
+Até 12/11/2026 havia também um `vencedores.bin.wasm` (o mesmo JSON em gzip, disfarçado de WebAssembly). Ele saiu:
+a revisão de compartilhamento do claude.ai recusa binários que não são imagem, vídeo ou áudio, e o Studio não podia
+ser compartilhado. Não publique arquivos binários junto da página.

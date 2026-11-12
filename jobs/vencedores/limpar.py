@@ -10,9 +10,8 @@ contratos pequenos), por isso eles são ajustados por subtração do que saiu; c
 a partir da lista limpa.
 
 Uso: python3 limpar.py vencedores.json SAIDA_DIR
-Grava SAIDA_DIR/vencedores.json, SAIDA_DIR/vencedores.bin.wasm (gzip) e SAIDA_DIR/removidos.json; imprime um resumo."""
+Grava SAIDA_DIR/vencedores.json e SAIDA_DIR/removidos.json; imprime um resumo."""
 import collections
-import gzip
 import json
 import os
 import sys
@@ -169,7 +168,6 @@ def main():
             "empresas": empresas, "orgaos": orgaos, "contratos": kept}
     raw = json.dumps(novo, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
     open(os.path.join(out, "vencedores.json"), "wb").write(raw)
-    open(os.path.join(out, "vencedores.bin.wasm"), "wb").write(gzip.compress(raw, 9))
     json.dump([{"id": c["id"], "frente": c["frente"], "motivo": m, "objeto": c["objeto"][:120]} for c, m in sai],
               open(os.path.join(out, "removidos.json"), "w", encoding="utf-8"), ensure_ascii=False)
     print(json.dumps({"contratos": [len(A["contratos"]), len(kept)], "empresas": [len(A["empresas"]), len(empresas)],
