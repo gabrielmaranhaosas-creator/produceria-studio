@@ -22,8 +22,10 @@ Tipos completos em `src/lib/tipos.ts`.
 | `notificacoes` | tarefas agendadas | Avisos que aparecem no Studio |
 | `projetos`, `pecas` | (desativado) | Produção, fora do escopo atual. Dados guardados, sem tela |
 
-Arquivos publicados junto da página: `vencedores.json` (contratos públicos), `mercado.json`
-(movimentos de conta curados), `jobs/*`.
+Nenhum arquivo é publicado junto da página (a revisão de compartilhamento do claude.ai recusa). Contratos públicos e
+mercado ficam no banco em blocos: `base_vencedores` e `base_mercado` (documento `cabeca` com os campos pequenos e a
+contagem de cada lista; `<lista>-NN` com até ~180 KB de itens), lidos por `lerBase` em `src/lib/db.ts`. Os scripts das
+rotinas (`jobs/*`) ficam no artefato só de scripts https://claude.ai/artifact/1k7uacyGKxSJ4D6ujmQDBp.
 
 ## Backup
 

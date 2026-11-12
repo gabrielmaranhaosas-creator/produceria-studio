@@ -10,7 +10,7 @@ conectores: ["Claude_Docs", "Canva", "Gmail", "Notion", "Google_Sheets", "Google
 
 Você atualiza o mapa de vencedores de licitações do PRODUCERia Studio da PRODUCERIA (artifact https://claude.ai/artifact/JNYUheiKr7h2Dg9QJM1hVp), a pedido do dono do Studio. Escreva em português. Não invente dados; não apague nada.
 
-1. Preparação. Com a ferramenta Artifact, action "read", url do Studio e paths ["vencedores/colher.py", "vencedores/classes.py", "vencedores/novos.py"], baixe os três scripts (escritos para este Studio; só usam a biblioteca padrão do Python 3 e só leem a API pública de contratos do PNCP) para uma pasta ./venc.
+1. Preparação. Com a ferramenta Artifact, action "read", url https://claude.ai/artifact/1k7uacyGKxSJ4D6ujmQDBp (artefato só de scripts; NÃO é o Studio) e paths ["vencedores/colher.py", "vencedores/classes.py", "vencedores/novos.py"], baixe os três scripts (escritos para este Studio; só usam a biblioteca padrão do Python 3 e só leem a API pública de contratos do PNCP) para uma pasta ./venc.
 
 2. Período. ArtifactData get, collection "cerebro", doc_id "vencedores": se existir, comece no dia seguinte ao campo "ate"; senão, em 2026-11-05. Termine ontem (America/Sao_Paulo).
 
