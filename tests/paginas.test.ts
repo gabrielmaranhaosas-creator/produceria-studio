@@ -50,6 +50,24 @@ afterEach(() => { vi.unstubAllGlobals(); delete (window as any).claude; });
 
 const hoje = new Date().toISOString().slice(0, 10);
 
+describe('Base em blocos no banco (lerBase)', () => {
+  it('remonta as listas na ordem e cai para o arquivo quando a base está incompleta', async () => {
+    vi.resetModules();
+    const db = bancoFalso({ base_teste: {
+      cabeca: { dados: { meta: { n: 3 } }, partes: { contratos: 3 } },
+      'contratos-02': { itens: [{ id: 3 }] },
+      'contratos-01': { itens: [{ id: 1 }, { id: 2 }] },
+    }, base_quebrada: { cabeca: { dados: {}, partes: { contratos: 5 } }, 'contratos-01': { itens: [{ id: 1 }] } } });
+    (window as any).claude = { use: async (n: string) => (n === 'db' ? db.banco : null) };
+    const { lerBase } = await import('../src/lib/db');
+    expect(await lerBase('teste')).toEqual({ meta: { n: 3 }, contratos: [{ id: 1 }, { id: 2 }, { id: 3 }] });
+    const f = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({ origem: 'arquivo' })));
+    expect(await lerBase('quebrada')).toEqual({ origem: 'arquivo' });
+    expect(f).toHaveBeenCalledWith('quebrada.json');
+    f.mockRestore();
+  });
+});
+
 describe('Agenda', () => {
   it('mostra o resumo e a fila do dia a partir dos alvos', async () => {
     const db = bancoFalso({ alvos: {

@@ -75,3 +75,32 @@ export async function lerArquivo<T>(...caminhos: string[]): Promise<T> {
   }
   throw ultimoErro;
 }
+
+/** Base grande guardada no banco em blocos, na coleção `base_<nome>`: o documento `cabeca` traz os campos pequenos
+ * (`dados`) e, em `partes`, quantos itens cada lista tem; os documentos `<lista>-NN` trazem os pedaços (`itens`).
+ * Fica no banco, e não em arquivo publicado junto da página, porque a revisão de compartilhamento do claude.ai recusa
+ * qualquer arquivo além da página. Sem banco, ou com a base incompleta, tenta o arquivo `<nome>.json` (teste local). */
+export async function lerBase<T>(nome: string): Promise<T> {
+  const db = await banco();
+  if (db) {
+    type D = { id: string; dados?: Record<string, unknown>; partes?: Record<string, number>; itens?: unknown[] };
+    const docs = await new Promise<D[]>((ok) => {
+      let fim = false, off: () => void = () => {};
+      const sair = (v: D[]) => { if (fim) return; fim = true; ok(v); setTimeout(() => { try { off(); } catch { /* já cancelado */ } }); };
+      const t = setTimeout(() => sair([]), 20000);
+      off = db.collection<D>(`base_${nome}`).onSnapshot((s) => { clearTimeout(t); sair(s.docs.map((d) => ({ ...(d.data() as D), id: d.id }))); }, () => { clearTimeout(t); sair([]); });
+    });
+    const cab = docs.find((d) => d.id === 'cabeca');
+    if (cab?.partes) {
+      const obj: Record<string, unknown> = { ...(cab.dados || {}) };
+      let ok = true;
+      for (const [lista, total] of Object.entries(cab.partes)) {
+        const itens = docs.filter((d) => d.id.startsWith(lista + '-')).sort((a, b) => a.id.localeCompare(b.id)).flatMap((d) => d.itens || []);
+        if (itens.length !== total) { ok = false; break; }
+        obj[lista] = itens;
+      }
+      if (ok) return obj as T;
+    }
+  }
+  return lerArquivo<T>(`${nome}.json`);
+}

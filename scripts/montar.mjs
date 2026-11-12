@@ -153,18 +153,17 @@ writeFileSync('dist/legado.html', html);
   const enxuto = (css) => css.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\s+/g, ' ').trim();
   const embutidas = legado.match(/@font-face\{[^}]*\}/g) || [];
   if (embutidas.length !== 4) throw new Error(`Esperava 4 fontes no legado, achei ${embutidas.length}.`);
-  // As fontes da marca não vão mais com a página: a revisão de compartilhamento do claude.ai recusa fonte embutida
-  // (data: URI) e também em arquivo publicado. A página carrega Instrument Sans e Oswald do Google Fonts; quem tem
-  // ABC Whyte e PTYPE instaladas no computador continua vendo as originais (ver --font-text e --font-display).
+  // Nenhuma fonte vai com a página: a revisão de compartilhamento do claude.ai recusou fonte embutida (data:), fonte em
+  // arquivo publicado e fonte carregada do Google Fonts. Quem tem ABC Whyte e PTYPE instaladas vê as originais
+  // (ver --font-text e --font-display); os demais veem as do sistema.
   const fontes = [];
-  const googleFonts = '<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>'
-    + '<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:ital,wght@0,400;0,500;0,600;1,400&family=Oswald:wght@400;500&display=swap">';
   const reset = `<style>${enxuto(readFileSync('src/estilos/reset.css', 'utf8'))}</style>`;
   const studio = `<style>${fontes.join('')}${enxuto(readFileSync('src/estilos/studio.css', 'utf8'))}</style>`;
-  const novo = `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">${reset}<title>PRODUCERia Studio</title><meta name="claude:viewport-fit-sides" content="cover">${googleFonts}${studio}</head>`
+  const novo = `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">${reset}<title>PRODUCERia Studio</title><meta name="claude:viewport-fit-sides" content="cover">${studio}</head>`
     + `<body><a class="sr pular" href="#conteudo">Pular para o conteúdo</a><div id="root" data-casca="propria"></div><script type="module" data-studio="modulos">${modulos}</script></body></html>`;
   if (/<script(?![^>]*data-studio)/i.test(novo.replace(modulos, ''))) throw new Error('O Studio novo não deve ter outro script além dos módulos.');
   if (/data:(?!image\/(png|jpeg|gif|webp))[a-z]+\//i.test(novo.replace(modulos, ''))) throw new Error('A página não pode embutir data: URI que não seja imagem: a revisão de compartilhamento recusa.');
+  if (/<link[^>]+(stylesheet|preconnect)|@import|https?:\/\/fonts\./i.test(novo.replace(modulos, ''))) throw new Error('A página não pode carregar folha de estilo ou fonte de fora: a revisão de compartilhamento recusa.');
   writeFileSync('dist/index.html', novo);
   console.log(`dist/index.html: ${(novo.length / 1024).toFixed(0)} KB sem o legado (módulos ${(modulos.length / 1024).toFixed(0)} KB) · dist/legado.html: ${(html.length / 1024).toFixed(0)} KB de reserva`);
 }

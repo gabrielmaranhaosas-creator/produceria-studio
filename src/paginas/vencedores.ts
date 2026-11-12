@@ -1,7 +1,7 @@
 // Vencedores de licitações: quem já ganhou contrato público no escopo da casa (PNCP, 24 meses).
 // Quatro visões: quem abordar (empresas), órgãos e recompra, preços e calendário, contratos.
 import { esc, int, brl, brk, dt } from '../lib/formato';
-import { banco, lerArquivo, type Banco } from '../lib/db';
+import { banco, lerBase, type Banco } from '../lib/db';
 import { chave } from '../lib/nomes';
 import { seletor, comId, abaNoEndereco, type Dialogo } from './dom';
 import { kpis, vazio, abrirDialogo, devolverFoco } from '../componentes';
@@ -347,7 +347,7 @@ export function montar(root: HTMLElement): () => void {
   });
 
   (async () => {
-    try { base = await lerArquivo<Mapa>('vencedores.json'); recalcular(); }
+    try { base = await lerBase<Mapa>('vencedores'); recalcular(); }
     catch (e) { $('#vcK').innerHTML = `<div class="lc-box"><p>Não consegui abrir o mapa de vencedores (${esc(e instanceof Error ? e.message : String(e))}).</p></div>`; }
     db = await banco();
     if (!db) return;

@@ -1,7 +1,7 @@
 // Contas e agências: quem atende quem no mercado privado (movimentações de conta, agências, maiores anunciantes).
-// Base publicada em mercado.json; a Captação semanal grava movimentações novas na coleção `movimentos`.
+// Base no banco (coleção base_mercado, ver lerBase em lib/db.ts); a Captação semanal grava movimentações novas na coleção `movimentos`.
 import { esc, int, brk, dt } from '../lib/formato';
-import { banco, lerArquivo, type Banco } from '../lib/db';
+import { banco, lerBase, type Banco } from '../lib/db';
 import { chave } from '../lib/nomes';
 import { seletor, comId, abaNoEndereco, type Dialogo } from './dom';
 import { kpis, vazio, abrirDialogo, devolverFoco } from '../componentes';
@@ -221,7 +221,7 @@ export function montar(root: HTMLElement): () => void {
   });
 
   (async () => {
-    try { base = await lerArquivo<Mercado>('mercado.json'); recalcular(); }
+    try { base = await lerBase<Mercado>('mercado'); recalcular(); }
     catch (e) { $('#mkK').innerHTML = `<div class="lc-box"><p>Não consegui abrir a base de mercado (${esc(e instanceof Error ? e.message : String(e))}).</p></div>`; }
     db = await banco();
     if (!db) return;
