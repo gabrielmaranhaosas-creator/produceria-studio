@@ -76,11 +76,11 @@ export async function lerArquivo<T>(...caminhos: string[]): Promise<T> {
   throw ultimoErro;
 }
 
-/** Base grande guardada no banco em blocos, na coleção `base_<nome>`: o documento `cabeca` traz os campos pequenos
- * (`dados`) e, em `partes`, quantos itens cada lista tem; os documentos `<lista>-NN` trazem os pedaços (`itens`).
- * Fica no banco, e não em arquivo publicado junto da página, porque a revisão de compartilhamento do claude.ai recusa
- * qualquer arquivo além da página. Sem banco, ou com a base incompleta, tenta o arquivo `<nome>.json` (teste local). */
+/** Base grande: primeiro o arquivo `<nome>.json` publicado junto do Studio (o caminho que sempre funcionou); se ele
+ * não existir, a cópia no banco em blocos, na coleção `base_<nome>` (documento `cabeca` com os campos pequenos em `dados`
+ * e a contagem de cada lista em `partes`; documentos `<lista>-NN` com os pedaços em `itens`). */
 export async function lerBase<T>(nome: string): Promise<T> {
+  try { return await lerArquivo<T>(`${nome}.json`); } catch (e) { if (!(await banco())) throw e; }
   const db = await banco();
   if (db) {
     type D = { id: string; dados?: Record<string, unknown>; partes?: Record<string, number>; itens?: unknown[] };
@@ -102,5 +102,5 @@ export async function lerBase<T>(nome: string): Promise<T> {
       if (ok) return obj as T;
     }
   }
-  return lerArquivo<T>(`${nome}.json`);
+  throw new Error(`Base ${nome} indisponível no arquivo e no banco.`);
 }

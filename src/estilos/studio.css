@@ -378,10 +378,8 @@ video {
   --ok: #171717;
   --erro: #171717;
   --aviso: #6b6b68;
-  /* Fontes da marca, se instaladas no computador; senão, as do sistema. Nenhuma fonte vai com a página: a revisão de
-     compartilhamento do claude.ai recusa fonte embutida, fonte em arquivo e fonte carregada de fora (Google Fonts). */
-  --font-display: "PTYPE", "Avenir Next Condensed", "Arial Narrow", "Helvetica Neue", Arial, sans-serif;
-  --font-text: "ABC Whyte", -apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+  --font-display: "PTYPE", Arial, sans-serif;
+  --font-text: "ABC Whyte", Arial, sans-serif;
   --gutter: clamp(16px, 3.4vw, 56px);
 }
 @media (prefers-color-scheme: dark) {
@@ -471,9 +469,7 @@ select {
 }
 .d {
   font-family: var(--font-display);
-  /* a PTYPE só tem caixa-alta; a fonte do sistema precisa da transformação para o mesmo visual */
-  text-transform: uppercase;
-  letter-spacing: -0.01em;
+  letter-spacing: -0.02em;
   text-wrap: balance;
   margin: 0;
   font-weight: 400;

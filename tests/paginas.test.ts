@@ -51,7 +51,7 @@ afterEach(() => { vi.unstubAllGlobals(); delete (window as any).claude; });
 const hoje = new Date().toISOString().slice(0, 10);
 
 describe('Base em blocos no banco (lerBase)', () => {
-  it('remonta as listas na ordem e cai para o arquivo quando a base está incompleta', async () => {
+  it('usa o arquivo quando existe e, sem ele, remonta a base do banco na ordem', async () => {
     vi.resetModules();
     const db = bancoFalso({ base_teste: {
       cabeca: { dados: { meta: { n: 3 } }, partes: { contratos: 3 } },
@@ -60,10 +60,13 @@ describe('Base em blocos no banco (lerBase)', () => {
     }, base_quebrada: { cabeca: { dados: {}, partes: { contratos: 5 } }, 'contratos-01': { itens: [{ id: 1 }] } } });
     (window as any).claude = { use: async (n: string) => (n === 'db' ? db.banco : null) };
     const { lerBase } = await import('../src/lib/db');
+    const sem = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response('', { status: 404 }));
     expect(await lerBase('teste')).toEqual({ meta: { n: 3 }, contratos: [{ id: 1 }, { id: 2 }, { id: 3 }] });
+    await expect(lerBase('quebrada')).rejects.toThrow();
+    sem.mockRestore();
     const f = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({ origem: 'arquivo' })));
-    expect(await lerBase('quebrada')).toEqual({ origem: 'arquivo' });
-    expect(f).toHaveBeenCalledWith('quebrada.json');
+    expect(await lerBase('teste')).toEqual({ origem: 'arquivo' });
+    expect(f).toHaveBeenCalledWith('teste.json');
     f.mockRestore();
   });
 });
