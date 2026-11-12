@@ -159,5 +159,13 @@ writeFileSync('dist/legado.html', html);
     + `<body><a class="sr pular" href="#conteudo">Pular para o conteúdo</a><div id="root" data-casca="propria"></div><script type="module" data-studio="modulos">${modulos}</script></body></html>`;
   if (/<script(?![^>]*data-studio)/i.test(novo.replace(modulos, ''))) throw new Error('O Studio novo não deve ter outro script além dos módulos.');
   writeFileSync('dist/index.html', novo);
+  // Modo consulta (fora do claude.ai): o mesmo Studio com um banco só leitura e uma faixa no topo. Servido por
+  // consulta/server.mjs, atrás de senha. O script entra antes dos módulos e define window.claude.
+  const runtime = readFileSync('scripts/consulta-runtime.js', 'utf8');
+  if (/<\/script/i.test(runtime)) throw new Error('consulta-runtime.js contém "</script".');
+  const faixa = '<style>#consultaFaixa{position:sticky;top:0;z-index:1000;background:#1a1a18;color:#f2f1ec;font:12px/1.4 var(--font-text,Arial),sans-serif;letter-spacing:.02em;padding:6px 16px;text-align:center}</style>';
+  const consulta = novo.replace('</head>', () => `${faixa}<title>PRODUCERia Studio · consulta</title></head>`).replace('<title>PRODUCERia Studio</title>', '')
+    .replace('<script type="module" data-studio="modulos">', () => `<script data-studio="consulta">${runtime}</script><script type="module" data-studio="modulos">`);
+  writeFileSync('dist/consulta.html', consulta);
   console.log(`dist/index.html: ${(novo.length / 1024).toFixed(0)} KB sem o legado (módulos ${(modulos.length / 1024).toFixed(0)} KB) · dist/legado.html: ${(html.length / 1024).toFixed(0)} KB de reserva`);
 }

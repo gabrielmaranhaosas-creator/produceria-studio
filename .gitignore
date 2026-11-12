@@ -4,3 +4,5 @@ dist/
 .DS_Store
 backups/
 out/
+consulta/.env
+consulta/export/
