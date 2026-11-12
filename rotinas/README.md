@@ -38,6 +38,5 @@ backup e Central rodaram no prazo e cria um aviso "Rotina parada" no Studio quan
 **Ambientes (11/11/2026):** os ambientes de nuvem comuns (`env_0141…`, `env_01Pcepff…`) bloqueiam `pncp.gov.br`
 (403 no proxy). As rotinas que leem o PNCP rodam no ambiente do Cowork (Cérebro, Vencedores) e baixam os scripts do
 artefato só de scripts (https://claude.ai/artifact/1k7uacyGKxSJ4D6ujmQDBp: `cerebro/*`, `vencedores/*`, `pca/pca.py`,
-`captacao/nota.py`); ao mudar um script em `jobs/`, publique de novo esse artefato (página em `rotinas/artefato-scripts.html`).
-Desde 12/11/2026 nenhum arquivo vai junto do Studio: a revisão de compartilhamento recusa. A rotina "Studio · publicação automática do main" foi apagada no claude.ai em 11/11/2026 e recriada no mesmo dia com o mesmo texto (novo id).
+`captacao/nota.py`); ao mudar um script em `jobs/`, publique de novo esse artefato (página em `rotinas/artefato-scripts.html`). A rotina "Studio · publicação automática do main" foi apagada no claude.ai em 11/11/2026 e recriada no mesmo dia com o mesmo texto (novo id).
 

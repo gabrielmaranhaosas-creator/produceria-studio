@@ -107,11 +107,12 @@ ou decisão).
 ## Publicação
 
 `npm run build` gera `dist/index.html`. Publicar = Artifact `publish` com esse arquivo na URL do Studio,
-sem nenhum outro arquivo. Desde 12/11/2026 o Studio publica só o `index.html`: a revisão de compartilhamento do
-claude.ai recusou, em testes isolados, qualquer arquivo publicado junto (.json, .py, .woff2, o antigo `.bin.wasm`),
-fonte embutida em `data:` e fonte carregada do Google Fonts ("grande ou complexa demais"). Por isso:
-- contratos públicos e mercado ficam no banco em blocos (`base_vencedores`, `base_mercado`; ver docs/DADOS.md);
-- os scripts das rotinas ficam no artefato só de scripts (https://claude.ai/artifact/1k7uacyGKxSJ4D6ujmQDBp, página em
-  `rotinas/artefato-scripts.html`); ao mudar um script em `jobs/`, publique de novo esse artefato;
-- não há fonte na página: quem tem ABC Whyte e PTYPE instaladas vê a marca (`--font-text`, `--font-display`), os demais
-  veem a do sistema. O build falha se a página embutir `data:` que não seja imagem ou carregar fonte ou CSS de fora.
+mantendo os arquivos de dados já publicados (`vencedores.json`, `mercado.json`). As fontes ABC Whyte e PTYPE vão
+embutidas na página.
+
+Compartilhamento (12/11/2026): a revisão do claude.ai passou a recusar a versão do Studio ("use JPEG, PNG..."). Em
+testes isolados, uma cópia só da página e sem capabilities passou; o Studio só com a página, mas com as capabilities,
+continuou recusado. A tentativa de tirar fontes e arquivos não resolveu, quebrou a tela Vencedores e foi desfeita
+(versão 74). Continua valendo: os scripts das rotinas ficam no artefato só de scripts
+(https://claude.ai/artifact/1k7uacyGKxSJ4D6ujmQDBp) e os contratos e o mercado têm cópia no banco (`base_vencedores`,
+`base_mercado`), que as telas só usam se o arquivo faltar.
