@@ -111,3 +111,7 @@ mantendo os arquivos de apoio já publicados (`vencedores.json`, `mercado.json`,
 Até 12/11/2026 havia também um `vencedores.bin.wasm` (o mesmo JSON em gzip, disfarçado de WebAssembly). Ele saiu:
 a revisão de compartilhamento do claude.ai recusa binários que não são imagem, vídeo ou áudio, e o Studio não podia
 ser compartilhado. Não publique arquivos binários junto da página.
+Pelo mesmo motivo, desde 12/11/2026 as 4 fontes (PTYPE e ABC Whyte) não vão mais embutidas na página: o build as grava
+em `dist/fontes/*.woff2` e a página as carrega de `fontes/`. Na primeira publicação depois de mudar uma fonte, publique
+também esses arquivos (`files`); a publicação automática manda só o `index.html` e mantém os que já estão lá. O build
+falha se a página voltar a embutir `data:` que não seja imagem.
