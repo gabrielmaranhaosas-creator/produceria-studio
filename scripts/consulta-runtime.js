@@ -50,7 +50,46 @@
     };
   }
   var banco = { collection: function (c) { return consulta(c, [], null, null); } };
-  window.claude = { use: function (n) { return Promise.resolve(n === 'db' ? banco : null); } };
+  // Downloads pelo próprio navegador (no claude.ai quem entrega é o Claude).
+  var downloads = {
+    save: function (o) {
+      try {
+        var blob = o.data instanceof Blob ? o.data : new Blob([o.data]);
+        var url = URL.createObjectURL(blob), a = document.createElement('a');
+        a.href = url; a.download = o.filename || 'arquivo'; document.body.appendChild(a); a.click(); a.remove();
+        setTimeout(function () { URL.revokeObjectURL(url); }, 4000);
+        return Promise.resolve({ status: 'saved' });
+      } catch (e) { return Promise.reject(e); }
+    },
+  };
+  window.claude = { use: function (n) { return Promise.resolve(n === 'db' ? banco : n === 'downloads' ? downloads : null); } };
+
+  // O que não funciona fora do Claude sai da tela: páginas que dependem da IA ou das rotinas, e os botões que gravam
+  // dados ou consultam a IA. Navegar, filtrar, buscar, ler e baixar continuam.
+  var PAGINAS_FORA = ['atelie', 'agentes', 'rotinas', 'lixeira'];
+  var BOTOES_FORA = /^(Salvar|Salva|Arquivar|Desarquivar|Editar|Excluir|Adicionar|Adicionar caso|Adicionar conta|Importar dados|Novo alvo|Nova oferta|Nova oportunidade|Nova ficha|Salvar ficha|Nova conversa|Enviar|Registrar contato|Adiar 2 dias úteis|Disputar|Monitorar|Levar|Levar para o funil|Marcar como perdida|Carregar base da pesquisa|Revisar matriz|Cruzar \(TOWS\)|Diagnóstico de diversificação|Ler edital ou aviso|Pedir leitura|Zerar desconto|Remover exemplos.*|Aplicar aos .*|Virar alvo.*|Virar frente →|\+|(Mapeado|Pesquisado|Abordado|Conversa|Proposta|Cliente|Contato|Qualificação|Negociação|Ganha|Ganho) →)$/;
+  function limpar() {
+    var nav = document.querySelectorAll('a[href^="#"]');
+    for (var i = 0; i < nav.length; i++) {
+      var h = nav[i].getAttribute('href').slice(1);
+      if (PAGINAS_FORA.indexOf(h) >= 0 && !nav[i].closest('main')) { var li = nav[i].closest('li') || nav[i]; li.style.display = 'none'; }
+    }
+    var bs = document.querySelectorAll('main button, main [data-lead], main [data-x="lead"]');
+    for (var j = 0; j < bs.length; j++) {
+      var b = bs[j], t = (b.textContent || '').replace(/\s+/g, ' ').trim();
+      if (b.hasAttribute('data-lead') || b.getAttribute('data-x') === 'lead' || b.getAttribute('data-x') === 'salvo' || b.getAttribute('data-x') === 'arquivado' || BOTOES_FORA.test(t)) b.style.display = 'none';
+    }
+  }
+  function vigiar() {
+    var pend = false;
+    new MutationObserver(function () { if (pend) return; pend = true; setTimeout(function () { pend = false; limpar(); }, 30); })
+      .observe(document.body, { childList: true, subtree: true });
+    limpar();
+    window.addEventListener('hashchange', function () {
+      var h = location.hash.slice(1).split(/[/?]/)[0];
+      if (PAGINAS_FORA.indexOf(h) >= 0) location.hash = h === 'atelie' ? '#desdobra' : '#inicio';
+    });
+  }
 
   // Faixa no topo: deixa claro que é uma cópia só leitura e de quando são os dados.
   function faixa() {
@@ -66,5 +105,6 @@
       }
     }).catch(function () {});
   }
-  if (document.body) faixa(); else document.addEventListener('DOMContentLoaded', faixa);
+  function iniciar() { faixa(); vigiar(); }
+  if (document.body) iniciar(); else document.addEventListener('DOMContentLoaded', iniciar);
 })();

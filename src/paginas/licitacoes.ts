@@ -72,7 +72,9 @@ const SIT_TXT = { pendente: 'Pendente', ok: 'Em dia', vence: 'Vence em 30 dias',
 const SIT_CLS = { pendente: 'erro', ok: 'ok', vence: 'aviso', vencida: 'erro', na: '' } as const;
 const PROX_STATUS = { pendente: 'ok', ok: 'na', na: 'pendente' } as const;
 
-const frenteDe = (o: Oportunidade) => o.frenteCerebro || o.frente || 'Sem frente';
+// Nomes de frente de perfis antigos do Cérebro, para o filtro não mostrar categorias que já não existem.
+const FRENTE_ANTIGA: Record<string, string> = { 'Transmissão e streaming': 'Transmissão ao vivo', 'Som, trilha e mixagem': 'Som, trilha e locução', 'Arte-finalização e produção gráfica': 'Comunicação visual e sinalização' };
+const frenteDe = (o: Oportunidade) => { const f = o.frenteCerebro || o.frente || 'Sem frente'; return FRENTE_ANTIGA[f] || f; };
 const aberta = (o: Oportunidade) => !o.prazo || o.prazo.slice(0, 10) >= hoje();
 const vencida = (o: Oportunidade) => !!o.prazo && o.prazo.slice(0, 10) < hoje();
 const valorTxt = (v?: number | null) => (v ? brl(v) : 'Sem valor');
