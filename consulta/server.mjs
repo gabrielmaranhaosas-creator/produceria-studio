@@ -56,6 +56,8 @@ async function conteudo(caminho) {
 createServer(async (req, res) => {
   const caminho = new URL(req.url, 'http://x').pathname;
   if (caminho === '/saude') { res.writeHead(200).end('ok'); return; }
+  // Qual commit está no ar (o Render define RENDER_GIT_COMMIT): sem dados, serve para conferir o deploy.
+  if (caminho === '/versao') { res.writeHead(200, { 'Content-Type': 'text/plain' }).end((process.env.RENDER_GIT_COMMIT || 'local').slice(0, 7)); return; }
   if (!autorizado(req)) {
     res.writeHead(401, { 'WWW-Authenticate': 'Basic realm="PRODUCERia Studio · consulta", charset="UTF-8"', 'Content-Type': 'text/plain; charset=utf-8' });
     res.end('Senha da equipe necessária.');
