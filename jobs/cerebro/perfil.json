@@ -1,5 +1,5 @@
 {
-  "versao": "2026-11-12b",
+  "versao": "2026-11-13a",
   "manifesto": "A PRODUCERIA disputa onde o craft decide: filme, fotografia, transmissão, som, conteúdo, direção de arte, comunicação visual e mídia exterior. Entra no radar só o que o próprio objeto da licitação pede. Gráfica em massa, agência de publicidade, shows, decoração e eventos ficam fora.",
   "modalidades": {
     "6": "Pregão - Eletrônico",
@@ -261,7 +261,11 @@
         "intermediac",
         "agenciamento",
         "publicidade legal",
-        "compra de midia"
+        "compra de midia",
+        "por intermedio de .{0,20}agencia",
+        "insercoes? de midia",
+        "em jornal impresso",
+        "publicacoes? em jornal"
       ]
     },
     {
@@ -299,7 +303,14 @@
         "atendimento multicanal",
         "omnichannel",
         "chatbot",
-        "integracao (a|com|aos) sistemas"
+        "integracao (a|com|aos) sistemas",
+        "access points?",
+        "wi-?fi",
+        "rede sem fio",
+        "licenciamento (do |de )?direito",
+        "direitos? de exibicao",
+        "portal (da )?transparencia",
+        "(desenvolvimento|manutencao|atualizacao).{0,40}(de |da )(site|pagina|portal)"
       ]
     },
     {
@@ -338,7 +349,15 @@
         "\\bmuretas?\\b",
         "esquadria",
         "marcenaria",
-        "mobiliario sob medida"
+        "mobiliario sob medida",
+        "\\bcad\\b",
+        "\\bbim\\b",
+        "modelagem (tridimensional|3d) arquitet",
+        "intemperies",
+        "conforto termico",
+        "controle solar",
+        "insulfilm",
+        "peliculas? (de controle solar|refletiva|de seguranca)"
       ]
     },
     {
@@ -414,7 +433,14 @@
         "cadastramento",
         "emplacamento",
         "numeracao (predial|de imoveis)",
-        "iluminacao (para|das|dos) (as |os )?(lonas|empenas|fachadas|predios)"
+        "iluminacao (para|das|dos) (as |os )?(lonas|empenas|fachadas|predios)",
+        "cotas? de patrocinio",
+        "lanternagem",
+        "funilaria",
+        "gestao administrativa e financeira",
+        "apoio a gestao administrativa",
+        "iluminacao para .{0,30}(lonas|empenas|fachadas|predios)",
+        "patrocinio (de|ao|do|para) (evento|projeto|festival)"
       ]
     },
     {
@@ -433,7 +459,9 @@
         "\\bcopa\\b",
         "torneio",
         "espetaculos?",
-        "cronometragem"
+        "cronometragem",
+        "mural artistico",
+        "pintura artistica"
       ]
     },
     {
@@ -485,7 +513,9 @@
         "fixacao (mensal )?de banner",
         "agencia(s)? de marketing",
         "emissoras? de (radio|tv|televisao)",
-        "\\bradios? fm\\b"
+        "\\bradios? fm\\b",
+        "trafego pago",
+        "impulsionamento"
       ],
       "exceto": {
         "frentes": [

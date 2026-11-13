@@ -130,6 +130,6 @@ lerBase<{movimentos?: Movimento[]}>('mercado').then((m)=>{if(m&&m.movimentos){es
  sub('noticias',b.collection('noticias').orderBy('data','desc').limit(500),'noticias');
  sub('movimentos',null,'movimentos');
  sub('contratos_novos',b.collection('contratos_novos').orderBy('publicado','desc').limit(400),'contratos');
- sub('b2g',b.collection('b2g').orderBy('publicado','desc').limit(3000),'b2g');
+ sub('b2g',null,'b2g'); // a coleção inteira, como em Licitações: o banco do Claude recusa limit alto e a Central ficava sem licitações
  sub('alvos',null,'alvos');sub('central',null,'central')})();
 return()=>{clearTimeout(timer);for(const o of offs){try{typeof o==='function'&&o()}catch(e){}}}}

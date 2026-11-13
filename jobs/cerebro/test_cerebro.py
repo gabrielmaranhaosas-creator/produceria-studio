@@ -131,7 +131,17 @@ class FalsosPositivos(unittest.TestCase):
                     "Fornecimento e instalação de policarbonato, vidros, acm, brise e placa cimentícia nas unidades",
                     "Mapeamento georreferenciado, vetorização, cadastramento digital, fornecimento e instalação de placas de identificação",
                     "- KIT DE FOTOGRAFIA PROFISSIONAL",
-                    "Credenciamento de prestadoras de serviços de comunicação institucional por meio da veiculação de spots de até 60 segundos em emissoras de rádio AM e/ou FM"):
+                    "Credenciamento de prestadoras de serviços de comunicação institucional por meio da veiculação de spots de até 60 segundos em emissoras de rádio AM e/ou FM",
+                    "Contratação de 01 (uma) cota de patrocínio destinada à realização do projeto Empreendedorismo Feminino, com transmissão ao vivo",
+                    "Contratação de solução de rede sem fio (Wi-Fi 6), com Access Points indoor e outdoor",
+                    "Interpretação de projetos em formato CAD e modelagem tridimensional arquitetônica com animação",
+                    "Contratação de serviço de inserções de mídia para divulgação de ações da administração, abrangendo sites, jornais e outdoor",
+                    "Licenciamento do direito de exibição do documentário Paradeiros, para exibição em TV aberta",
+                    "Serviço de lanternagem e pintura automotiva, com aplicação de identidade visual (adesivos)",
+                    "Fornecimento e aplicação de soluções de proteção contra intempéries e conforto térmico, com comunicação visual",
+                    "Serviço de tráfego pago para impulsionamento de conteúdos institucionais nas redes sociais",
+                    "Prestação de serviços de publicidade institucional e comunicação digital, por intermédio de 01 (uma) agência de propaganda",
+                    "Fornecimento e instalação de sistema de iluminação para as 03 (três) lonas tipo empena da fachada"):
             self.zero(obj)
 
     def test_misto_com_servico_do_hub_fica(self):
@@ -139,6 +149,10 @@ class FalsosPositivos(unittest.TestCase):
                     "Prestação de serviços de gravação de spots e propaganda volante",
                     "Prestação de serviços de produção de áudio (spot institucional) e divulgação via propaganda volante (carro de som)"):
             self.assertGreater(nota(obj)["score"], 0, obj)
+
+    def test_cidade_patrocinio_nao_e_patrocinio(self):
+        n = nota("Confecção e instalação de 03 totens e 03 placas de identificação visual para unidades em Caratinga e Patrocínio/MG")
+        self.assertGreater(n["score"], 0)
 
 
 class GraficaComComunicacaoVisual(unittest.TestCase):
