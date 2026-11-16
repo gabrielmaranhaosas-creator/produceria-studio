@@ -50,9 +50,13 @@ describe('adaptação de campanha, critérios de produção', () => {
     expect(JSON.stringify(m)).toBe(original);
     expect(p.revisao).toMatch(/obrigatória/);
   });
-  it('bloqueia papel desconhecido, estrutura incompatível e áreas impossíveis', () => {
+  it('papel desconhecido vira Outro com aviso; pranchetas e áreas impossíveis bloqueiam', () => {
     const m = mestre(); m.camadas[0].papel = 'desconhecido'; m.pranchetas = true;
-    expect(A.planejar(m, { largura: 500, altura: 500 }).bloqueios).toHaveLength(2);
+    const p = A.planejar(m, { largura: 500, altura: 500 });
+    expect(p.bloqueios).toHaveLength(1);
+    expect(p.bloqueios[0]).toMatch(/pranchetas/);
+    expect(p.avisos.join(' ')).toMatch(/sem papel definido/);
+    expect(p.elementos.find((e: any) => e.chave === m.camadas[0].chave).papel).toBe('outro');
     for (const margens of [{ topo: 70, base: 30 }, { esquerda: -1 }, { topo: 'abc' }]) {
       expect(() => A.areaSegura(100, 100, margens)).toThrow();
     }
@@ -194,5 +198,53 @@ describe('execução com adaptador Photoshop simulado', () => {
     expect(falha.arquivos).toEqual([{ formato: 'psd', caminho: '/rodada/PSD/TESTE.psd', status: 'gravado' }]);
     expect(escritas).toEqual(['/rodada/PSD/TESTE.psd']); expect(removidos).toEqual(['TESTE.jpg']);
     expect(e.eventos.at(-1)).toBe('fechou');
+  });
+});
+
+describe('KV real: fundo travado, máscara de recorte, cadeados e 8 bits (v1.4.1)', () => {
+  it('JPG/PNG aceitam RGB 8 bits pelas constantes do Photoshop, não pelo número', () => {
+    const host = { ...ambiente().host, constants: { AnchorPosition: {}, DocumentMode: { RGB: 'RGBColorMode', CMYK: 'CMYKColorMode' }, BitsPerChannelType: { EIGHT: 'bitDepth8', SIXTEEN: 'bitDepth16' } } };
+    const PS = carregar('photoshop.js', host);
+    expect(PS.ehRgb8({ mode: 'RGBColorMode', bitsPerChannel: 'bitDepth8' })).toBe(true);
+    expect(PS.ehRgb8({ mode: 'RGBColorMode', bitsPerChannel: 'bitDepth16' })).toBe(false);
+    expect(PS.ehRgb8({ mode: 'CMYKColorMode', bitsPerChannel: 'bitDepth8' })).toBe(false);
+    expect(() => PS.conferirWeb({ mode: 'RGBColorMode', bitsPerChannel: 'bitDepth8' }, ['psd', 'jpg', 'png'])).not.toThrow();
+  });
+  it('Plano de fundo não bloqueia: vira camada na cópia antes de expandir o canvas e mantém o nome', async () => {
+    const e = ambiente(), lotes: any[] = [];
+    (e.host as any).action = { batchPlay: async (d: any) => { lotes.push(d); e.eventos.push('converteu'); const c = e.copias[0]; c.layers[1].isBackgroundLayer = false; c.layers[1].name = 'Camada 0'; return [{}]; } };
+    e.fonte.layers[1].name = 'Plano de fundo'; e.fonte.layers[1].isBackgroundLayer = true; e.fonte.layers[1].locked = true; e.fonte.layers[1].kind = 'pixel';
+    const duplicar = e.fonte.duplicate;
+    e.fonte.duplicate = async () => { const c = await duplicar(); c.layers[1].isBackgroundLayer = true; c.layers[1].kind = 'pixel'; return c; };
+    const PS = carregar('photoshop.js', e.host), m = PS.lerMestre(e.fonte);
+    expect(m.camadas[1].papel).toBe('fundo'); expect(m.camadas[1].risco).toBe(''); expect(m.camadas[1].fundoEspecial).toBe(true);
+    const p = A.planejar(m, { nome: 'v', largura: 500, altura: 1500 });
+    expect(p.bloqueios).toEqual([]);
+    await PS.gerar(p, { nome: 'saida', modo: 'camadas', pasta: null }, {});
+    expect(e.eventos.indexOf('converteu')).toBe(1);
+    expect(e.eventos.indexOf('converteu')).toBeLessThan(e.eventos.findIndex((x) => x.startsWith('canvas:')));
+    expect(lotes[0][0]._target[0]._property).toBe('background');
+    expect(e.copias[0].layers[1].name).toBe('Plano de fundo');
+  });
+  it('cadeado de posição ou pixels bloqueia com instrução; trava de transparência não', () => {
+    const e = ambiente(), PS = carregar('photoshop.js', e.host);
+    e.fonte.layers[0].positionLocked = true;
+    expect(PS.lerMestre(e.fonte).camadas[0].risco).toMatch(/cadeado/);
+    e.fonte.layers[0].positionLocked = false; e.fonte.layers[0].transparentPixelsLocked = true; e.fonte.layers[0].locked = true;
+    expect(PS.lerMestre(e.fonte).camadas[0].risco).toBe('');
+  });
+  it('máscara de recorte segue a base: mesma escala, mesmo deslocamento, papel herdado', () => {
+    const e = ambiente(), PS = carregar('photoshop.js', e.host);
+    const sombra = { ...e.fonte.layers[0], id: 11, name: 'Sombra', isClippingMask: true, boundsNoEffects: caixa(60, 60, 100, 40) };
+    e.fonte.layers = [sombra, ...e.fonte.layers];
+    const m = PS.lerMestre(e.fonte);
+    expect(m.camadas[0].base).toBe('1'); expect(m.camadas[0].papel).toBe('marca'); expect(m.camadas[0].risco).toBe('');
+    const p = A.planejar(m, { nome: 'b', largura: 300, altura: 250 });
+    const base = p.elementos.find((x: any) => x.chave === '1'), rec = p.elementos.find((x: any) => x.chave === '0');
+    expect(rec.escala).toBe(base.escala); expect(rec.segue).toBe('LOGO');
+    const centro = (b: any) => [(b.left + b.right) / 2, (b.top + b.bottom) / 2];
+    const [bx, by] = centro(base.bounds), [ox, oy] = centro(base.origem), [rx, ry] = centro(rec.bounds), [qx, qy] = centro(rec.origem);
+    expect(rx - bx).toBeCloseTo((qx - ox) * base.escala); expect(ry - by).toBeCloseTo((qy - oy) * base.escala);
+    expect(p.avisos.join(' ')).not.toMatch(/colisão/);
   });
 });

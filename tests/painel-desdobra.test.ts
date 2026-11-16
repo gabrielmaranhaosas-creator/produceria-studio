@@ -22,22 +22,23 @@ function painel() {
 }
 
 describe('fluxo do painel de adaptação', () => {
-  it('adiciona KV, mostra nome como texto e bloqueia geração com papel desconhecido', async () => {
-    const { doc, mutacoes, win } = painel();
+  it('abre em Cobrir; no modo camadas, papel desconhecido vira aviso e o nome aparece como texto', async () => {
+    const { doc, win } = painel();
+    expect((doc.getElementById('modo') as any).value).toBe('cobrir');
+    (doc.getElementById('modo') as any).value = 'camadas';
     (doc.getElementById('cliente') as any).value = 'TESTE';
     (doc.getElementById('campanha') as any).value = 'piloto';
     doc.getElementById('btnAdicionarKv')!.dispatchEvent(new win.MouseEvent('click'));
     expect(doc.getElementById('mapa')!.textContent).toContain('<img src=x');
     expect(doc.getElementById('mapa')!.querySelector('img')).toBeNull();
     doc.getElementById('btnDiagnosticar')!.dispatchEvent(new win.MouseEvent('click'));
-    expect(doc.getElementById('resultado')!.textContent).toContain('[CORRIGIR]');
-    doc.getElementById('btnDesdobrar')!.dispatchEvent(new win.MouseEvent('click')); await Promise.resolve();
-    expect(mutacoes()).toBe(0);
-    expect(doc.getElementById('resumo')!.textContent).toContain('Resolva');
+    expect(doc.getElementById('resultado')!.textContent).not.toContain('[CORRIGIR]');
+    expect(doc.getElementById('resultado')!.textContent).toContain('sem papel definido');
     win.happyDOM.abort();
   });
   it('diagnóstico após correção não cria arquivos e a memória guarda o papel escolhido', () => {
     const { doc, mutacoes, win } = painel();
+    (doc.getElementById('modo') as any).value = 'camadas';
     (doc.getElementById('cliente') as any).value = 'TESTE'; (doc.getElementById('campanha') as any).value = 'piloto';
     doc.getElementById('btnAdicionarKv')!.dispatchEvent(new win.MouseEvent('click'));
     const select = doc.querySelector('#mapa select') as any;
@@ -52,13 +53,14 @@ describe('fluxo do painel de adaptação', () => {
   });
   it('papel manual não migra silenciosamente para outra estrutura de camadas', () => {
     const { doc, win, fonte } = painel();
+    (doc.getElementById('modo') as any).value = 'camadas';
     (doc.getElementById('cliente') as any).value = 'TESTE'; (doc.getElementById('campanha') as any).value = 'piloto';
     doc.getElementById('btnAdicionarKv')!.dispatchEvent(new win.MouseEvent('click'));
     const select = doc.querySelector('#mapa select') as any;
     select.selectedIndex = 2; select.dispatchEvent(new win.Event('change'));
     fonte.layers[0].name = 'Camada nova';
     doc.getElementById('btnDiagnosticar')!.dispatchEvent(new win.MouseEvent('click'));
-    expect(doc.getElementById('resultado')!.textContent).toContain('[CORRIGIR]');
+    expect(doc.getElementById('resultado')!.textContent).toContain('sem papel definido');
     expect((doc.querySelector('#mapa select') as any).value).toBe('desconhecido');
     win.happyDOM.abort();
   });

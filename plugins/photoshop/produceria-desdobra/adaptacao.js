@@ -86,12 +86,32 @@ function planejar(mestre, alvo, margens) {
   if (mestre.historico == null) avisos.push("Histórico da fonte indisponível: alterações só de pixels podem não ser detectadas. Releia o KV antes do lote.");
   if (distancia > Math.log(1.5)) avisos.push("Mudança acentuada de proporção: prefira outro KV e revise a composição.");
   if (mestre.pranchetas) bloqueios.push("KV com pranchetas: use um documento de canvas único nesta versão.");
-  for (const c of mestre.camadas.filter((x) => x.visivel)) {
-    if (c.papel === "desconhecido") { bloqueios.push("Defina o papel de “" + c.nome + "”."); continue; }
+  const porChave = new Map();
+  // Bases antes das recortadas (que ficam acima delas na lista de camadas).
+  const ordem = mestre.camadas.filter((x) => x.visivel).sort((a, b) => (a.base != null) - (b.base != null));
+  for (const c of ordem) {
+    // Sem papel definido, a camada acompanha a composição como "Outro elemento": revisar, mas não trava o lote.
+    const papel = c.papel === "desconhecido" ? "outro" : c.papel;
+    if (c.papel === "desconhecido") avisos.push("“" + c.nome + "” sem papel definido: tratada como Outro elemento. Defina o papel no mapa para um resultado melhor.");
     if (c.risco) { bloqueios.push(c.nome + ": " + c.risco); continue; }
-    if (c.papel === "ajuste") continue;
+    if (papel === "ajuste") continue;
     if (!valido(c.bounds)) { bloqueios.push("Não foi possível medir “" + c.nome + "”."); continue; }
-    const fundo = c.papel === "fundo" || c.papel === "decoracao";
+    // Máscara de recorte: mesma escala e mesmo deslocamento da camada base, para não descolar.
+    const base = c.base != null ? porChave.get(String(c.base)) : null;
+    if (c.base != null && !base) {
+      const b = mestre.camadas[Number(c.base)];
+      if (!b || !b.visivel || (b.papel === "ajuste")) { /* base sem transformação: a recortada também fica */ continue; }
+    }
+    if (base) {
+      const s = base.escala, bo = base.origem, bn = base.bounds;
+      const cx = (bn.left + bn.right) / 2 + ((c.bounds.left + c.bounds.right) / 2 - (bo.left + bo.right) / 2) * s;
+      const cy = (bn.top + bn.bottom) / 2 + ((c.bounds.top + c.bounds.bottom) / 2 - (bo.top + bo.bottom) / 2) * s;
+      const w = largura(c.bounds) * s, h = altura(c.bounds) * s;
+      elementos.push({ chave: c.chave, nome: c.nome, tipo: c.tipo, papel: base.papel, escala: s, segue: base.nome, fundoEspecial: false,
+        bounds: { left: cx - w / 2, top: cy - h / 2, right: cx + w / 2, bottom: cy + h / 2 }, origem: c.bounds });
+      continue;
+    }
+    const fundo = papel === "fundo" || papel === "decoracao";
     const s = fundo ? Math.max(alvo.largura / largura(c.bounds), alvo.altura / altura(c.bounds)) :
       Math.min(largura(area) / mestre.largura, altura(area) / mestre.altura);
     const w = largura(c.bounds) * s, h = altura(c.bounds) * s;
@@ -108,9 +128,11 @@ function planejar(mestre, alvo, margens) {
     if (c.fontePx && c.fontePx * s < 12) { avisos.push(c.nome + ": texto projetado abaixo de 12 px (limiar interno de triagem, não norma do veículo)."); escore -= 15; }
     if (c.grupoMisto) { avisos.push(c.nome + ": grupo com funções diferentes será movido como uma unidade."); escore -= 10; }
     const bounds = { left: cx - w / 2, top: cy - h / 2, right: cx + w / 2, bottom: cy + h / 2 };
-    elementos.push({ chave: c.chave, nome: c.nome, tipo: c.tipo, papel: c.papel, escala: s, bounds, origem: c.bounds });
+    const el = { chave: c.chave, nome: c.nome, tipo: c.tipo, papel, escala: s, bounds, origem: c.bounds, fundoEspecial: !!c.fundoEspecial };
+    elementos.push(el); porChave.set(String(c.chave), el);
   }
-  const importantes = elementos.filter((e) => !["fundo", "decoracao"].includes(e.papel));
+  elementos.sort((a, b) => Number(a.chave) - Number(b.chave));
+  const importantes = elementos.filter((e) => !["fundo", "decoracao"].includes(e.papel) && !e.segue);
   for (let i = 0; i < importantes.length; i++) for (let j = i + 1; j < importantes.length; j++) {
     const a = importantes[i], b = importantes[j];
     if (sobreposicao(a.bounds, b.bounds) > 0.15 && sobreposicao(a.origem, b.origem) <= 0.15) {

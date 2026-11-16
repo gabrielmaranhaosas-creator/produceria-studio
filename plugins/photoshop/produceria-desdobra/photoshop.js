@@ -1,4 +1,4 @@
-const { app, core, constants } = require("photoshop");
+const { app, core, constants, action } = require("photoshop");
 const A = require("./adaptacao.js");
 const { calcularEscala } = require("./desdobra.js");
 const { capturar } = require("./previa.js");
@@ -17,10 +17,13 @@ function estrutura(camada) {
     Array.from(seguro(() => camada.layers, []) || []).map(estrutura)];
 }
 
+// O Plano de fundo (Background) é tratado na cópia: vira camada comum antes de qualquer transformação.
+// Máscaras de recorte acompanham a camada base. Só travas de mover/pixels e vínculos bloqueiam.
 function riscos(camada) {
-  if (seguro(() => camada.isBackgroundLayer, false)) return "converta a camada especial Background em camada comum no KV de teste";
-  if (seguro(() => camada.locked, false)) return "há trava de transformação; desbloqueie a unidade no KV de teste";
-  if (seguro(() => camada.isClippingMask, false)) return "máscara de recorte fora de grupo; agrupe a cadeia antes de adaptar";
+  const fundoEspecial = seguro(() => camada.isBackgroundLayer, false);
+  if (!fundoEspecial && (seguro(() => camada.allLocked, false) || seguro(() => camada.positionLocked, false) || seguro(() => camada.pixelsLocked, false))) {
+    return "camada com cadeado (mover ou pixels); destrave no painel Camadas e leia o KV de novo";
+  }
   if (Array.from(seguro(() => camada.linkedLayers, []) || []).some((l) => l.id !== camada.id)) return "camadas vinculadas; remova vínculos ou agrupe antes de adaptar";
   for (const filha of Array.from(seguro(() => camada.layers, []) || [])) {
     if (Array.from(seguro(() => filha.linkedLayers, []) || []).some((l) => l.id !== filha.id)) return "grupo contém camadas vinculadas; confira a estrutura antes de adaptar";
@@ -36,15 +39,21 @@ function lerMestre(doc, papeis) {
   const m = { id: doc.id, nome: doc.name, largura: numero(doc.width), altura: numero(doc.height),
     ppi: numero(doc.resolution), modo: String(seguro(() => doc.mode, "")), bits: String(seguro(() => doc.bitsPerChannel, "")),
     pranchetas: seguro(() => doc.artboards.length > 0, false), historico: seguro(() => doc.activeHistoryState.id, null), camadas: [] };
-  m.camadas = Array.from(doc.layers).map((l, i) => {
+  const lista = Array.from(doc.layers);
+  const recortada = (l) => !!seguro(() => l.isClippingMask, false);
+  m.camadas = lista.map((l, i) => {
     const chave = String(i), filhas = Array.from(seguro(() => l.layers, []) || []);
     const c = { chave, nome: l.name, tipo: String(l.kind), bounds: seguro(() => medir(l), null),
       visivel: seguro(() => l.visible, true) && numero(seguro(() => l.opacity, 100)) > 0,
       conteudo: seguro(() => l.textItem.contents, ""), fontePx: seguro(() => numero(l.textItem.characterStyle.size) * m.ppi / 72, null),
-      estrutura: estrutura(l), risco: riscos(l),
+      estrutura: estrutura(l), risco: riscos(l), fundoEspecial: !!seguro(() => l.isBackgroundLayer, false),
+      // Camada recortada (máscara de recorte): segue a primeira camada abaixo que não é recortada.
+      base: recortada(l) ? (() => { for (let j = i + 1; j < lista.length; j++) if (!recortada(lista[j])) return String(j); return null; })() : null,
       grupoMisto: new Set(filhas.filter((f) => seguro(() => f.visible, true)).map((f) => A.identificar({ nome: f.name, tipo: f.kind }).papel)).size > 1 };
     return Object.assign(c, A.identificar(c, papeis && papeis[chave]));
   });
+  // Recortada sem papel próprio herda o papel da base.
+  m.camadas.forEach((c) => { if (c.base != null && c.papel === "desconhecido") { const b = m.camadas[Number(c.base)]; if (b && b.papel !== "desconhecido") Object.assign(c, { papel: b.papel, sinal: 0.8, motivo: "Máscara de recorte: segue “" + b.nome + "”." }); } });
   m.assinatura = A.assinatura(m);
   return m;
 }
@@ -64,8 +73,15 @@ function conferirFonte(plano) {
   return d;
 }
 
+// Compara com as constantes do próprio Photoshop (os valores internos não são "8" nem "RGB").
+function ehRgb8(doc) {
+  const C = constants || {}, modo = seguro(() => doc.mode, ""), bits = seguro(() => doc.bitsPerChannel, "");
+  const rgb = (C.DocumentMode && modo === C.DocumentMode.RGB) || /rgb/i.test(String(modo));
+  const oito = (C.BitsPerChannelType && bits === C.BitsPerChannelType.EIGHT) || /(^|\D)8$|eight/i.test(String(bits));
+  return !!(rgb && oito);
+}
 function conferirWeb(doc, extensoes) {
-  if (extensoes.some((e) => e !== "psd") && (!/rgb/i.test(String(doc.mode)) || !/^(8|eight)$/i.test(String(doc.bitsPerChannel)))) {
+  if (extensoes.some((e) => e !== "psd") && !ehRgb8(doc)) {
     throw new Error("JPG/PNG desta versão exigem RGB de 8 bits. Prepare uma cópia RGB/8 ou escolha só PSD. Não há conversão de cor automática.");
   }
 }
@@ -102,16 +118,27 @@ async function gerar(plano, opcoes, controle) {
       verificarCancelamento(ctx);
       copia = await fonte.duplicate(opcoes.nome);
       if (opcoes.modo === "camadas") {
+        // Plano de fundo vira camada comum na cópia (o KV original não muda) e mantém o nome.
+        for (const e of plano.elementos.filter((x) => x.fundoEspecial)) {
+          const l = copia.layers[Number(e.chave)];
+          if (l && seguro(() => l.isBackgroundLayer, false)) {
+            await action.batchPlay([{ _obj: "set", _target: [{ _ref: "layer", _property: "background" }],
+              to: { _obj: "layer", opacity: { _unit: "percentUnit", _value: 100 }, mode: { _enum: "blendMode", _value: "normal" } },
+              _options: { dialogOptions: "dontDisplay" } }], {});
+            const convertida = copia.layers[Number(e.chave)];
+            if (convertida) convertida.name = e.nome;
+          }
+        }
         // Primeiro expandir, nunca recortar o KV antes de mover seu conteúdo.
         await copia.resizeCanvas(Math.max(plano.alvo.largura, numero(fonte.width)), Math.max(plano.alvo.altura, numero(fonte.height)), constants.AnchorPosition.TOPLEFT);
         for (const e of plano.elementos) {
           verificarCancelamento(ctx);
           const l = copia.layers[Number(e.chave)];
-          if (!l || l.name !== e.nome || String(l.kind) !== e.tipo) throw new Error("Estrutura da cópia mudou: “" + e.nome + "”.");
+          if (!l || l.name !== e.nome || (!e.fundoEspecial && String(l.kind) !== e.tipo)) throw new Error("Estrutura da cópia mudou: “" + e.nome + "”.");
           await l.scale(e.escala * 100, e.escala * 100, constants.AnchorPosition.MIDDLECENTER);
           const b = medir(l);
           await l.translate((e.bounds.left + e.bounds.right - b.left - b.right) / 2, (e.bounds.top + e.bounds.bottom - b.top - b.bottom) / 2);
-          if (!["fundo", "decoracao"].includes(e.papel)) {
+          if (!["fundo", "decoracao"].includes(e.papel) && !e.segue) {
             const final = medir(l), a = plano.area;
             if (final.left < a.left - 2 || final.top < a.top - 2 || final.right > a.right + 2 || final.bottom > a.bottom + 2) {
               throw new Error(e.nome + ": limites reais ficaram fora da área segura. Confira fonte, máscara e efeitos.");
@@ -153,4 +180,4 @@ async function gerar(plano, opcoes, controle) {
 }
 
 const previaDisponivel = () => !!(imaging && typeof imaging.getPixels === "function" && typeof imaging.encodeImageData === "function");
-module.exports = { lerMestre, documento, conferirFonte, conferirWeb, gerar, medir, previaDisponivel };
+module.exports = { lerMestre, documento, conferirFonte, conferirWeb, ehRgb8, gerar, medir, previaDisponivel };

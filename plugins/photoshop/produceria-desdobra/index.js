@@ -79,8 +79,8 @@ function adicionar(doc) {
 function mostrarMapas() {
   const caixa = $("mapa"); caixa.innerHTML = "";
   for (const m of mestres) {
-    const bloco = document.createElement("fieldset");
-    const titulo = document.createElement("legend"); titulo.textContent = m.nome + " · " + m.largura + "×" + m.altura;
+    const bloco = document.createElement("div"); bloco.className = "caixa";
+    const titulo = document.createElement("div"); titulo.className = "caixa-titulo"; titulo.textContent = m.nome + " · " + m.largura + "×" + m.altura;
     bloco.appendChild(titulo);
     const remover = document.createElement("button"); remover.textContent = "Remover este KV da seleção";
     remover.addEventListener("click", () => { mestres = mestres.filter((x) => x.id !== m.id); invalidarGaleria(); mostrarMapas(); salvarMapas(); });
@@ -114,8 +114,16 @@ function atualizarMestres() {
   });
   mostrarMapas(); salvarMapas();
 }
+// Cópias que este painel deixou abertas: se uma delas estiver ativa, a fonte continua sendo o KV original.
+const copiasGeradas = new Set();
+let ultimaFonteId = null;
+function fonteAtiva() {
+  const d = docAtivo();
+  if (d && copiasGeradas.has(d.id) && ultimaFonteId != null) { try { return PS.documento(ultimaFonteId); } catch (_) { return d; } }
+  return d;
+}
 function dadosDoPlano() {
-  const doc = docAtivo();
+  const doc = fonteAtiva();
   if (!doc && !mestres.length) throw new Error("Abra um KV no Photoshop.");
   const cliente = $("cliente").value.trim(), campanha = $("campanha").value.trim();
   if (!cliente || !campanha) throw new Error("Preencha cliente e campanha.");
@@ -127,7 +135,8 @@ function dadosDoPlano() {
   const margens = { topo: $("topoSeguro").value, base: $("baseSegura").value, esquerda: $("lateralSegura").value, direita: $("lateralSegura").value };
   let planos;
   if (modo === "camadas") {
-    if (!mestres.length) throw new Error("Adicione um KV aberto e confirme os papéis das camadas.");
+    if (!mestres.length && doc) adicionar(doc);
+    if (!mestres.length) throw new Error("Abra o KV e clique em Adicionar ou atualizar KV aberto.");
     atualizarMestres();
     planos = formatos.map((f) => {
       const m = A.escolherMestre(mestres, f), p = A.planejar(m, f, margens), cruzamento = A.compararMestres(mestres, m);
@@ -136,6 +145,7 @@ function dadosDoPlano() {
       return p;
     });
   } else {
+    ultimaFonteId = doc.id;
     const m = PS.lerMestre(doc);
     planos = formatos.map((f) => ({ alvo: f, mestreId: doc.id, mestreNome: doc.name, assinatura: m.assinatura, historico: m.historico,
       bloqueios: [], avisos: ["Encaixe global: revise cortes, textos, logo e margens."], escore: 0,
@@ -275,7 +285,7 @@ $("btnDesdobrar").addEventListener("click", async () => {
     }
     const inicio = new Date().toISOString();
     const registrar = async (estado) => {
-      ultimoResultado = { schema: 1, plugin: "produceria-desdobra", versao: "1.4.0", cliente: dados.cliente,
+      ultimoResultado = { schema: 1, plugin: "produceria-desdobra", versao: "1.4.1", cliente: dados.cliente,
         campanha: dados.campanha, inicio, modo: dados.modo, revisao: "pendente", ...estado };
       if (checkpoint) await checkpoint.write(JSON.stringify(ultimoResultado, null, 2));
     };
@@ -286,6 +296,7 @@ $("btnDesdobrar").addEventListener("click", async () => {
         const r = await PS.gerar(p, { nome: nomeDoc(dados.cliente, dados.campanha, p.alvo.nome, dados.versao),
           modo: dados.modo, ancora: dados.ancora, pasta: destino, extensoes, capturarPrevia: PS.previaDisponivel() }, ctl);
         const item = galeria[dados.planos.indexOf(p)]; item.previa = r.previa; item.erro = r.avisoPrevia || "";
+        if (r.documento != null && !destino) copiasGeradas.add(r.documento);
         return r;
       },
       registrar,

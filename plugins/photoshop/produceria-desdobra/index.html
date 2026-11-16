@@ -11,14 +11,15 @@
     #resumo { margin: 8px 0; font-weight: bold; }
     .item { margin: 3px 0; padding: 3px 0; border-bottom: 1px solid #77777755; }
     .nota { opacity: 0.8; margin: 4px 0; }
-    fieldset { border: 1px solid #77777755; padding: 8px; margin: 10px 0; }
+    .caixa { border: 1px solid #77777755; padding: 8px; margin: 10px 0; }
+    .caixa-titulo { font-weight: bold; margin-bottom: 6px; }
     h2 { font-size: 14px; margin: 12px 0 6px; }
     .medidas { display: flex; }
     .medidas label { flex: 1; margin-right: 6px; }
   </style>
 </head>
 <body>
-  <div class="nota">Desdobra KV 1.4 · Adaptação de campanhas em cópias editáveis, com galeria e simulação das saídas. Piloto: cada resultado exige revisão visual.</div>
+  <div class="nota">Desdobra KV 1.4.1 · Adaptação de campanhas em cópias editáveis, com galeria e simulação das saídas. Piloto: cada resultado exige revisão visual.</div>
   <h2>1. Identifique a campanha</h2>
   <label for="cliente">Cliente</label><input type="text" id="cliente" placeholder="SICREDI">
   <label for="campanha">Campanha</label><input type="text" id="campanha" placeholder="natal">
@@ -26,9 +27,9 @@
 
   <label for="modo">Como encaixar</label>
   <select id="modo">
-    <option value="camadas">Adaptar por papéis das camadas (piloto)</option>
     <option value="cobrir">Cobrir (preenche o formato e corta o excesso)</option>
     <option value="conter">Conter (mostra tudo; sobra área vazia)</option>
+    <option value="camadas">Adaptar por papéis das camadas (piloto)</option>
   </select>
   <div class="nota">Cobrir e Conter são encaixes globais. A adaptação por camadas preserva proporções e reposiciona unidades; não refaz quebras de texto nem expande fundos por IA.</div>
   <label for="ancora">Ponto de foco do corte</label>
@@ -41,7 +42,7 @@
   </select>
 
   <h2>2. Leia os KVs e confira as camadas</h2>
-  <div class="nota">Deixe um KV ativo no Photoshop e clique abaixo. Repita para adicionar versões horizontal, vertical ou quadrada. A fonte mais próxima de cada proporção será escolhida.</div>
+  <div class="nota">Só para o modo por camadas (Cobrir e Conter usam o KV ativo direto). Deixe um KV ativo no Photoshop e clique abaixo. Repita para adicionar versões horizontal, vertical ou quadrada. A fonte mais próxima de cada proporção será escolhida.</div>
   <button id="btnAdicionarKv">Adicionar ou atualizar KV aberto</button>
   <div id="quantidadeKvs" class="nota"></div>
   <div id="mapa"></div>
@@ -62,15 +63,15 @@
   <label for="formatos">Formatos (um por linha: nome;largura;altura)</label>
   <textarea id="formatos"></textarea>
   <div class="nota">Aceita 1080x1920 ou nome;largura;altura. Os pacotes são exemplos editáveis, não especificações atualizadas dos veículos.</div>
-  <fieldset>
-    <legend>Área segura da adaptação (% do formato)</legend>
+  <div class="caixa">
+    <div class="caixa-titulo">Área segura da adaptação (% do formato)</div>
     <div class="medidas">
       <label for="topoSeguro">Topo<input type="number" id="topoSeguro" value="5" min="0" max="49"></label>
       <label for="baseSegura">Base<input type="number" id="baseSegura" value="5" min="0" max="49"></label>
       <label for="lateralSegura">Laterais<input type="number" id="lateralSegura" value="5" min="0" max="49"></label>
     </div>
     <div class="nota">5% é apenas um ponto de partida interno. Use as margens do plano de mídia. Efeitos, máscaras e legibilidade exigem conferência.</div>
-  </fieldset>
+  </div>
   <button id="btnDiagnosticar">Diagnosticar formatos sem criar arquivos</button>
 
   <h2>4. Simule as saídas</h2>
