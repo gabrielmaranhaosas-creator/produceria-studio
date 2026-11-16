@@ -989,4 +989,31 @@ describe('Big Data do mercado', () => {
     expect(alvo.origem).toBe('Big Data · Fora do radar');
     desmontar();
   });
+  it('pílulas de ação filtram por tipo e a leitura do mercado aparece no topo', async () => {
+    try { localStorage.removeItem('bd.filtros'); } catch { /* sem armazenamento */ }
+    const db = bancoFalso({
+      movimentos: {}, mapa_agencias: {}, mapa_pessoas: {}, alvos: {},
+      mapa_cenario: { 'cn-1': { data: '2026-10-26', titulo: 'Juros sobem', texto: 'DI longo subiu.', implicacao: 'Oferecer pacote de adaptação', fonte: 'https://exemplo.com/j', tipo: 'crise' } },
+      mapa_empresas: {
+        'em-a': { nome: 'Marca A', radar: { criterios: ['imagem'], porque: 'x', pilulas: [{ tipo: 'data', titulo: 'Natal', texto: 'Chegar antes' }, { tipo: 'crise', titulo: 'Pacote', texto: 'Preço fechado' }] } },
+      },
+    });
+    const { raiz, desmontar } = await montar('bigdata', db);
+    await espera(40);
+    raiz.querySelector<HTMLButtonElement>('[data-v="radar"]')!.click();
+    await espera();
+    expect(raiz.querySelector('.bd-cen')!.textContent).toContain('Oferecer pacote de adaptação');
+    raiz.querySelector<HTMLButtonElement>('[data-r="pilulas"]')!.click();
+    await espera();
+    expect(raiz.querySelectorAll('.bd-pc').length).toBe(2);
+    raiz.querySelector<HTMLButtonElement>('[data-p="crise"]')!.click();
+    await espera();
+    const cards = raiz.querySelectorAll('.bd-pc');
+    expect(cards.length).toBe(1);
+    expect(cards[0].textContent).toContain('Pacote');
+    cards[0].querySelector<HTMLButtonElement>('[data-org]')!.click();
+    await espera();
+    expect(raiz.querySelector<HTMLDialogElement>('#bdD')!.textContent).toContain('Marca A');
+    desmontar();
+  });
 });

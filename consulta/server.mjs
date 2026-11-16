@@ -15,7 +15,7 @@ const pool = new pg.Pool({ connectionString: process.env.DATABASE_URL, max: 3, s
 // Coleções que a consulta mostra (as conversas com agentes e a lixeira ficam de fora).
 export const COLECOES = new Set(['alvos', 'b2g', 'habilitacao', 'pca', 'pipeline', 'linhas', 'swot', 'tows', 'frentes', 'ofertas',
   'casos', 'contas', 'central', 'agenda', 'biblioteca', 'fichas', 'cotacoes', 'config', 'notificacoes', 'noticias', 'movimentos',
-  'contratos_novos', 'cerebro', 'testes_plugins', 'alertas', 'mapa_pessoas', 'mapa_empresas', 'mapa_agencias']);
+  'contratos_novos', 'cerebro', 'testes_plugins', 'alertas', 'mapa_pessoas', 'mapa_empresas', 'mapa_agencias', 'mapa_cenario']);
 const ARQUIVOS = new Set(['vencedores.json', 'mercado.json']);
 
 const hash = (s) => createHash('sha256').update(s).digest();

@@ -39,10 +39,26 @@ export const CRITERIOS: [Criterio, number, string, string][] = [
   ['porta', 15, 'Time interno ou agência fora das redes globais', 'quem decide produção está perto e escolhe fornecedor'],
   ['verba', 10, 'Verba ou faturamento publicado em alta', 'tem dinheiro para investir em produção agora'],
 ];
+/**
+ * Pílulas de ação: uma jogada comercial curta por possibilidade de negócio, para a equipe sair do lugar comum.
+ * O tipo diz de onde vem a oportunidade; o texto diz o que fazer, com quem e por quê.
+ */
+export type TipoPilula = 'data' | 'crise' | 'diversificar' | 'porta' | 'ousar';
+export const TIPOS_PILULA: [TipoPilula, string, string][] = [
+  ['data', 'Data forte chegando', 'Calendário do cliente: chegar antes do briefing, com a peça pensada.'],
+  ['crise', 'Fazer mais com menos', 'Verba apertada: adaptação em escala, reaproveitar acervo, preço fechado por pacote.'],
+  ['diversificar', 'Nova frente de negócio', 'Um serviço ou mercado novo para a Produceria (EUA, varejo, in-house como serviço).'],
+  ['porta', 'Porta de entrada', 'Quem contrata produção e como chegar nessa pessoa ou agência.'],
+  ['ousar', 'Fora do lugar comum', 'Uma ideia que o cliente não pediu e que só o craft resolve.'],
+];
+export interface Pilula { tipo: TipoPilula; titulo: string; texto: string; prazo?: string }
 export interface Radar {
   criterios: Criterio[]; porque: string; servicos?: string[]; acao?: string; desde?: string;
   sinais?: { texto: string; fonte: string; data?: string }[];
+  pilulas?: Pilula[];
 }
+/** Leitura do mercado: um fato com fonte e o que a Produceria faz com ele. */
+export interface Cenario { id?: string; data: string; titulo: string; texto: string; implicacao: string; fonte: string; tipo?: TipoPilula }
 /** Nota de encaixe do craft (0 a 100): soma dos pesos dos critérios comprovados. */
 export function notaEncaixe(r?: Pick<Radar, 'criterios'> | null): number {
   if (!r) return 0;

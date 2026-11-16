@@ -10,7 +10,7 @@ const [pasta, ...arquivos] = process.argv.slice(2);
 if (!pasta || !process.env.DATABASE_URL) { console.error('Uso: DATABASE_URL=... node consulta/carregar.mjs PASTA [arquivos.json]'); process.exit(1); }
 const COLECOES = new Set(['alvos', 'b2g', 'habilitacao', 'pca', 'pipeline', 'linhas', 'swot', 'tows', 'frentes', 'ofertas',
   'casos', 'contas', 'central', 'agenda', 'biblioteca', 'fichas', 'cotacoes', 'config', 'notificacoes', 'noticias', 'movimentos',
-  'contratos_novos', 'cerebro', 'testes_plugins', 'alertas', 'mapa_pessoas', 'mapa_empresas', 'mapa_agencias']);
+  'contratos_novos', 'cerebro', 'testes_plugins', 'alertas', 'mapa_pessoas', 'mapa_empresas', 'mapa_agencias', 'mapa_cenario']);
 
 const cli = new pg.Client({ connectionString: process.env.DATABASE_URL, ssl: { rejectUnauthorized: true } });
 await cli.connect();

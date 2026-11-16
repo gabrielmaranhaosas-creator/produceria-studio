@@ -3,7 +3,7 @@
 import { esc, int, dt } from '../lib/formato';
 import { chave, slug, nomeLegivel, mesmaEmpresa } from '../lib/nomes';
 import { banco, lerBase, type Colecao } from '../lib/db';
-import { montarGrafo, nivelDe, notaEncaixe, NIVEIS, CRITERIOS, type Nivel, type Grafo, type NoEmpresa, type NoAgencia, type PessoaMapa, type EmpresaMapa, type AgenciaMapa, type MercadoBase, type MovimentoBase } from '../lib/grafo';
+import { montarGrafo, nivelDe, notaEncaixe, NIVEIS, CRITERIOS, TIPOS_PILULA, type TipoPilula, type Pilula, type Cenario, type Nivel, type Grafo, type NoEmpresa, type NoAgencia, type PessoaMapa, type EmpresaMapa, type AgenciaMapa, type MercadoBase, type MovimentoBase } from '../lib/grafo';
 import type { Alvo } from '../lib/tipos';
 import { seletor, elDe, mensagem, comId, type Dialogo } from './dom';
 import { kpis, numero, vazio } from '../componentes';
@@ -25,7 +25,22 @@ export function blocoRadar(e: NoEmpresa): string {
   <ul class="bd-crit">${CRITERIOS.map(([k, peso, t, s]) => `<li class="${tem.has(k) ? 'sim' : 'nao'}"><span aria-hidden="true">${tem.has(k) ? '●' : '○'}</span> <b>${esc(t)}</b> <span class="note">${esc(s)} · ${tem.has(k) ? '+' + peso : 'não comprovado'}</span></li>`).join('')}</ul>
   ${r.servicos?.length ? `<p><span class="lab">O que oferecer</span> ${r.servicos.map((x) => `<span class="chip sm">${esc(x)}</span>`).join(' ')}</p>` : ''}
   ${r.sinais?.length ? `<h3 class="bd-h">Sinais</h3><ul class="bd-lig">${[...r.sinais].sort((a, b) => (b.data || '').localeCompare(a.data || '')).map((x) => `<li>${x.data ? `<span class="note">${esc(dt(x.data))}</span> ` : ''}${esc(x.texto)} ${link(x.fonte, veiculo(x.fonte))}</li>`).join('')}</ul>` : ''}
+  ${r.pilulas?.length ? `<h3 class="bd-h">Pílulas de ação</h3><ul class="bd-pil">${r.pilulas.map((x) => cartaoPilula(x)).join('')}</ul>` : ''}
   ${r.acao ? `<p class="bd-acao"><span class="lab">Ação proposta</span> ${esc(r.acao)}</p>` : ''}</section>`;
+}
+const CURTO: Record<string, string> = { imagem: 'Imagem', lancamentos: 'Lançamentos', varejo: 'Varejo', multicanal: 'Multicanal', porta: 'Porta aberta', verba: 'Verba' };
+const rotuloPilula = (t: TipoPilula) => (TIPOS_PILULA.find((x) => x[0] === t) || TIPOS_PILULA[0])[1];
+/** Cartão de uma pílula de ação; com a empresa, vira atalho para a ficha dela. */
+export function cartaoPilula(x: Pilula, empresa?: string): string {
+  return `<li class="bd-pc p-${esc(x.tipo)}"><span class="lab">${esc(rotuloPilula(x.tipo))}</span><b>${esc(x.titulo)}</b><p>${esc(x.texto)}</p>
+  ${empresa || x.prazo ? `<span class="bd-pc-pe">${empresa ? `<button type="button" class="chip sm" data-org="${esc(empresa)}">${esc(nomeLegivel(empresa))}</button>` : ''}${x.prazo ? `<span class="note">até ${esc(dt(x.prazo))}</span>` : ''}</span>` : ''}</li>`;
+}
+/** Leitura do mercado: fato com fonte e o que a Produceria faz com ele. */
+export function faixaCenario(L: Cenario[]): string {
+  if (!L.length) return '';
+  return `<section class="bd-cen" aria-labelledby="bdCenT"><h3 class="bd-h" id="bdCenT">Leitura do mercado</h3><ul class="bd-cen-l">${[...L].sort((a, b) => (b.data || '').localeCompare(a.data || '')).slice(0, 6).map((c) => `<li>
+  <span class="note">${esc(dt(c.data))}${c.tipo ? ' · ' + esc(rotuloPilula(c.tipo)) : ''}</span><b>${esc(c.titulo)}</b><p class="note">${esc(c.texto)}</p>
+  <p class="bd-cen-a"><span class="lab">O que fazer</span> ${esc(c.implicacao)}</p>${link(c.fonte, veiculo(c.fonte))}</li>`).join('')}</ul></section>`;
 }
 const curto = (s: string, n = 18) => (s.length > n ? s.slice(0, n - 1) + '…' : s);
 
@@ -62,10 +77,10 @@ export function montar(root: HTMLElement): () => void {
  <p class="sr" id="bdLive" aria-live="polite"></p>
  <div id="bdL"></div></div><dialog id="bdD" class="bd-det" aria-labelledby="bdDT"></dialog>`;
   const $ = seletor(root);
-  let mercado: MercadoBase | null = null, movs: MovimentoBase[] = [], emp: EmpresaMapa[] = [], ags: AgenciaMapa[] = [], pes: PessoaMapa[] = [], alvos: Alvo[] = [];
+  let mercado: MercadoBase | null = null, cen: Cenario[] = [], movs: MovimentoBase[] = [], emp: EmpresaMapa[] = [], ags: AgenciaMapa[] = [], pes: PessoaMapa[] = [], alvos: Alvo[] = [];
   let G: Grafo = montarGrafo({}), colAlvos: Colecao<Alvo> | null = null, lim = 60;
   const offs: (() => void)[] = [];
-  const F: { v: Visao; q: string; o: string; n: Nivel | '' } = { v: 'empresas', q: '', o: 'relevancia', n: '' };
+  const F: { v: Visao; q: string; o: string; n: Nivel | ''; r: 'lista' | 'pilulas'; p: TipoPilula | '' } = { v: 'empresas', q: '', o: 'relevancia', n: '', r: 'lista', p: '' };
   try { const sv = JSON.parse(localStorage.getItem('bd.filtros') || 'null'); if (sv) Object.assign(F, sv); } catch { /* sem armazenamento */ }
   const ehAlvo = (nome: string) => alvos.some((a) => a.id === 'al-' + slug(nome) || mesmaEmpresa(a.nome, nome));
 
@@ -82,9 +97,9 @@ export function montar(root: HTMLElement): () => void {
   function linhaRadar(e: NoEmpresa): string {
     const nota = notaEncaixe(e.radar), tem = new Set(e.radar?.criterios || []);
     return `<li><button type="button" class="bd-linha" data-e="${esc(e.k)}">
-  <span class="bd-rank num" title="Encaixe do craft, de 0 a 100">${nota}</span>
-  <span class="bd-c"><b>${esc(nomeLegivel(e.nome))}</b><span class="note">${esc(e.setor || 'anunciante')}${e.radar?.servicos?.length ? ' · ' + esc(e.radar.servicos.slice(0, 4).join(', ')) : ''}</span>
-   <span class="bd-crits" aria-label="Critérios comprovados">${CRITERIOS.filter(([k]) => tem.has(k)).map(([, , t]) => `<span class="chip sm">${esc(t)}</span>`).join('')}</span></span>
+  <span class="bd-rank bd-enc num" title="Encaixe do craft, de 0 a 100">${nota}<span class="bd-meter" aria-hidden="true"><i style="width:${nota}%"></i></span></span>
+  <span class="bd-c"><b>${esc(nomeLegivel(e.nome))}</b><span class="note">${esc(e.setor || 'anunciante')}${e.radar?.servicos?.length ? ' · ' + esc(e.radar.servicos.slice(0, 4).join(', ')) : ''}${e.radar?.pilulas?.length ? ` · ${int(e.radar.pilulas.length)} pílula(s) de ação` : ''}</span>
+   <span class="bd-crits" aria-label="Critérios comprovados">${CRITERIOS.filter(([k]) => tem.has(k)).map(([k, , t]) => `<span class="bd-ct" title="${esc(t)}">${esc(CURTO[k])}</span>`).join('')}</span></span>
   <span class="bd-n" title="${int(e.pessoas.length)} pessoa(s) mapeada(s)"><b class="num">${int(e.pessoas.length)}</b><span class="note">pessoa(s)</span></span>
   <span class="bd-n"><b class="num">${int(new Set(e.ligacoes.map((l) => l.agencia)).size)}</b><span class="note">agência(s)</span></span></button></li>`;
   }
@@ -125,9 +140,20 @@ export function montar(root: HTMLElement): () => void {
     } else if (F.v === 'radar') {
       const base = G.empresas.filter((e) => e.radar && (!q || chave([e.nome, e.setor, e.radar.porque, ...(e.radar.servicos || []), ...e.ligacoes.map((l) => l.agencia), ...e.pessoas.map((p) => p.nome)].join(' ')).includes(q)));
       const L = F.o === 'relevancia' ? [...base].sort((x, y) => notaEncaixe(y.radar) - notaEncaixe(x.radar) || porNome(x, y)) : ordem(base);
-      n = L.length;
-      html = `<p class="note bd-dica">Grandes anunciantes fora da disputa das grandes contas, onde o craft da Produceria faz diferença. A nota soma só o que a fonte comprova; o porquê é hipótese até a primeira conversa.</p>`
-        + (L.length ? `<ul class="bd-l">${L.slice(0, lim).map(linhaRadar).join('')}</ul>` : vazio({ titulo: F.q ? 'Nada com essa busca' : 'Nenhuma empresa na varredura ainda', texto: 'A rotina da Central faz a varredura toda quarta-feira e grava aqui as empresas com fonte.' }));
+      const P = L.flatMap((e) => (e.radar?.pilulas || []).map((x) => ({ x, e })));
+      const PF = P.filter((y) => !F.p || y.x.tipo === F.p);
+      const modo = `<div class="pills bd-modo" role="group" aria-label="Mostrar"><button type="button" data-r="lista" aria-pressed="${F.r === 'lista'}">Empresas por encaixe <span class="note">${int(L.length)}</span></button><button type="button" data-r="pilulas" aria-pressed="${F.r === 'pilulas'}">Pílulas de ação <span class="note">${int(P.length)}</span></button></div>`;
+      const topo = (q ? '' : faixaCenario(cen)) + modo;
+      if (F.r === 'pilulas') {
+        n = PF.length;
+        const tipos = `<div class="pills bd-niveis" role="group" aria-label="Tipo de pílula">${[['', 'Todas'], ...TIPOS_PILULA.map(([v, t]) => [v, t])].map(([v, t]) => `<button type="button" data-p="${v}" aria-pressed="${F.p === v}">${t} <span class="note">${int(v ? P.filter((y) => y.x.tipo === v).length : P.length)}</span></button>`).join('')}</div>
+      <p class="note bd-dica">${esc(F.p ? (TIPOS_PILULA.find((x) => x[0] === F.p) || TIPOS_PILULA[0])[2] : 'Uma jogada curta para cada possibilidade de negócio, da empresa com mais encaixe para a de menos. Clique na empresa para ver as fontes e virar alvo.')}</p>`;
+        html = topo + tipos + (PF.length ? `<ul class="bd-pil">${PF.slice(0, lim).map((y) => cartaoPilula(y.x, y.e.nome)).join('')}</ul>` : vazio({ titulo: 'Nenhuma pílula deste tipo ainda', texto: 'A varredura de quarta-feira escreve novas pílulas para cada empresa.' }));
+      } else {
+        n = L.length;
+        html = topo + `<p class="note bd-dica">Grandes anunciantes fora da disputa das grandes contas, onde o craft da Produceria faz diferença. A nota soma só o que a fonte comprova; o porquê é hipótese até a primeira conversa.</p>`
+          + (L.length ? `<ul class="bd-l">${L.slice(0, lim).map(linhaRadar).join('')}</ul>` : vazio({ titulo: F.q ? 'Nada com essa busca' : 'Nenhuma empresa na varredura ainda', texto: 'A rotina da Central faz a varredura toda quarta-feira e grava aqui as empresas com fonte.' }));
+      }
     } else if (F.v === 'agencias') {
       const L = ordem(G.agencias.filter((a) => !q || chave([a.nome, a.grupo, ...a.ligacoes.map((l) => l.empresa), ...a.pessoas.map((p) => p.nome)].join(' ')).includes(q)));
       n = L.length; html = L.length ? `<ul class="bd-l">${L.slice(0, lim).map(linhaAgencia).join('')}</ul>` : '';
@@ -190,6 +216,8 @@ export function montar(root: HTMLElement): () => void {
   $('#bdD').addEventListener('close', () => { const d = $<Dialogo>('#bdD'); if (d._ret && d._ret.isConnected) d._ret.focus(); });
   root.addEventListener('click', (ev) => {
     const el = elDe(ev);
+    const rr = el.closest<HTMLElement>('[data-r]'); if (rr) { F.r = rr.dataset.r === 'pilulas' ? 'pilulas' : 'lista'; lim = 60; render(); root.querySelector<HTMLElement>(`[data-r="${F.r}"]`)?.focus(); return; }
+    const pp = el.closest<HTMLElement>('[data-p]'); if (pp) { F.p = (pp.dataset.p || '') as TipoPilula | ''; lim = 60; render(); root.querySelector<HTMLElement>(`[data-p="${F.p}"]`)?.focus(); return; }
     const nv = el.closest<HTMLElement>('[data-n]'); if (nv) { F.n = (nv.dataset.n || '') as Nivel | ''; lim = 60; render(); root.querySelector<HTMLElement>(`[data-n="${F.n}"]`)?.focus(); return; }
     const v = el.closest<HTMLElement>('[data-v]'); if (v) { F.v = v.dataset.v as Visao; lim = 60; render(); root.querySelector<HTMLElement>(`[data-v="${F.v}"]`)?.focus(); return; }
     if (el.id === 'bdM') { lim += 60; render(); return; }
@@ -209,6 +237,7 @@ export function montar(root: HTMLElement): () => void {
     sub<EmpresaMapa & { id: string }>('mapa_empresas', (l) => { emp = l; });
     sub<AgenciaMapa & { id: string }>('mapa_agencias', (l) => { ags = l; });
     sub<PessoaMapa>('mapa_pessoas', (l) => { pes = l; });
+    sub<Cenario>('mapa_cenario', (l) => { cen = l; });
     colAlvos = db.collection<Alvo>('alvos');
     offs.push(colAlvos.onSnapshot((s) => { alvos = s.docs.map(comId); }, () => {}));
   })();
