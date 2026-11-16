@@ -1,7 +1,17 @@
-const { app, constants } = require("photoshop");
-const { localFileSystem } = require("uxp").storage;
-const { lerFormatos, nomeDoc, PADRAO_FORMATOS, PACOTES } = require("./desdobra.js");
-const { resolverDestino, escolherPasta } = require("./destino.js");
+// Primeira coisa do painel: mostrar que o código rodou e expor qualquer erro, inclusive de carregamento.
+const VERSAO = "1.4.2";
+const estado = (t) => { const e = document.getElementById("estadoPainel"); if (e) e.textContent = t; };
+window.addEventListener("error", (e) => estado("Erro no painel: " + (e && e.message ? e.message : e)));
+window.addEventListener("unhandledrejection", (e) => estado("Erro no painel: " + (e && e.reason && e.reason.message ? e.reason.message : String(e && e.reason))));
+function carregar(nome) {
+  try { return require(nome); }
+  catch (e) { estado("O painel não carregou " + nome + ": " + (e && e.message ? e.message : e) + ". Copie esta frase no relatório."); throw e; }
+}
+estado("Carregando o código do painel...");
+const { app, constants } = carregar("photoshop");
+const { localFileSystem } = carregar("uxp").storage;
+const { lerFormatos, nomeDoc, PADRAO_FORMATOS, PACOTES } = carregar("./desdobra.js");
+const { resolverDestino, escolherPasta, pastaDoArquivo, pastaDoCaminho } = carregar("./destino.js");
 // Leituras seguras: algumas versões do UXP não preenchem .value de <select>, e app.activeDocument pode lançar erro sem documento aberto.
 const valorDe = (el) => (el && el.value ? el.value : (el && el.options && el.selectedIndex >= 0 && el.options[el.selectedIndex] ? el.options[el.selectedIndex].value : ""));
 const docAtivo = () => { try { return app.activeDocument || null; } catch (e) { return null; } };
@@ -28,7 +38,7 @@ function lembrarCampos(chave, ids) {
 
 // Os botões são ligados antes de tudo: se a memória do painel falhar, os cliques continuam funcionando.
 let salvarCampos = () => {};
-const AVISO_JANELA = "A janela de pastas não apareceu? Procure atrás da janela do Photoshop, ou cole o caminho da pasta no campo abaixo (no Mac: botão direito na pasta, segure Option, \"Copiar como nome de caminho\"). Vazio = pasta \"desdobra\" ao lado do KV.";
+const AVISO_JANELA = "A janela de pastas não apareceu em 4 segundos. Procure atrás da janela do Photoshop (Cmd + Tab). Se não estiver lá, use \"Escolher pela janela Salvar\", \"Usar a pasta do KV aberto\" ou cole o caminho da pasta (Mac: botão direito na pasta, segure Option, \"Copiar como nome de caminho\").";
 
 function linha(texto) {
   const d = document.createElement("div");
@@ -37,13 +47,41 @@ function linha(texto) {
   $("resultado").appendChild(d);
 }
 
+// Cada clique é registrado no painel: se a frase "Clique recebido" não aparece, o botão não recebeu o clique.
+let cliques = 0;
+function usarPasta(p, origem) {
+  pastaPSD = p; $("caminho").value = p.nativePath; $("salvar").checked = true; salvarCampos();
+  $("pasta").textContent = "Pasta (" + origem + "): " + p.nativePath; lembrarPasta("desdobra.pasta", p);
+}
 $("btnPasta").addEventListener("click", async () => {
-  $("pasta").textContent = "Abrindo a janela de escolher pasta...";
+  cliques++;
+  $("pasta").textContent = "Clique recebido (" + cliques + "). Pedindo ao Photoshop a janela de pastas...";
   try {
+    if (!localFileSystem || typeof localFileSystem.getFolder !== "function") throw new Error("este Photoshop não oferece a janela de pastas aos plugins");
     const p = await escolherPasta(localFileSystem, () => { $("pasta").textContent = AVISO_JANELA; });
-    if (p) { pastaPSD = p; $("caminho").value = p.nativePath; $("salvar").checked = true; salvarCampos(); $("pasta").textContent = "Pasta: " + p.nativePath; lembrarPasta("desdobra.pasta", p); }
-    else $("pasta").textContent = "Nenhuma pasta escolhida.";
+    if (p) usarPasta(p, "janela de pastas");
+    else $("pasta").textContent = "A janela fechou sem pasta escolhida. Se ela nem apareceu, use os botões abaixo.";
   } catch (e) { $("pasta").textContent = "Não foi possível abrir a janela de pastas: " + msg(e) + ". Cole o caminho no campo abaixo ou deixe vazio para salvar ao lado do KV."; }
+});
+// Plano B 1: a janela Salvar do sistema (outra janela, que costuma abrir quando a de pastas falha).
+$("btnPastaSalvar").addEventListener("click", async () => {
+  $("pasta").textContent = "Abrindo a janela Salvar... Navegue até a pasta desejada e clique em Salvar (o arquivo não é criado).";
+  try {
+    const f = await localFileSystem.getFileForSaving("escolher-esta-pasta.txt");
+    if (!f) { $("pasta").textContent = "Nenhuma pasta escolhida."; return; }
+    const dir = pastaDoArquivo(f.nativePath);
+    usarPasta(await pastaDoCaminho(localFileSystem, dir), "janela Salvar");
+  } catch (e) { $("pasta").textContent = "A janela Salvar também falhou: " + msg(e) + ". Use \"Usar a pasta do KV aberto\" ou cole o caminho."; }
+});
+// Plano B 2: sem janela nenhuma, a pasta "desdobra" ao lado do KV.
+$("btnPastaKv").addEventListener("click", () => {
+  const d = fonteAtiva();
+  let caminho = ""; try { caminho = String((d && d.path) || ""); } catch (_) { caminho = ""; }
+  const dir = pastaDoArquivo(caminho);
+  if (!d) { $("pasta").textContent = "Abra o KV no Photoshop e clique de novo."; return; }
+  if (!dir) { $("pasta").textContent = "O KV ainda não foi salvo em disco. Salve uma vez (Cmd ou Ctrl + S) e clique de novo."; return; }
+  pastaPSD = null; $("caminho").value = ""; $("salvar").checked = true; salvarCampos();
+  $("pasta").textContent = "Pasta: " + dir + "/desdobra (criada ao gerar, ao lado do KV).";
 });
 $("caminho").addEventListener("change", () => { const c = $("caminho").value.trim(); if (pastaPSD && pastaPSD.nativePath !== c) pastaPSD = null; if (c) { $("salvar").checked = true; $("pasta").textContent = "Pasta: " + c; } else $("pasta").textContent = "Sem pasta: os PSD vão para a pasta \"desdobra\" ao lado do KV."; });
 
@@ -285,7 +323,7 @@ $("btnDesdobrar").addEventListener("click", async () => {
     }
     const inicio = new Date().toISOString();
     const registrar = async (estado) => {
-      ultimoResultado = { schema: 1, plugin: "produceria-desdobra", versao: "1.4.1", cliente: dados.cliente,
+      ultimoResultado = { schema: 1, plugin: "produceria-desdobra", versao: VERSAO, cliente: dados.cliente,
         campanha: dados.campanha, inicio, modo: dados.modo, revisao: "pendente", ...estado };
       if (checkpoint) await checkpoint.write(JSON.stringify(ultimoResultado, null, 2));
     };
@@ -341,3 +379,4 @@ pastaLembrada("desdobra.pasta").then((p) => {
 });
 ocupada(false);
 mostrarGaleria();
+estado("Painel pronto · Desdobra KV " + VERSAO + " · botões ligados.");

@@ -1,4 +1,4 @@
-# PRODUCERIA Desdobra KV — 1.4.1
+# PRODUCERIA Desdobra KV — 1.4.2
 
 Painel UXP de adaptação de campanhas em **piloto**, com regras próprias de geometria. O código não contém o motor de ImageFactory ou Smart Resize. Não foi executado no Photoshop nesta rodada; testes automatizados usam dados e host simulados.
 

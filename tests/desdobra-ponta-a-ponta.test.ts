@@ -17,7 +17,7 @@ it('Cobrir + Salvar ao lado do KV, ponta a ponta', async () => {
     saveAs: { psd: async (f: any) => ev.push('psd:' + f.nativePath) }, closeWithoutSaving: async () => ev.push('fechou') }; return c; };
   const host = { app: { activeDocument: fonte, documents: [fonte] }, core: { executeAsModal: async (fn: any) => fn({ isCancelled: false }) }, action: { batchPlay: async () => [] }, imaging: undefined,
     constants: { AnchorPosition: { MIDDLECENTER: 'mc', TOPLEFT: 'tl' }, DocumentMode: { RGB: 'RGBColorMode' }, BitsPerChannelType: { EIGHT: 'bitDepth8' } } };
-  const lfs = { getEntryWithUrl: async (u: string) => pasta(u.replace(/^file:(\/\/)?/, '')), getFolder: async () => null };
+  const lfs = { getEntryWithUrl: async (u: string) => pasta(u.replace(/^file:(\/\/)?/, '')), getFolder: async () => null, getFileForSaving: async () => ({ nativePath: '/Users/ana/entregas/escolher-esta-pasta.txt' }) };
   function req(r: string): any {
     if (r === 'photoshop') return host;
     if (r === 'uxp') return { storage: { localFileSystem: lfs } };
@@ -25,6 +25,21 @@ it('Cobrir + Salvar ao lado do KV, ponta a ponta', async () => {
   }
   new Function('require', 'window', 'document', 'localStorage', arq['../plugins/photoshop/produceria-desdobra/index.js'])(req, win, doc, win.localStorage);
   const $ = (id: string) => doc.getElementById(id) as any;
+  expect($('estadoPainel').textContent).toMatch(/Painel pronto · Desdobra KV 1\.4\.2/);
+  // botão de pasta: o clique fica registrado; janela fechada sem pasta é explicada
+  $('btnPasta').dispatchEvent(new win.MouseEvent('click'));
+  expect($('pasta').textContent).toMatch(/Clique recebido \(1\)/);
+  await new Promise((r) => setTimeout(r, 10));
+  expect($('pasta').textContent).toMatch(/sem pasta escolhida/);
+  // plano B 1: janela Salvar define a pasta pelo arquivo escolhido
+  $('btnPastaSalvar').dispatchEvent(new win.MouseEvent('click'));
+  await new Promise((r) => setTimeout(r, 10));
+  expect($('caminho').value).toBe('/Users/ana/entregas');
+  expect($('pasta').textContent).toMatch(/janela Salvar/);
+  // plano B 2: sem janela, pasta desdobra ao lado do KV
+  $('btnPastaKv').dispatchEvent(new win.MouseEvent('click'));
+  expect($('caminho').value).toBe('');
+  expect($('pasta').textContent).toContain('/Users/ana/job/desdobra');
   expect($('modo').value).toBe('cobrir');
   $('cliente').value = 'TESTE'; $('campanha').value = 'piloto'; $('formatos').value = 'stories;1080;1920\n300x250'; $('salvar').checked = true;
   $('btnDesdobrar').dispatchEvent(new win.MouseEvent('click'));

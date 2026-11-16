@@ -48,7 +48,7 @@ export const AFTER_EFFECTS: [string, string][] = Object.entries(ARQ)
   .filter(([k]) => k.includes('/plugins/after-effects/'))
   .map(([k, v]): [string, string] => [k.split('/plugins/after-effects/')[1], v]);
 
-const VERSAO_KIT = '1.4.1';
+const VERSAO_KIT = '1.4.2';
 export const NOME_PACOTE = `Produceria-Plugins-v${VERSAO_KIT}.zip`;
 
 /** O .ccx: os arquivos do plugin na raiz (sem o LEIA-ME, que não faz parte do plugin). */
@@ -153,7 +153,11 @@ export const TUTORIAL: Secao[] = [
 export interface Passo { fazer: string; esperado: string }
 export const ROTEIRO: Record<string, Passo[]> = {
   desdobra: [
-    { fazer: 'Confira o rodapé do painel: deve dizer "Desdobra KV 1.4.1". Abra uma CÓPIA de um KV real salvo em disco (pode ter Plano de fundo travado). Modo Cobrir, foco Centro, cliente TESTE, campanha piloto. Clique em "Gerar cópias para revisão" sem marcar Salvar.', esperado: 'Um documento aberto por formato, nome TESTE_piloto_<formato>_v01, medidas da lista. O KV original não muda.' },
+    { fazer: 'Antes de tudo, leia a primeira linha em negrito do painel.', esperado: '"Painel pronto · Desdobra KV 1.4.2 · botões ligados." Se disser que o código não rodou, ou mostrar outra versão, o Photoshop está com o plugin antigo: Creative Cloud > Plug-ins > Gerenciar plug-ins > remova o Desdobra KV, feche o Photoshop, instale o .ccx novo e abra de novo.' },
+    { fazer: 'Clique em "Escolher pasta de saída" e anote o que aparece embaixo do campo de caminho.', esperado: 'Na hora: "Clique recebido (1)". Depois, a janela de pastas do sistema. Se ela não aparecer em 4 s, o painel avisa. Anote no relatório qual frase apareceu: isso mostra se o problema é o clique ou a janela.' },
+    { fazer: 'Se a janela de pastas não abriu: clique em "A janela não abriu? Escolher pela janela Salvar", vá até a pasta "Teste plugins" e clique em Salvar.', esperado: 'O caminho da pasta aparece no campo e embaixo: "Pasta (janela Salvar)". Nenhum arquivo é criado.' },
+    { fazer: 'Com o KV salvo em disco, clique em "Usar a pasta do KV aberto (sem janela)".', esperado: 'Aparece o caminho <pasta do KV>/desdobra. É o caminho que não depende de janela nenhuma.' },
+    { fazer: 'Confira o rodapé do painel: deve dizer "Desdobra KV 1.4.2". Abra uma CÓPIA de um KV real salvo em disco (pode ter Plano de fundo travado). Modo Cobrir, foco Centro, cliente TESTE, campanha piloto. Clique em "Gerar cópias para revisão" sem marcar Salvar.', esperado: 'Um documento aberto por formato, nome TESTE_piloto_<formato>_v01, medidas da lista. O KV original não muda.' },
     { fazer: 'Clique de novo em "Gerar cópias para revisão" com uma das cópias ativa.', esperado: 'A desdobra sai do KV original, não da cópia ativa.' },
     { fazer: 'Marque Salvar e deixe o campo do caminho vazio. Gere.', esperado: 'Aparece desdobra/rodada-<data>/PSD/ ao lado do KV com um PSD por formato e relatorio.json. As cópias de trabalho fecham.' },
     { fazer: 'Clique em "Escolher pasta de saída". Se a janela não abrir em 4 s, cole o caminho da pasta "Teste plugins" no campo (Mac: botão direito, segure Option, "Copiar como nome de caminho"). Marque JPG e PNG e gere.', esperado: 'Nova rodada dentro da pasta escolhida com PSD/, JPG/ e PNG/. Num KV RGB de 8 bits não aparece aviso de RGB.' },

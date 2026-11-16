@@ -19,7 +19,8 @@
   </style>
 </head>
 <body>
-  <div class="nota">Desdobra KV 1.4.1 · Adaptação de campanhas em cópias editáveis, com galeria e simulação das saídas. Piloto: cada resultado exige revisão visual.</div>
+  <div id="estadoPainel" class="nota" style="font-weight:bold">O código do painel não rodou. Anote esta frase e a versão no relatório.</div>
+  <div class="nota">Desdobra KV 1.4.2 · Adaptação de campanhas em cópias editáveis, com galeria e simulação das saídas. Piloto: cada resultado exige revisão visual.</div>
   <h2>1. Identifique a campanha</h2>
   <label for="cliente">Cliente</label><input type="text" id="cliente" placeholder="SICREDI">
   <label for="campanha">Campanha</label><input type="text" id="campanha" placeholder="natal">
@@ -97,6 +98,8 @@
   <div class="linha"><input type="checkbox" id="saidaPng"> <label style="display:inline" for="saidaPng">Também PNG (RGB de 8 bits)</label></div>
   <div class="nota">Sem salvar, as cópias ficam abertas (até 12 formatos). Ao salvar, a rodada contém PSD/, JPG/, PNG/ conforme a seleção e relatorio.json; cada cópia de trabalho é fechada.</div>
   <button id="btnPasta">Escolher pasta de saída</button>
+  <button id="btnPastaSalvar">A janela não abriu? Escolher pela janela Salvar</button>
+  <button id="btnPastaKv">Usar a pasta do KV aberto (sem janela)</button>
   <label for="caminho">Ou cole o caminho da pasta (vazio = pasta "desdobra" ao lado do KV)</label>
   <input type="text" id="caminho" placeholder="/Users/voce/Desktop/job ou C:\job">
   <div id="pasta" class="nota"></div>
