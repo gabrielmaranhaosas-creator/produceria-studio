@@ -10,7 +10,7 @@ Precisa do Photoshop 2023 (v24.2) ou mais novo.
 ## Uso
 1. Abra o PSD. 2. Preencha cliente e campanha (a versão sai do nome do arquivo: _v03 vira v03).
 3. Ajuste a marca d'água, a opacidade e o tamanho máximo (2000 px é bom para e-mail e WhatsApp).
-4. Escolha a pasta e clique em Gerar prova. Marque "Todos os documentos abertos" para a desdobra inteira.
+4. Escolha a pasta e clique em Gerar prova. Se a janela de pastas não abrir, cole o caminho da pasta no campo abaixo do botão (Mac: botão direito na pasta, segure Option, "Copiar como nome de caminho"; Windows: Shift + botão direito > Copiar como caminho) ou deixe vazio para salvar na pasta "provas" ao lado do arquivo (que precisa estar salvo em disco). Marque "Todos os documentos abertos" para a desdobra inteira.
 
 ## Regras
 - Trabalha numa cópia: o documento aberto não muda e a cópia é fechada sem salvar.

@@ -1,6 +1,7 @@
 const { app, core, constants } = require("photoshop");
 const { localFileSystem } = require("uxp").storage;
 const { lerFormatos, calcularEscala, nomeDoc, PADRAO_FORMATOS, PACOTES } = require("./desdobra.js");
+const { resolverDestino, escolherPasta } = require("./destino.js");
 // Leituras seguras: algumas versões do UXP não preenchem .value de <select>, e app.activeDocument pode lançar erro sem documento aberto.
 const valorDe = (el) => (el && el.value ? el.value : (el && el.options && el.selectedIndex >= 0 && el.options[el.selectedIndex] ? el.options[el.selectedIndex].value : ""));
 const docAtivo = () => { try { return app.activeDocument || null; } catch (e) { return null; } };
@@ -25,14 +26,9 @@ function lembrarCampos(chave, ids) {
   return salvar;
 }
 
-const salvarCampos = lembrarCampos("desdobra.campos", ["cliente", "campanha", "versao", "modo", "ancora", "formatos", "salvar"]);
-if (!$("formatos").value.trim()) $("formatos").value = PADRAO_FORMATOS;
-$("pacote").addEventListener("change", () => {
-  const p = PACOTES[valorDe($("pacote"))];
-  if (p) { $("formatos").value = p.lista; salvarCampos(); $("resumo").textContent = "Pacote " + p.nome + " carregado: edite a lista se quiser."; }
-});
-pastaLembrada("desdobra.pasta").then((p) => { if (p) { pastaPSD = p; $("pasta").textContent = "Pasta (lembrada): " + p.nativePath; } });
-
+// Os botões são ligados antes de tudo: se a memória do painel falhar, os cliques continuam funcionando.
+let salvarCampos = () => {};
+const AVISO_JANELA = "A janela de pastas não apareceu? Procure atrás da janela do Photoshop, ou cole o caminho da pasta no campo abaixo (no Mac: botão direito na pasta, segure Option, \"Copiar como nome de caminho\"). Vazio = pasta \"desdobra\" ao lado do KV.";
 
 function linha(texto) {
   const d = document.createElement("div");
@@ -42,13 +38,14 @@ function linha(texto) {
 }
 
 $("btnPasta").addEventListener("click", async () => {
-  $("pasta").textContent = "Abrindo a janela de escolher pasta... (se não aparecer, procure atrás da janela do Photoshop).";
+  $("pasta").textContent = "Abrindo a janela de escolher pasta...";
   try {
-    const p = await localFileSystem.getFolder();
-    if (p) { pastaPSD = p; $("pasta").textContent = "Pasta: " + p.nativePath; lembrarPasta("desdobra.pasta", p); }
+    const p = await escolherPasta(localFileSystem, () => { $("pasta").textContent = AVISO_JANELA; });
+    if (p) { pastaPSD = p; $("caminho").value = p.nativePath; $("salvar").checked = true; salvarCampos(); $("pasta").textContent = "Pasta: " + p.nativePath; lembrarPasta("desdobra.pasta", p); }
     else $("pasta").textContent = "Nenhuma pasta escolhida.";
-  } catch (e) { $("pasta").textContent = "Não foi possível abrir a janela de pastas: " + msg(e) + "."; }
+  } catch (e) { $("pasta").textContent = "Não foi possível abrir a janela de pastas: " + msg(e) + ". Cole o caminho no campo abaixo ou deixe vazio para salvar ao lado do KV."; }
 });
+$("caminho").addEventListener("change", () => { const c = $("caminho").value.trim(); if (pastaPSD && pastaPSD.nativePath !== c) pastaPSD = null; if (c) { $("salvar").checked = true; $("pasta").textContent = "Pasta: " + c; } else $("pasta").textContent = "Sem pasta: os PSD vão para a pasta \"desdobra\" ao lado do KV."; });
 
 $("btnDesdobrar").addEventListener("click", async () => {
   $("resultado").innerHTML = "";
@@ -59,7 +56,11 @@ $("btnDesdobrar").addEventListener("click", async () => {
   const { formatos, erros } = lerFormatos($("formatos").value, Number(doc.resolution) || 72);
   if (erros.length) { $("resumo").textContent = "Corrija a lista de formatos."; erros.forEach((e) => linha("[ERRO] " + e)); return; }
   if (formatos.length === 0) { $("resumo").textContent = "Nenhum formato informado."; return; }
-  if ($("salvar").checked && !pastaPSD) { $("resumo").textContent = "Escolha a pasta para os PSD ou desmarque a opção de salvar."; return; }
+  let destino = null;
+  if ($("salvar").checked) {
+    try { destino = await resolverDestino(localFileSystem, { caminho: $("caminho").value, escolhida: pastaPSD, doc, subpasta: "desdobra" }); $("pasta").textContent = "Pasta: " + destino.nativePath; }
+    catch (e) { $("resumo").textContent = "Não deu para usar a pasta: " + msg(e) + "."; return; }
+  }
 
   const modo = valorDe($("modo")) || "cobrir";
   const ancora = constants.AnchorPosition[valorDe($("ancora"))] || constants.AnchorPosition.MIDDLECENTER;
@@ -78,7 +79,7 @@ $("btnDesdobrar").addEventListener("click", async () => {
           await copia.resizeImage(dim.largura, dim.altura);
           await copia.resizeCanvas(f.largura, f.altura, ancora);
           if ($("salvar").checked) {
-            const arq = await pastaPSD.createFile(nome + ".psd", { overwrite: true });
+            const arq = await destino.createFile(nome + ".psd", { overwrite: true });
             await copia.saveAs.psd(arq, {}, true);
           }
           feitos.push(nome + " (" + f.largura + "x" + f.altura + ")" + aviso);
@@ -95,4 +96,20 @@ $("btnDesdobrar").addEventListener("click", async () => {
   falhas.forEach((t) => linha("[ERRO] " + t));
   feitos.forEach((t) => linha("[OK] " + t));
   if (feitos.length) linha("Isto é a base da desdobra: ajuste textos, logo e margens de cada formato.");
+});
+
+// Memória e pacotes por último, cada um protegido: um erro aqui não desliga os botões.
+try {
+  salvarCampos = lembrarCampos("desdobra.campos", ["cliente", "campanha", "versao", "modo", "ancora", "formatos", "salvar", "caminho"]);
+  if (!$("formatos").value.trim()) $("formatos").value = PADRAO_FORMATOS;
+  $("pacote").addEventListener("change", () => {
+    const p = PACOTES[valorDe($("pacote"))];
+    if (p) { $("formatos").value = p.lista; salvarCampos(); $("resumo").textContent = "Pacote " + p.nome + " carregado: edite a lista se quiser."; }
+  });
+} catch (e) { $("resumo").textContent = "O painel abriu sem a memória dos campos: " + msg(e); }
+pastaLembrada("desdobra.pasta").then((p) => {
+  if (!p) return;
+  pastaPSD = p;
+  if (!$("caminho").value.trim()) $("caminho").value = p.nativePath;
+  $("pasta").textContent = "Pasta (lembrada): " + p.nativePath;
 });

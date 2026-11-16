@@ -80,6 +80,23 @@ $('checar').addEventListener('click', async () => {
   log(`${r.filter((x) => x.status === 'ajustar').length} ajuste(s). Itens "conferir" dependem do arquivo final (PDF/X) e da gráfica.`);
 });
 
+// ---------------------------------------------------------------- pasta de saída
+// A janela de pastas do Photoshop às vezes não abre: avisa em 4 s e, se der erro, salva numa subpasta ao lado do arquivo.
+async function pastaAoLado(doc, nome) {
+  let p = ''; try { p = String(doc.path || ''); } catch (e) { p = ''; }
+  const i = Math.max(p.lastIndexOf('/'), p.lastIndexOf('\\'));
+  if (i < 1) throw new Error('salve o documento uma vez (Cmd ou Ctrl + S) para usar a pasta ao lado dele');
+  const base = await lfs.getEntryWithUrl('file:' + p.slice(0, i));
+  try { const e = await base.getEntry(nome); if (e.isFolder) return e; } catch (e) { /* cria */ }
+  return base.createFolder(nome);
+}
+async function pastaDeSaida(doc, nome) {
+  const t = setTimeout(() => log('A janela de pastas não apareceu? Procure atrás da janela do Photoshop.'), 4000);
+  try { return await lfs.getFolder(); }
+  catch (e) { log('A janela de pastas falhou (' + e.message + '): salvando em "' + nome + '" ao lado do arquivo.'); return pastaAoLado(doc, nome); }
+  finally { clearTimeout(t); }
+}
+
 // ---------------------------------------------------------------- desdobramento
 const px = (v, unidade, dpi) => Math.round(unidade === 'mm' ? (v / MM_POR_POL) * (dpi || 300) : v);
 const limpar = (s) => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-zA-Z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 40);
@@ -87,7 +104,8 @@ const limpar = (s) => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').r
 $('desdobrar').addEventListener('click', async () => {
   if (!pacote || !(pacote.formatos || []).length) { log('Carregue um pacote do job com formatos (aba Pré-checagem).'); return; }
   const base = docAtivo(); if (!base) { log('Abra o KV mestre.'); return; }
-  const pasta = await lfs.getFolder(); if (!pasta) return;
+  let pasta; try { pasta = await pastaDeSaida(base, 'desdobra'); } catch (e) { log('Sem pasta: ' + e.message); return; }
+  if (!pasta) return;
   const feitos = [];
   try {
     await core.executeAsModal(async () => {
@@ -112,7 +130,8 @@ $('desdobrar').addEventListener('click', async () => {
 // ---------------------------------------------------------------- exportar prova
 $('exportar').addEventListener('click', async () => {
   const doc = docAtivo(); if (!doc) { log('Abra a peça.'); return; }
-  const pasta = await lfs.getFolder(); if (!pasta) return;
+  let pasta; try { pasta = await pastaDeSaida(doc, 'provas'); } catch (e) { log('Sem pasta: ' + e.message); return; }
+  if (!pasta) return;
   const nome = `${limpar(pacote?.job || 'job')}_${limpar($('peca').value || doc.title)}_v${limpar($('versao').value || '1')}.jpg`;
   try {
     await core.executeAsModal(async () => {

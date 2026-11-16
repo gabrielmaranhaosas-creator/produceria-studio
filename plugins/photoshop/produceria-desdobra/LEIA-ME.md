@@ -9,7 +9,7 @@ Descompacte; no UXP Developer Tool: Add Plugin > manifest.json > Load. Painel em
 1. Abra o PSD do KV. 2. Preencha cliente, campanha e versão.
 3. Escolha "Cobrir" (preenche o formato e corta o excesso) ou "Conter" (mostra tudo) e o ponto de foco do corte.
 4. Edite a lista de formatos se precisar (uma linha por formato: nome;largura;altura).
-5. Opcional: marque "Salvar um PSD de cada formato" e escolha a pasta. 6. Clique em Desdobrar.
+5. Opcional: marque "Salvar um PSD de cada formato" e escolha a pasta. Se a janela de pastas não abrir, cole o caminho da pasta no campo abaixo do botão (Mac: botão direito na pasta, segure Option, "Copiar como nome de caminho"; Windows: Shift + botão direito > Copiar como caminho) ou deixe vazio para salvar na pasta "desdobra" ao lado do arquivo (que precisa estar salvo em disco). 6. Clique em Desdobrar.
 
 ## Limites conhecidos
 - Reescala e corta o documento inteiro; não reposiciona logo, texto ou elementos por regra. Em formatos muito diferentes (ex.: banner 728x90 a partir de um KV vertical) o resultado é só um ponto de partida.

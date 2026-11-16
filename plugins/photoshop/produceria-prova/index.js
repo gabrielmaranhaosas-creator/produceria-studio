@@ -1,6 +1,7 @@
 const { app, core } = require("photoshop");
 const { localFileSystem } = require("uxp").storage;
 const P = require("./prova.js");
+const { resolverDestino, escolherPasta } = require("./destino.js");
 // Leituras seguras: algumas versões do UXP não preenchem .value de <select>, e app.activeDocument pode lançar erro sem documento aberto.
 const valorDe = (el) => (el && el.value ? el.value : (el && el.options && el.selectedIndex >= 0 && el.options[el.selectedIndex] ? el.options[el.selectedIndex].value : ""));
 const docAtivo = () => { try { return app.activeDocument || null; } catch (e) { return null; } };
@@ -34,6 +35,7 @@ async function centralizar(camada, w, h) {
 
 async function gerarProva(doc, o) {
   const nome = P.nomeProva(doc.name);
+  const destino = await resolverDestino(localFileSystem, { caminho: $("caminho").value, escolhida: pasta, doc, subpasta: "provas" });
   const copia = await doc.duplicate(nome.replace(/\.jpg$/, ""));
   try {
     await copia.flatten();
@@ -53,21 +55,31 @@ async function gerarProva(doc, o) {
     rod.opacity = 90;
 
     await copia.flatten();
-    const arq = await pasta.createFile(nome, { overwrite: true });
+    const arq = await destino.createFile(nome, { overwrite: true });
     await copia.saveAs.jpg(arq, { quality: o.qualidade, embedColorProfile: true }, true);
-    return nome + " (" + w + " x " + h + " px)";
+    return nome + " (" + w + " x " + h + " px) em " + destino.nativePath;
   } finally {
     await copia.closeWithoutSaving();
   }
 }
 
+let salvarCampos = () => {};
+const AVISO_JANELA = "A janela de pastas não apareceu? Procure atrás da janela do Photoshop, ou cole o caminho da pasta no campo abaixo (no Mac: botão direito na pasta, segure Option, \"Copiar como nome de caminho\"). Vazio = pasta \"provas\" ao lado de cada arquivo.";
 $("btnPasta").addEventListener("click", async () => {
-  try { const p = await localFileSystem.getFolder(); if (p) { pasta = p; $("pasta").textContent = "Pasta: " + p.nativePath; lembrarPasta("prova.pasta", p); } }
-  catch (e) { $("pasta").textContent = "Não foi possível escolher a pasta: " + msg(e); }
+  $("pasta").textContent = "Abrindo a janela de escolher pasta...";
+  try {
+    const p = await escolherPasta(localFileSystem, () => { $("pasta").textContent = AVISO_JANELA; });
+    if (p) { pasta = p; $("caminho").value = p.nativePath; salvarCampos(); $("pasta").textContent = "Pasta: " + p.nativePath; lembrarPasta("prova.pasta", p); }
+    else $("pasta").textContent = "Nenhuma pasta escolhida.";
+  } catch (e) { $("pasta").textContent = "Não foi possível abrir a janela de pastas: " + msg(e) + ". Cole o caminho no campo abaixo ou deixe vazio para salvar ao lado do arquivo."; }
+});
+$("caminho").addEventListener("change", () => {
+  const c = $("caminho").value.trim();
+  if (pasta && pasta.nativePath !== c) pasta = null;
+  $("pasta").textContent = c ? "Pasta: " + c : "Sem pasta: as provas vão para \"provas\", ao lado de cada documento.";
 });
 
 $("btnProva").addEventListener("click", async () => {
-  if (!pasta) { resumo("Escolha a pasta das provas primeiro."); return; }
   const docs = $("todos").checked ? Array.from(app.documents) : (docAtivo() ? [docAtivo()] : []);
   if (!docs.length) { resumo("Abra um documento no Photoshop e clique de novo."); return; }
   const o = {
@@ -89,5 +101,12 @@ $("btnProva").addEventListener("click", async () => {
   feitos.forEach((t) => linha("[OK] " + t));
 });
 
-lembrarCampos("prova.campos", ["cliente", "campanha", "marca", "opacidade", "diagonal", "maxLado", "qualidade", "todos"]);
-pastaLembrada("prova.pasta").then((p) => { if (p) { pasta = p; $("pasta").textContent = "Pasta (lembrada): " + p.nativePath; } });
+// Memória por último e protegida: um erro aqui não desliga os botões.
+try { salvarCampos = lembrarCampos("prova.campos", ["cliente", "campanha", "marca", "opacidade", "diagonal", "maxLado", "qualidade", "todos", "caminho"]); }
+catch (e) { $("resumo").textContent = "O painel abriu sem a memória dos campos: " + msg(e); }
+pastaLembrada("prova.pasta").then((p) => {
+  if (!p) return;
+  pasta = p;
+  if (!$("caminho").value.trim()) $("caminho").value = p.nativePath;
+  $("pasta").textContent = "Pasta (lembrada): " + p.nativePath;
+});

@@ -63,6 +63,63 @@ describe('melhorias da v1.1', () => {
     expect(js).toContain('createSessionToken');
     expect(js).toMatch(/copy: true/);
   });
+  it('painéis que salvam não dependem só da janela de pastas', () => {
+    const base = ler('produceria-desdobra', 'destino.js');
+    for (const p of ['produceria-desdobra', 'produceria-exportador', 'produceria-prova']) {
+      expect(ler(p, 'destino.js'), p).toBe(base);
+      expect(JSON.parse(ler(p, 'manifest.json')).requiredPermissions.localFileSystem, p).toBe('fullAccess');
+      expect(ler(p, 'index.html'), p).toContain('id="caminho"');
+      const js = ler(p, 'index.js');
+      expect(js, p).toContain('resolverDestino');
+      expect(js, p).not.toContain('localFileSystem.getFolder()');
+      // a memória dos campos roda por último, protegida, e lembra o caminho
+      expect(js.search(/try \{\s*salvarCampos = lembrarCampos/) > js.indexOf('$("btnPasta").addEventListener'), p).toBe(true);
+    }
+  });
+  it('destino: limpa o caminho colado e escolhe a pasta certa', async () => {
+    const D = req('photoshop/produceria-desdobra/destino.js');
+    expect(D.normalizarCaminho('  "/Users/ana/Job KV/"  ')).toBe('/Users/ana/Job KV');
+    expect(D.normalizarCaminho('file:///Users/ana/Job%20KV')).toBe('/Users/ana/Job KV');
+    expect(D.normalizarCaminho('C:\\Jobs\\Natal\\')).toBe('C:\\Jobs\\Natal');
+    expect(D.normalizarCaminho('file:///C:/Jobs')).toBe('C:/Jobs');
+    expect(D.normalizarCaminho('C:')).toBe('C:\\');
+    expect(D.pastaDoArquivo('/Users/ana/job/kv.psd')).toBe('/Users/ana/job');
+    expect(D.pastaDoArquivo('C:\\job\\kv.psd')).toBe('C:\\job');
+    expect(D.pastaDoArquivo('C:\\kv.psd')).toBe('C:\\');
+    expect(D.pastaDoArquivo('')).toBe('');
+    expect(D.urlsPara('/Users/ana')).toEqual(['file:/Users/ana', 'file:///Users/ana']);
+    expect(D.urlsPara('C:\\job')).toEqual(['file:C:\\job', 'file:/C:/job', 'file:///C:/job']);
+
+    const criadas: string[] = [];
+    const pasta = (caminho: string): any => ({
+      isFolder: true, nativePath: caminho,
+      getEntry: async (n: string) => { throw new Error('não existe ' + n); },
+      createFolder: async (n: string) => { criadas.push(caminho + '/' + n); return pasta(caminho + '/' + n); },
+    });
+    const fs = { getEntryWithUrl: async (u: string) => { if (u === 'file:/Users/ana/arquivo.psd') return { isFolder: false }; if (u.startsWith('file:/Users/ana')) return pasta(u.replace(/^file:/, '')); throw new Error('sem acesso'); } };
+    const doc = { name: 'kv.psd', path: '/Users/ana/job/kv.psd' };
+    expect((await D.resolverDestino(fs, { caminho: '/Users/ana/entregas/', doc })).nativePath).toBe('/Users/ana/entregas');
+    const escolhida = pasta('/Users/ana/escolhida');
+    expect(await D.resolverDestino(fs, { caminho: '/Users/ana/escolhida', escolhida, doc })).toBe(escolhida);
+    expect(await D.resolverDestino(fs, { caminho: '', escolhida, doc })).toBe(escolhida);
+    expect((await D.resolverDestino(fs, { caminho: '', doc, subpasta: 'desdobra' })).nativePath).toBe('/Users/ana/job/desdobra');
+    expect(criadas).toEqual(['/Users/ana/job/desdobra']);
+    await expect(D.resolverDestino(fs, { caminho: '', doc: { name: 'Sem título-1', path: '' } })).rejects.toThrow(/ainda não foi salvo/);
+    await expect(D.resolverDestino(fs, { caminho: '/Volumes/X' })).rejects.toThrow(/não achei a pasta \/Volumes\/X/);
+    await expect(D.resolverDestino(fs, { caminho: '/Users/ana/arquivo.psd' })).rejects.toThrow(/arquivo, não de uma pasta/);
+    await expect(D.resolverDestino({}, { caminho: '/Users/ana' })).rejects.toThrow(/não abre pasta por caminho/);
+  });
+  it('destino: avisa quando a janela de pastas demora', async () => {
+    const D = req('photoshop/produceria-desdobra/destino.js');
+    let avisou = 0;
+    const lenta = { getFolder: () => new Promise((r) => setTimeout(() => r('pasta'), 30)) };
+    expect(await D.escolherPasta(lenta, () => { avisou++; }, 5)).toBe('pasta');
+    expect(avisou).toBe(1);
+    const rapida = { getFolder: async () => null };
+    expect(await D.escolherPasta(rapida, () => { avisou++; }, 50)).toBe(null);
+    await new Promise((r) => setTimeout(r, 70));
+    expect(avisou).toBe(1);
+  });
   it('painéis com pasta de saída lembram a pasta', () => {
     for (const p of ['produceria-desdobra', 'produceria-exportador', 'produceria-prova']) expect(ler(p, 'index.js')).toContain('createPersistentToken');
   });

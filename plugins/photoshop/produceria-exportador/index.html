@@ -24,11 +24,14 @@
   <div class="linha"><input type="checkbox" id="todos"> <label style="display:inline" for="todos">Todos os documentos abertos</label></div>
 
   <button id="btnPasta">Escolher pasta de saída</button>
-  <div id="pasta">Nenhuma pasta escolhida.</div>
+  <label for="caminho">Ou cole o caminho da pasta (vazio = pasta "exportados" ao lado de cada arquivo)</label>
+  <input type="text" id="caminho" placeholder="/Users/voce/Desktop/job ou C:\job">
+  <div id="pasta">Sem pasta: os arquivos vão para "exportados", ao lado de cada documento.</div>
 
   <button id="btnExportar">Exportar</button>
   <div id="resumo"></div>
   <div id="resultado"></div>
+  <div style="opacity:0.7;margin-top:8px">Exportador v1.2.0</div>
   <script src="index.js"></script>
 </body>
 </html>
