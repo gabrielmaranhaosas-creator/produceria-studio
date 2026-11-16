@@ -56,7 +56,10 @@ function nomeDoc(cliente, campanha, formato, versao) {
 // Pacotes prontos de formatos (o painel preenche a lista; a pessoa pode editar antes de desdobrar).
 const PACOTES = {
   redes: { nome: "Redes sociais", lista: PADRAO_FORMATOS },
+  meta: { nome: "Meta (exemplos editáveis)", lista: "meta-feed-retrato;1080;1350\nmeta-feed-quadrado;1080;1080\nmeta-stories;1080;1920\nmeta-feed-paisagem;1200;628" },
   display: { nome: "Display (Google e programática)", lista: "300x250;300;250\n336x280;336;280\n728x90;728;90\n970x250;970;250\n970x90;970;90\n300x600;300;600\n160x600;160;600\n320x50;320;50\n320x100;320;100\n468x60;468;60" },
+  mac: { nome: "Mac / computador (telas de exemplo, não especificações de hardware)", lista: "mac-navegador-1440;1440;900\nmac-navegador-full-hd;1920;1080\nmac-navegador-qhd;2560;1440\nmac-navegador-1600;1600;1000" },
+  celular: { nome: "Celular (telas de exemplo)", lista: "celular-vertical;1080;1920\ncelular-pagina-longa;1080;2400\ncelular-quadrado;1080;1080\ncelular-paisagem;1920;1080" },
   telas: { nome: "Vídeo, telas e DOOH", lista: "full-hd-horizontal;1920;1080\nfull-hd-vertical;1080;1920\n4k-horizontal;3840;2160\ndooh-quadrado;1080;1080\nreels-capa;1080;1920\nyoutube-thumb;1280;720" },
   impresso: { nome: "Impresso (pelo ppi do documento)", lista: "a4-retrato: 210x297 mm\na3-retrato: 297x420 mm\na2-retrato: 420x594 mm\nflyer-a5: 148x210 mm\ncartaz-50x70: 50x70 cm\nbanner-80x120: 80x120 cm" },
 };

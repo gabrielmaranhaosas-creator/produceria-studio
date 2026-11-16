@@ -49,7 +49,11 @@ $("caminho").addEventListener("change", () => { const c = $("caminho").value.tri
 
 const A = require("./adaptacao.js");
 const PS = require("./photoshop.js");
+const G = require("./galeria.js");
+const galeriaCss = require("./galeria-estilo.js");
+const estiloGaleria = document.createElement("style"); estiloGaleria.textContent = galeriaCss; document.head.appendChild(estiloGaleria);
 let mestres = [], controle = null, ultimoResultado = null;
+let galeria = [], detalhe = -1;
 const CHAVE_MAPA = "desdobra.mapas.v1";
 const camposNovos = ["topoSeguro", "baseSegura", "lateralSegura", "saidaJpg", "saidaPng"];
 const papeisManuais = new Map();
@@ -69,6 +73,7 @@ function adicionar(doc) {
   papeisManuais.set(doc.id, manual);
   const m = PS.lerMestre(doc, manual);
   mestres = mestres.filter((x) => x.id !== doc.id).concat(m);
+  invalidarGaleria();
   mostrarMapas(); salvarMapas();
 }
 function mostrarMapas() {
@@ -78,7 +83,7 @@ function mostrarMapas() {
     const titulo = document.createElement("legend"); titulo.textContent = m.nome + " · " + m.largura + "×" + m.altura;
     bloco.appendChild(titulo);
     const remover = document.createElement("button"); remover.textContent = "Remover este KV da seleção";
-    remover.addEventListener("click", () => { mestres = mestres.filter((x) => x.id !== m.id); mostrarMapas(); salvarMapas(); });
+    remover.addEventListener("click", () => { mestres = mestres.filter((x) => x.id !== m.id); invalidarGaleria(); mostrarMapas(); salvarMapas(); });
     bloco.appendChild(remover);
     m.camadas.forEach((c) => {
       const label = document.createElement("label"); label.textContent = c.nome + (c.visivel ? "" : " (oculta; não transforma)");
@@ -133,12 +138,14 @@ function dadosDoPlano() {
   } else {
     const m = PS.lerMestre(doc);
     planos = formatos.map((f) => ({ alvo: f, mestreId: doc.id, mestreNome: doc.name, assinatura: m.assinatura, historico: m.historico,
-      bloqueios: [], avisos: ["Encaixe global: revise cortes, textos, logo e margens."], escore: 0, elementos: [] }));
+      bloqueios: [], avisos: ["Encaixe global: revise cortes, textos, logo e margens."], escore: 0,
+      area: A.areaSegura(f.largura, f.altura, margens), elementos: G.elementosGlobais(m, f, modo, valorDe($("ancora"))) }));
   }
   return { planos, cliente, campanha, versao: $("versao").value, modo,
     ancora: constants.AnchorPosition[valorDe($("ancora"))] || constants.AnchorPosition.MIDDLECENTER };
 }
 function diagnosticar() {
+  invalidarGaleria();
   $("resultado").innerHTML = "";
   const d = dadosDoPlano();
   for (const p of d.planos) {
@@ -147,9 +154,74 @@ function diagnosticar() {
     p.bloqueios.forEach((a) => linha("[CORRIGIR] " + a));
     p.avisos.forEach((a) => linha("[REVISAR] " + a));
   }
+  galeria = d.planos.map(G.novoItem); mostrarGaleria();
   $("resumo").textContent = "Diagnóstico de " + d.planos.length + " formatos. Revisão visual obrigatória; escore não aprova a peça.";
   return d;
 }
+
+function opcoesGaleria() {
+  const moldura = valorDe($("moldura"));
+  return { contexto: valorDe($("visualizacao")) !== "peca", guias: $("mostrarGuias").checked, maxW: (document.body.clientWidth || 360) - 64,
+    forcarContexto: moldura === "auto" ? null : moldura };
+}
+function invalidarGaleria() {
+  galeria = []; detalhe = -1; atualizarProgresso(0, 0); mostrarGaleria();
+}
+function atualizarProgresso(n, total) {
+  const pct = total ? Math.round(n / total * 100) : 0;
+  $("progresso").setAttribute("aria-valuenow", String(pct)); $("progressoBarra").style.width = pct + "%";
+  $("progressoTexto").textContent = total ? n + "/" + total + " formatos processados · " + pct + "%" : "";
+}
+function mostrarGaleria() {
+  const filtro = valorDe($("filtroContexto")), opts = opcoesGaleria();
+  const visiveis = galeria.map((item, i) => ({ item, i })).filter(({ item }) => filtro === "todos" || item.contexto === filtro);
+  $("galeria").innerHTML = visiveis.map(({ item, i }) => G.cartao(item, i, opts)).join("");
+  $("contagemGaleria").textContent = galeria.length ? visiveis.length + "/" + galeria.length + " formatos exibidos · " + galeria.filter((x) => x.previa).length + " com pixels reais. Capturas da última execução; alterações no Photoshop pedem novas prévias." : "Diagnostique os formatos para montar a galeria.";
+  $("btnFolha").disabled = !!controle || !galeria.length;
+  for (const b of $("galeria").querySelectorAll("button[data-detalhe]")) b.addEventListener("click", () => { detalhe = Number(b.getAttribute("data-detalhe")); mostrarDetalhe(); });
+  if (!visiveis.some(({ i }) => i === detalhe)) detalhe = -1;
+  mostrarDetalhe();
+}
+function mostrarDetalhe() {
+  const item = galeria[detalhe];
+  $("detalheGaleria").innerHTML = item ? '<h3>Detalhe: ' + G.esc(item.plano.alvo.nome) + '</h3>' + G.palco(item, { ...opcoesGaleria(), grande: true }) + '<div class="nota">' + (item.previa ? 'Prévia real reduzida; confira nitidez e texto no PSD em 100%.' : 'Esquema geométrico: gere prévias reais para conferir a arte.') + '</div><button id="fecharDetalhe">Fechar detalhe</button>' : "";
+  const fechar = document.getElementById("fecharDetalhe");
+  if (fechar) fechar.addEventListener("click", () => { detalhe = -1; mostrarDetalhe(); });
+}
+for (const id of ["filtroContexto", "visualizacao", "moldura", "mostrarGuias"]) $(id).addEventListener("change", mostrarGaleria);
+for (const id of ["cliente", "campanha", "versao", "modo", "ancora", "formatos", "topoSeguro", "baseSegura", "lateralSegura"]) {
+  $(id).addEventListener("input", invalidarGaleria); $(id).addEventListener("change", invalidarGaleria);
+}
+$("btnFolha").addEventListener("click", async () => {
+  if (!galeria.length || controle) return;
+  try {
+    const html = G.folhaHtml(galeria, $("cliente").value + " · " + $("campanha").value, galeriaCss, opcoesGaleria());
+    const f = await localFileSystem.getFileForSaving("PRODUCERIA_folha_de_revisao.html", { types: ["html"] });
+    if (f) { await f.write(html); $("resumo").textContent = "Folha salva com todos os formatos (inclusive os ocultos pelo filtro). Abra no navegador para revisar ou imprimir em PDF."; }
+  } catch (e) { $("resumo").textContent = "Falha ao salvar folha: " + msg(e); }
+});
+$("btnPrevias").addEventListener("click", async () => {
+  if (controle) return;
+  try {
+    if (!PS.previaDisponivel()) throw new Error("Prévia real indisponível: esta instalação não expõe a Imaging API. O diagnóstico continua disponível como esquema. Atualize o Photoshop e valide o painel.");
+    const d = diagnosticar();
+    if (d.planos.some((p) => p.bloqueios.length)) throw new Error("Resolva os itens [CORRIGIR] antes de gerar prévias reais.");
+    controle = { cancelado: false }; ocupada(true);
+    for (let i = 0; i < d.planos.length && !controle.cancelado; i++) {
+      const p = d.planos[i], item = galeria[i];
+      item.status = "processando"; mostrarGaleria(); atualizarProgresso(i, d.planos.length);
+      $("resumo").textContent = "Renderizando prévia " + (i + 1) + "/" + d.planos.length + ": " + p.alvo.nome;
+      try {
+        const r = await PS.gerar(p, { nome: "PREVIA_" + p.alvo.nome, modo: d.modo, ancora: d.ancora, somentePrevia: true }, controle);
+        item.previa = r.previa; item.status = "previa";
+      } catch (e) { item.status = "falhou"; item.erro = msg(e); }
+      mostrarGaleria(); atualizarProgresso(i + 1, d.planos.length);
+    }
+    if (controle.cancelado) galeria.filter((x) => x.status === "planejado").forEach((x) => { x.status = "cancelado"; });
+    $("resumo").textContent = galeria.filter((x) => x.previa).length + " prévia(s) real(is), " + galeria.filter((x) => x.status === "falhou").length + " falha(s). Nenhuma arte foi gravada; as cópias temporárias foram fechadas quando possível. Revisão pendente.";
+  } catch (e) { $("resumo").textContent = msg(e); }
+  finally { controle = null; ocupada(false); mostrarGaleria(); }
+});
 $("btnAdicionarKv").addEventListener("click", () => {
   try { adicionar(docAtivo()); $("resumo").textContent = "KV lido. Confira os papéis antes de diagnosticar."; }
   catch (e) { $("resumo").textContent = msg(e); }
@@ -170,6 +242,7 @@ function ocupada(sim) {
   for (const e of document.querySelectorAll("input,select,textarea,button")) e.disabled = sim;
   $("btnCancelar").disabled = !sim;
   if (!sim) $("btnRelatorio").disabled = !ultimoResultado;
+  $("btnFolha").disabled = sim || !galeria.length;
 }
 async function pastaDeRodada(base) {
   const prefixo = "rodada-" + new Date().toISOString().replace(/[:.]/g, "-");
@@ -202,25 +275,36 @@ $("btnDesdobrar").addEventListener("click", async () => {
     }
     const inicio = new Date().toISOString();
     const registrar = async (estado) => {
-      ultimoResultado = { schema: 1, plugin: "produceria-desdobra", versao: "1.3.0", cliente: dados.cliente,
+      ultimoResultado = { schema: 1, plugin: "produceria-desdobra", versao: "1.4.0", cliente: dados.cliente,
         campanha: dados.campanha, inicio, modo: dados.modo, revisao: "pendente", ...estado };
       if (checkpoint) await checkpoint.write(JSON.stringify(ultimoResultado, null, 2));
     };
     await registrar({ itens: [], total: dados.planos.length, cancelado: false });
     const r = await A.executarLote(dados.planos, {
-      gerar: (p, ctl) => PS.gerar(p, { nome: nomeDoc(dados.cliente, dados.campanha, p.alvo.nome, dados.versao),
-        modo: dados.modo, ancora: dados.ancora, pasta: destino, extensoes }, ctl),
+      gerar: async (p, ctl) => {
+        galeria[dados.planos.indexOf(p)].status = "processando"; mostrarGaleria();
+        const r = await PS.gerar(p, { nome: nomeDoc(dados.cliente, dados.campanha, p.alvo.nome, dados.versao),
+          modo: dados.modo, ancora: dados.ancora, pasta: destino, extensoes, capturarPrevia: PS.previaDisponivel() }, ctl);
+        const item = galeria[dados.planos.indexOf(p)]; item.previa = r.previa; item.erro = r.avisoPrevia || "";
+        return r;
+      },
       registrar,
       progresso: (item, n, total) => {
         $("resumo").textContent = n + "/" + total + " formatos processados.";
+        atualizarProgresso(n, total);
         linha((item.status === "falhou" ? "[FALHOU] " + item.erro + " · " : "[GERADO PARA REVISÃO] ") + item.formato.nome);
+        galeria[item.indice].status = item.status === "falhou" ? "falhou" : "gerado";
+        if (item.erro) galeria[item.indice].erro = item.erro;
+        mostrarGaleria();
       },
     }, controle);
     await registrar(r);
+    if (r.cancelado) galeria.filter((x) => x.status === "planejado").forEach((x) => { x.status = "cancelado"; });
+    mostrarGaleria();
     $("resumo").textContent = r.itens.filter((x) => x.status !== "falhou").length + " formato(s) gerado(s) para revisão, " +
       r.itens.filter((x) => x.status === "falhou").length + " falha(s), " + r.pendentes + " pendente(s).";
   } catch (e) { $("resumo").textContent = msg(e); }
-  finally { controle = null; ocupada(false); }
+  finally { controle = null; ocupada(false); mostrarGaleria(); }
 });
 
 // Memória por último: falhas de armazenamento não devem desligar os botões.
@@ -229,7 +313,7 @@ try {
   if (!$("formatos").value.trim()) $("formatos").value = PADRAO_FORMATOS;
   $("pacote").addEventListener("change", () => {
     const p = PACOTES[valorDe($("pacote"))];
-    if (p) { $("formatos").value = p.lista; salvarCampos(); $("resumo").textContent = "Pacote " + p.nome + " carregado; confirme o plano de mídia do job."; }
+    if (p) { $("formatos").value = p.lista; invalidarGaleria(); salvarCampos(); $("resumo").textContent = "Pacote " + p.nome + " carregado; confirme o plano de mídia do job."; }
   });
   const salvos = mapasSalvos();
   for (const doc of Array.from(app.documents)) {
@@ -245,3 +329,4 @@ pastaLembrada("desdobra.pasta").then((p) => {
   $("pasta").textContent = "Pasta (lembrada): " + p.nativePath;
 });
 ocupada(false);
+mostrarGaleria();

@@ -18,7 +18,7 @@
   </style>
 </head>
 <body>
-  <div class="nota">Adaptação de campanhas em cópias editáveis. Motor por regras em piloto; cada resultado exige revisão visual.</div>
+  <div class="nota">Desdobra KV 1.4 · Adaptação de campanhas em cópias editáveis, com galeria e simulação das saídas. Piloto: cada resultado exige revisão visual.</div>
   <h2>1. Identifique a campanha</h2>
   <label for="cliente">Cliente</label><input type="text" id="cliente" placeholder="SICREDI">
   <label for="campanha">Campanha</label><input type="text" id="campanha" placeholder="natal">
@@ -52,7 +52,10 @@
   <select id="pacote">
     <option value="">Minha lista (abaixo)</option>
     <option value="redes">Redes sociais</option>
+    <option value="meta">Meta: feed e stories (exemplos)</option>
     <option value="display">Display (Google e programática)</option>
+    <option value="mac">Mac / computador (telas de exemplo)</option>
+    <option value="celular">Celular (telas de exemplo)</option>
     <option value="telas">Vídeo, telas e DOOH</option>
     <option value="impresso">Impresso (mm e cm, pelo ppi do documento)</option>
   </select>
@@ -70,7 +73,24 @@
   </fieldset>
   <button id="btnDiagnosticar">Diagnosticar formatos sem criar arquivos</button>
 
-  <h2>4. Gere e revise as entregas</h2>
+  <h2>4. Simule as saídas</h2>
+  <div class="nota">Diagnosticar monta o esquema das camadas sem criar arquivos. Gerar prévias reais adapta cópias temporárias e captura os pixels, sem gravar as artes; requer a Imaging API disponível nesta instalação.</div>
+  <button id="btnPrevias">Gerar prévias reais para revisão</button>
+  <div class="gv-controles">
+    <label for="filtroContexto">Mostrar<select id="filtroContexto"><option value="todos">Todos os contextos</option><option value="google">Google Display</option><option value="meta">Meta</option><option value="mac">Mac / computador</option><option value="celular">Celular</option><option value="video">Vídeo / DOOH</option><option value="personalizado">Formatos próprios</option></select></label>
+    <label for="visualizacao">Visualização<select id="visualizacao"><option value="contexto">Simulação em contexto</option><option value="peca">Peça isolada</option></select></label>
+    <label for="moldura">Moldura<select id="moldura"><option value="auto">Automática pelo nome / medida</option><option value="google">Google Display</option><option value="meta">Meta</option><option value="mac">Mac / computador</option><option value="celular">Celular</option><option value="video">Vídeo / DOOH</option><option value="personalizado">Sem moldura</option></select></label>
+  </div>
+  <div class="linha"><input type="checkbox" id="mostrarGuias" checked> <label for="mostrarGuias" style="display:inline">Sobrepor área segura do job</label></div>
+  <div class="nota">Molduras aproximadas e escalas ajustadas por cartão. Mac é um contexto de tela, não um formato de anúncio. A moldura escolhida não altera as medidas ou as saídas. Interfaces e guias não entram no PSD/JPG/PNG.</div>
+  <div id="contagemGaleria" class="nota" role="status"></div>
+  <div id="detalheGaleria" class="gv-detalhe"></div>
+  <div id="galeria" class="gv-galeria"></div>
+  <button id="btnFolha" disabled>Salvar folha de revisão (.html)</button>
+  <div id="progresso" role="progressbar" aria-label="Progresso do lote" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" style="height:6px;background-color:#52606a;margin:8px 0"><div id="progressoBarra" style="height:6px;width:0%;background-color:#bde088"></div></div>
+  <div id="progressoTexto" class="nota"></div>
+
+  <h2>5. Gere e revise as entregas</h2>
   <div class="linha"><input type="checkbox" id="salvar"> <label style="display:inline" for="salvar">Salvar PSDs em uma nova pasta de rodada</label></div>
   <div class="linha"><input type="checkbox" id="saidaJpg"> <label style="display:inline" for="saidaJpg">Também JPG (RGB de 8 bits)</label></div>
   <div class="linha"><input type="checkbox" id="saidaPng"> <label style="display:inline" for="saidaPng">Também PNG (RGB de 8 bits)</label></div>

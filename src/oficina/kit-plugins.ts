@@ -22,7 +22,7 @@ const arquivosDe = (pasta: string): [string, string][] => Object.entries(ARQ)
   .sort(([a], [b]) => a.localeCompare(b));
 
 const INFO: Omit<Plugin, 'arquivos' | 'versao' | 'minPs' | 'nome' | 'painel'>[] = [
-  { id: 'desdobra', pasta: 'produceria-desdobra', faz: 'Mapeia papéis das camadas, escolhe entre KVs abertos por proporção, diagnostica margens e gera cópias editáveis. Exporta PSD/JPG/PNG por rodada com relatório, cancelamento e revisão visual pendente.', referencia: 'ImageFactory Banner Resize e Smart Resize (mapeamento, múltiplos mestres e entrega em lote)', experimental: 'Adaptação geométrica por regras em piloto, sem IA ou quebra automática de texto. Não homologada no Photoshop.' },
+  { id: 'desdobra', pasta: 'produceria-desdobra', faz: 'Mapeia papéis das camadas, escolhe entre KVs abertos por proporção, diagnostica margens e gera cópias editáveis. Galeria com esquema e prévias reais opcionais, molduras de Google/Meta/Mac/celular e folha HTML de revisão. Exporta PSD/JPG/PNG por rodada com relatório e cancelamento.', referencia: 'ImageFactory Banner Resize e Smart Resize (mapeamento, múltiplos mestres e entrega em lote)', experimental: 'Adaptação geométrica por regras em piloto, sem IA ou quebra automática de texto. Não homologada no Photoshop.' },
   { id: 'retoque', pasta: 'produceria-retoque', faz: 'Estrutura de retoque não destrutiva (limpeza, dodge, burn, cor), antes e depois, nova versão do arquivo e separação de frequência.', referencia: 'Ultimate Retouch Panel, Retouch4me, AUREL Skin Studio (separação de frequência, dodge & burn)', experimental: 'Separação de frequência (botão 4) é nova na v1.1.' },
   { id: 'checar', pasta: 'produceria-checar-arquivo', faz: 'Lê nome, modo de cor, perfil, textos, fontes e camadas. Em digital, compara largura e altura em pixels ao alvo do job; ppi isolado não é critério de aprovação.', referencia: 'Preflight e conferência de entregas por formato' },
   { id: 'exportador', pasta: 'produceria-exportador', faz: 'Exporta o documento aberto, ou todos os abertos, em PNG, JPG e PDF numa pasta, com nome padronizado e sem sobrescrever.', referencia: 'Direct Export, Export Visible, Web Sharp PRO (exportação em um clique)' },
@@ -48,7 +48,7 @@ export const AFTER_EFFECTS: [string, string][] = Object.entries(ARQ)
   .filter(([k]) => k.includes('/plugins/after-effects/'))
   .map(([k, v]): [string, string] => [k.split('/plugins/after-effects/')[1], v]);
 
-const VERSAO_KIT = '1.3.0';
+const VERSAO_KIT = '1.4.0';
 export const NOME_PACOTE = `Produceria-Plugins-v${VERSAO_KIT}.zip`;
 
 /** O .ccx: os arquivos do plugin na raiz (sem o LEIA-ME, que não faz parte do plugin). */
@@ -153,6 +153,9 @@ export const TUTORIAL: Secao[] = [
 export interface Passo { fazer: string; esperado: string }
 export const ROTEIRO: Record<string, Passo[]> = {
   desdobra: [
+    { fazer: 'Diagnostique 728x90, 160x600, 1080x1920 e mac-navegador;1440;900; filtre a galeria e troque a moldura.', esperado: 'Cartões proporcionais com medidas, KV, esquema e contexto. Alterar a moldura não muda dimensões nem transforma o documento.' },
+    { fazer: 'Em uma instalação com Imaging API, gere prévias reais; cancele um lote e salve a folha HTML.', esperado: 'Miniaturas das cópias adaptadas; cópias temporárias fechadas quando possível; pendentes identificados. HTML contém todos os formatos, mesmo filtrados. Sem API, aviso explícito e esquema disponível.' },
+    { fazer: 'Depois de gerar prévias, mude uma medida no painel.', esperado: 'Galeria antiga é invalidada. Edições fora do painel exigem nova leitura do KV e novas prévias.' },
     { fazer: 'Abra um KV com LOGO, TITULO, PRODUTO e FUNDO em camadas ou grupos independentes. Preencha TESTE/piloto e adicione o KV.', esperado: 'Mapa editável. Nomes não reconhecidos pedem revisão. O original continua intacto.' },
     { fazer: 'Adicione outro KV com proporção diferente e diagnostique 1080x1920 e 1920x1080.', esperado: 'Cada alvo mostra o mestre escolhido por proporção e avisos. Nenhum arquivo é criado pelo diagnóstico.' },
     { fazer: 'Corrija papéis desconhecidos, use margens 10% no topo, 20% na base e 5% nas laterais; gere sem salvar.', esperado: 'Cópias editáveis com proporções preservadas. Revisão visual pendente. Fontes especiais, pranchetas ou vínculos incompatíveis bloqueiam o piloto.' },

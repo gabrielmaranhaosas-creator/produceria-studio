@@ -1,6 +1,8 @@
 const { app, core, constants } = require("photoshop");
 const A = require("./adaptacao.js");
 const { calcularEscala } = require("./desdobra.js");
+const { capturar } = require("./previa.js");
+const imaging = require("photoshop").imaging;
 const seguro = (fn, padrao) => { try { const v = fn(); return v === undefined ? padrao : v; } catch (_) { return padrao; } };
 const numero = (v) => Number(v && v._value !== undefined ? v._value : v);
 
@@ -91,7 +93,7 @@ async function salvar(copia, pasta, nome, extensoes, arquivos) {
 
 async function gerar(plano, opcoes, controle) {
   const arquivos = [];
-  let copia = null, sucesso = false;
+  let copia = null, sucesso = false, previa = null, avisoPrevia = "";
   const verificarCancelamento = (ctx) => { if ((controle && controle.cancelado) || ctx.isCancelled) throw new Error("Cancelado antes de concluir este formato."); };
   try {
     await core.executeAsModal(async (ctx) => {
@@ -123,20 +125,25 @@ async function gerar(plano, opcoes, controle) {
         await copia.resizeCanvas(plano.alvo.largura, plano.alvo.altura, opcoes.ancora);
       }
       verificarCancelamento(ctx);
-      if (opcoes.pasta) await salvar(copia, opcoes.pasta, opcoes.nome, opcoes.extensoes, arquivos);
+      if (opcoes.capturarPrevia || opcoes.somentePrevia) {
+        try { previa = await capturar(imaging, copia); }
+        catch (e) { if (opcoes.somentePrevia) throw e; avisoPrevia = e.message; }
+      }
+      verificarCancelamento(ctx);
+      if (opcoes.pasta && !opcoes.somentePrevia) await salvar(copia, opcoes.pasta, opcoes.nome, opcoes.extensoes, arquivos);
       sucesso = true;
     }, { commandName: "PRODUCERIA: " + plano.alvo.nome });
-    return { arquivos, documento: copia && copia.id };
+    return { arquivos, documento: copia && copia.id, previa, avisoPrevia };
   } catch (e) {
     e.arquivos = arquivos;
     throw e;
   } finally {
     // Modal por formato. Descartar somente a cópia criada nesta execução.
-    if (copia && (!sucesso || opcoes.pasta)) {
-      try { await core.executeAsModal(async () => { copia.closeWithoutSaving(); }, { commandName: "PRODUCERIA: fechar cópia de trabalho" }); }
+    if (copia && (!sucesso || opcoes.pasta || opcoes.somentePrevia)) {
+      try { await core.executeAsModal(async () => { await copia.closeWithoutSaving(); }, { commandName: "PRODUCERIA: fechar cópia de trabalho" }); }
       catch (e) {
         if (sucesso) {
-          const falha = new Error("Saídas gravadas, mas não foi possível fechar a cópia. Confira documentos abertos. " + e.message);
+          const falha = new Error((opcoes.somentePrevia ? "Prévia capturada, mas não foi possível fechar a cópia temporária. " : "Saídas gravadas, mas não foi possível fechar a cópia. ") + "Confira documentos abertos. " + e.message);
           falha.arquivos = arquivos;
           throw falha;
         }
@@ -145,4 +152,5 @@ async function gerar(plano, opcoes, controle) {
   }
 }
 
-module.exports = { lerMestre, documento, conferirFonte, conferirWeb, gerar, medir };
+const previaDisponivel = () => !!(imaging && typeof imaging.getPixels === "function" && typeof imaging.encodeImageData === "function");
+module.exports = { lerMestre, documento, conferirFonte, conferirWeb, gerar, medir, previaDisponivel };
