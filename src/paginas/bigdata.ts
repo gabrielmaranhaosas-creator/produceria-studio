@@ -3,7 +3,7 @@
 import { esc, int, dt } from '../lib/formato';
 import { chave, slug, nomeLegivel, mesmaEmpresa } from '../lib/nomes';
 import { banco, lerBase, type Colecao } from '../lib/db';
-import { montarGrafo, type Grafo, type NoEmpresa, type NoAgencia, type PessoaMapa, type EmpresaMapa, type AgenciaMapa, type MercadoBase, type MovimentoBase } from '../lib/grafo';
+import { montarGrafo, nivelDe, NIVEIS, type Nivel, type Grafo, type NoEmpresa, type NoAgencia, type PessoaMapa, type EmpresaMapa, type AgenciaMapa, type MercadoBase, type MovimentoBase } from '../lib/grafo';
 import type { Alvo } from '../lib/tipos';
 import { seletor, elDe, mensagem, comId, type Dialogo } from './dom';
 import { kpis, numero, vazio } from '../componentes';
@@ -13,6 +13,32 @@ const VISOES: [Visao, string][] = [['empresas', 'Anunciantes'], ['agencias', 'Ag
 const link = (url: string, texto: string) => url ? `<a class="cn-f" href="${esc(url)}" target="_blank" rel="noopener">${texto} ↗<span class="sr"> (abre em nova aba)</span></a>` : '';
 const redes = (o: { site?: string; instagram?: string; linkedin?: string }) => [link(o.site || '', 'Site'), link(o.instagram || '', 'Instagram'), link(o.linkedin || '', 'LinkedIn')].filter(Boolean).join(' ');
 const veiculo = (url: string) => { try { return new URL(url).hostname.replace(/^www\./, ''); } catch { return 'fonte'; } };
+const ORDEM: Record<Nivel, number> = { contrata: 0, aprova: 1, lidera: 2 };
+const rotuloNivel = (n: Nivel) => (NIVEIS.find((x) => x[0] === n) || NIVEIS[1])[1];
+const portas = (l: PessoaMapa[]) => l.filter((p) => nivelDe(p) === 'contrata').length;
+const curto = (s: string, n = 18) => (s.length > n ? s.slice(0, n - 1) + '…' : s);
+
+/** Mapa de conexões: a organização no centro, quem trabalha com ela em volta e as pessoas de cada lado, por nível. */
+export function mapaConexoes(centro: { nome: string; pessoas: PessoaMapa[] }, vizinhos: { nome: string; pessoas: PessoaMapa[]; data: string }[]): string {
+  const W = 680, H = 400, cx = W / 2, cy = H / 2, rx = 205, ry = 135;
+  const V = [...vizinhos].sort((a, b) => b.pessoas.length - a.pessoas.length || (b.data || '').localeCompare(a.data || '')).slice(0, 12);
+  const pts = (n: number, i: number, ox: number, oy: number, rr: number, ry2 = rr, desloc = -Math.PI / 2) => { const t = desloc + (2 * Math.PI * i) / Math.max(n, 1); return [ox + rr * Math.cos(t), oy + ry2 * Math.sin(t), t] as const; };
+  const pessoaNo = (p: PessoaMapa, x: number, y: number) => `<g class="bd-pn n-${nivelDe(p)}"><circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${nivelDe(p) === 'lidera' ? 4 : 6}"></circle><title>${esc(p.nome)} · ${esc(p.cargo)} · ${esc(rotuloNivel(nivelDe(p)))}</title></g>`;
+  let linhas = '', nos = '', gente = '';
+  V.forEach((v, i) => {
+    const [x, y, t] = pts(V.length, i, cx, cy, rx, ry);
+    linhas += `<line x1="${cx}" y1="${cy}" x2="${x.toFixed(1)}" y2="${y.toFixed(1)}"></line>`;
+    const ps = [...v.pessoas].sort((a, b) => ORDEM[nivelDe(a)] - ORDEM[nivelDe(b)]).slice(0, 4);
+    ps.forEach((p, j) => { const a = t + Math.PI + (j - (ps.length - 1) / 2) * 0.55, px = x + 30 * Math.cos(a), py = y + 30 * Math.sin(a); gente += `<line class="bd-lp" x1="${x.toFixed(1)}" y1="${y.toFixed(1)}" x2="${px.toFixed(1)}" y2="${py.toFixed(1)}"></line>` + pessoaNo(p, px, py); });
+    const anc = Math.cos(t) > 0.35 ? 'start' : Math.cos(t) < -0.35 ? 'end' : 'middle', dx = anc === 'start' ? 16 : anc === 'end' ? -16 : 0, dy = anc === 'middle' ? (Math.sin(t) > 0 ? 26 : -18) : 4;
+    nos += `<g class="bd-vn" data-org="${esc(v.nome)}" role="button" tabindex="0" aria-label="Abrir ${esc(nomeLegivel(v.nome))}"><circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="11"></circle><text x="${(x + dx).toFixed(1)}" y="${(y + dy).toFixed(1)}" text-anchor="${anc}">${esc(curto(nomeLegivel(v.nome), anc === 'middle' ? 24 : 17))}</text></g>`;
+  });
+  const cp = [...centro.pessoas].sort((a, b) => ORDEM[nivelDe(a)] - ORDEM[nivelDe(b)]).slice(0, 10);
+  cp.forEach((p, j) => { const [x, y] = pts(cp.length, j, cx, cy, 62, 50, Math.PI / 2); gente += `<line class="bd-lp" x1="${cx}" y1="${cy}" x2="${x.toFixed(1)}" y2="${y.toFixed(1)}"></line>` + pessoaNo(p, x, y); });
+  return `<figure class="bd-mapa"><svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Mapa de conexões de ${esc(nomeLegivel(centro.nome))}: ${V.length} organizações e ${cp.length} pessoas">
+  <g class="bd-ls">${linhas}</g>${gente}${nos}<g class="bd-cn"><circle cx="${cx}" cy="${cy}" r="30"></circle><text x="${cx}" y="${cy + 4}" text-anchor="middle">${esc(curto(nomeLegivel(centro.nome), 9))}</text><title>${esc(nomeLegivel(centro.nome))}</title></g></svg>
+  <figcaption class="bd-leg">${NIVEIS.map(([n, t]) => `<span><i class="n-${n}"></i>${t}</span>`).join('')}<span><i class="bd-vi"></i>Organização ligada (clique para abrir)</span></figcaption></figure>`;
+}
 
 export function montar(root: HTMLElement): () => void {
   root.innerHTML = `<div class="wrap">
@@ -28,7 +54,7 @@ export function montar(root: HTMLElement): () => void {
   let mercado: MercadoBase | null = null, movs: MovimentoBase[] = [], emp: EmpresaMapa[] = [], ags: AgenciaMapa[] = [], pes: PessoaMapa[] = [], alvos: Alvo[] = [];
   let G: Grafo = montarGrafo({}), colAlvos: Colecao<Alvo> | null = null, lim = 60;
   const offs: (() => void)[] = [];
-  const F: { v: Visao; q: string; o: string } = { v: 'empresas', q: '', o: 'relevancia' };
+  const F: { v: Visao; q: string; o: string; n: Nivel | '' } = { v: 'empresas', q: '', o: 'relevancia', n: '' };
   try { const sv = JSON.parse(localStorage.getItem('bd.filtros') || 'null'); if (sv) Object.assign(F, sv); } catch { /* sem armazenamento */ }
   const ehAlvo = (nome: string) => alvos.some((a) => a.id === 'al-' + slug(nome) || mesmaEmpresa(a.nome, nome));
 
@@ -39,7 +65,7 @@ export function montar(root: HTMLElement): () => void {
     return `<li><button type="button" class="bd-linha" data-e="${esc(e.k)}">
   <span class="bd-rank num">${e.ranking ? e.ranking + 'º' : '·'}</span>
   <span class="bd-c"><b>${esc(nomeLegivel(e.nome))}</b><span class="note">${esc([e.setor, e.grupo].filter(Boolean).join(' · ') || (e.ranking ? 'entre os 20 que mais investiram em mídia em 2025' : 'anunciante'))}${ags.length ? ' · ' + esc(ags.slice(0, 3).map(nomeLegivel).join(', ')) + (ags.length > 3 ? ` e mais ${ags.length - 3}` : '') : ''}</span></span>
-  <span class="bd-n"><b class="num">${int(e.pessoas.length)}</b><span class="note">pessoa(s)</span></span>
+  <span class="bd-n" title="${int(e.pessoas.length)} pessoa(s) mapeada(s)"><b class="num">${int(portas(e.pessoas))}</b><span class="note">porta(s) de entrada</span></span>
   <span class="bd-n"><b class="num">${int(ags.length)}</b><span class="note">agência(s)</span></span></button></li>`;
   }
   function linhaAgencia(a: NoAgencia): string {
@@ -47,11 +73,12 @@ export function montar(root: HTMLElement): () => void {
     return `<li><button type="button" class="bd-linha" data-a="${esc(a.k)}">
   <span class="bd-rank num" title="${a.cenp ? 'Posição no Cenp-Meios 2025' : ''}">${a.cenp ? a.cenp + 'º' : '·'}</span>
   <span class="bd-c"><b>${esc(nomeLegivel(a.nome))}</b><span class="note">${esc([a.grupo, a.perfil, a.uf].filter(Boolean).join(' · '))}${cl.length ? ' · ' + esc(cl.slice(0, 3).map(nomeLegivel).join(', ')) + (cl.length > 3 ? ` e mais ${cl.length - 3}` : '') : ''}</span></span>
-  <span class="bd-n"><b class="num">${int(a.pessoas.length)}</b><span class="note">pessoa(s)</span></span>
+  <span class="bd-n" title="${int(a.pessoas.length)} pessoa(s) mapeada(s)"><b class="num">${int(portas(a.pessoas))}</b><span class="note">porta(s) de entrada</span></span>
   <span class="bd-n"><b class="num">${int(cl.length)}</b><span class="note">cliente(s)</span></span></button></li>`;
   }
   function linhaPessoa(p: PessoaMapa): string {
-    return `<li><div class="bd-linha bd-pessoa"><span class="bd-c"><b>${esc(p.nome)}</b><span class="note">${esc(p.cargo)}${p.area ? ' · ' + esc(p.area) : ''}</span></span>
+    const n = nivelDe(p);
+    return `<li><div class="bd-linha bd-pessoa"><span class="bd-c"><b>${esc(p.nome)} <span class="bd-nv n-${n}">${esc(rotuloNivel(n))}</span></b><span class="note">${esc(p.cargo)}${p.campanha ? ' · ' + esc(p.campanha) : ''}</span></span>
   <span class="bd-org"><button type="button" class="chip sm" data-org="${esc(p.organizacao)}">${esc(nomeLegivel(p.organizacao))}</button></span>
   <span class="bd-links">${redes(p)} ${link(p.fonte, veiculo(p.fonte))}</span></div></li>`;
   }
@@ -65,7 +92,7 @@ export function montar(root: HTMLElement): () => void {
     $('#bdK').innerHTML = kpis([
       { rotulo: 'Anunciantes', valor: numero(int(G.empresas.length)), nota: `${int(G.empresas.filter((e) => e.ranking).length)} entre os maiores investidores em mídia` },
       { rotulo: 'Agências', valor: numero(int(G.agencias.length)), nota: `${int(G.agencias.filter((a) => a.perfil === 'rede').length)} de redes globais` },
-      { rotulo: 'Pessoas', valor: numero(int(G.pessoas.length)), nota: 'quem decide, com cargo e fonte' },
+      { rotulo: 'Pessoas', valor: numero(int(G.pessoas.length)), nota: `${int(portas(G.pessoas))} contratam produção · ${int(G.pessoas.filter((p) => nivelDe(p) === 'aprova').length)} aprovam` },
       { rotulo: 'Ligações', valor: numero(int(G.ligacoes.length)), nota: `${int(comFonte)} com link da fonte` },
     ]);
     const q = chave(F.q);
@@ -78,8 +105,12 @@ export function montar(root: HTMLElement): () => void {
       const L = ordem(G.agencias.filter((a) => !q || chave([a.nome, a.grupo, ...a.ligacoes.map((l) => l.empresa), ...a.pessoas.map((p) => p.nome)].join(' ')).includes(q)));
       n = L.length; html = L.length ? `<ul class="bd-l">${L.slice(0, lim).map(linhaAgencia).join('')}</ul>` : '';
     } else {
-      const L = [...G.pessoas].filter((p) => !q || chave([p.nome, p.cargo, p.organizacao, p.area].join(' ')).includes(q)).sort((x, y) => F.o === 'recente' ? (y.data || '').localeCompare(x.data || '') : chave(x.nome).localeCompare(chave(y.nome)));
-      n = L.length; html = L.length ? `<ul class="bd-l">${L.slice(0, lim).map(linhaPessoa).join('')}</ul>` : '';
+      const L = [...G.pessoas].filter((p) => (!F.n || nivelDe(p) === F.n) && (!q || chave([p.nome, p.cargo, p.organizacao, p.area, p.campanha].join(' ')).includes(q)))
+        .sort((x, y) => F.o === 'recente' ? (y.data || '').localeCompare(x.data || '') : F.o === 'nome' ? chave(x.nome).localeCompare(chave(y.nome)) : ORDEM[nivelDe(x)] - ORDEM[nivelDe(y)] || chave(x.organizacao).localeCompare(chave(y.organizacao)));
+      n = L.length;
+      const pills = `<div class="pills bd-niveis" role="group" aria-label="Nível">${[['', 'Todos os níveis'], ...NIVEIS.map(([v, t]) => [v, t])].map(([v, t]) => `<button type="button" data-n="${v}" aria-pressed="${F.n === v}">${t} <span class="note">${int(v ? G.pessoas.filter((p) => nivelDe(p) === v).length : G.pessoas.length)}</span></button>`).join('')}</div>
+      <p class="note bd-dica">${esc(F.n ? (NIVEIS.find((x) => x[0] === F.n) || NIVEIS[0])[2] : 'Comece por quem contrata produção: são as pessoas que pedem orçamento e mandam o job. A alta liderança abre portas, mas raramente escolhe o fornecedor.')}</p>`;
+      html = pills + (L.length ? `<ul class="bd-l">${L.slice(0, lim).map(linhaPessoa).join('')}</ul>` : vazio({ titulo: 'Ninguém neste nível ainda', texto: 'A rotina diária procura essas pessoas nas fichas técnicas das campanhas e nas notícias.' }));
     }
     $('#bdL').innerHTML = html ? html + (n > lim ? `<p class="mais"><button type="button" class="ghost" id="bdM">Mostrar mais ${int(Math.min(60, n - lim))} (${int(n - lim)} restantes)</button></p>` : '')
       : vazio({ titulo: F.q ? 'Nada com essa busca' : F.v === 'pessoas' ? 'Nenhuma pessoa mapeada ainda' : 'Base vazia', texto: F.q ? 'Tente parte do nome ou limpe a busca.' : 'A rotina diária da Central grava aqui, todo dia, quem decide em cada anunciante e agência, sempre com a fonte.' });
@@ -92,6 +123,9 @@ export function montar(root: HTMLElement): () => void {
     const outro = (l: { empresa: string; agencia: string }) => tipo === 'e' ? l.agencia : l.empresa;
     const e = tipo === 'e' ? no as NoEmpresa : null, a = tipo === 'a' ? no as NoAgencia : null;
     const inv = e?.investimento;
+    const lista = tipo === 'e' ? G.agencias : G.empresas;
+    const viz = [...new Set(lig.map(outro))].map((nome) => { const o = lista.find((x) => x.nome === nome); return { nome, pessoas: o ? o.pessoas : [], data: lig.find((l) => outro(l) === nome)?.data || '' }; });
+    const pontes = viz.flatMap((v) => v.pessoas.filter((p) => nivelDe(p) !== 'lidera').map((p) => ({ org: v.nome, p }))).sort((x, y) => ORDEM[nivelDe(x.p)] - ORDEM[nivelDe(y.p)]).slice(0, 12);
     d.innerHTML = `<div class="dh"><div><span class="lab">${tipo === 'e' ? 'Anunciante' : 'Agência'}</span><h2 class="d d-sub" id="bdDT">${esc(nomeLegivel(no.nome))}</h2>
   <p class="note">${esc([e?.setor, e?.grupo, a?.grupo, a?.perfil, a?.uf].filter(Boolean).join(' · '))}${e?.ranking ? ` · ${e.ranking}º maior anunciante de 2025` : ''}${a?.cenp ? ` · ${a.cenp}º no Cenp-Meios 2025` : ''}</p></div><button type="button" class="x" id="bdX" aria-label="Fechar">×</button></div>
  <div class="bd-corpo">
@@ -100,8 +134,10 @@ export function montar(root: HTMLElement): () => void {
   ${redes(no) ? `<p>${redes(no)}</p>` : ''}
   <h3 class="bd-h">${tipo === 'e' ? 'Agências e o que cada uma faz' : 'Clientes e o que atende'}</h3>
   ${lig.length ? `<ul class="bd-lig">${lig.map((l) => `<li><button type="button" class="chip sm" data-org="${esc(outro(l))}">${esc(nomeLegivel(outro(l)))}</button> <span class="note">${esc(l.disciplina || l.tipo || '')}${l.data ? ' · ' + esc(/^\d{4}-\d{2}-\d{2}/.test(l.data) ? dt(l.data) : l.data) : ''}</span> ${link(l.fonte, veiculo(l.fonte))}</li>`).join('')}</ul>` : '<p class="note">Nenhuma ligação registrada ainda.</p>'}
-  <h3 class="bd-h">Quem decide</h3>
-  ${no.pessoas.length ? `<ul class="bd-lig">${no.pessoas.map((p) => `<li><b>${esc(p.nome)}</b> · ${esc(p.cargo)} ${redes(p)} ${link(p.fonte, veiculo(p.fonte))}</li>`).join('')}</ul>` : '<p class="note">Ninguém mapeado ainda. A rotina diária procura os responsáveis por marketing, criação e produção.</p>'}
+  <h3 class="bd-h">Conexões</h3>
+  ${mapaConexoes(no, viz)}
+  ${NIVEIS.map(([n, t, dica]) => { const ps = no.pessoas.filter((p) => nivelDe(p) === n); return `<h3 class="bd-h">${t}${n === 'contrata' ? ' · porta de entrada' : ''}</h3>${ps.length ? `<ul class="bd-lig">${ps.map((p) => `<li><b>${esc(p.nome)}</b> · ${esc(p.cargo)}${p.campanha ? ` <span class="note">(${esc(p.campanha)})</span>` : ''} ${redes(p)} ${link(p.fonte, veiculo(p.fonte))}</li>`).join('')}</ul>` : `<p class="note">${n === 'contrata' ? 'Ninguém mapeado ainda. A rotina procura produção gráfica, RTV, art buyer e finalização nas fichas técnicas das campanhas.' : 'Ninguém mapeado ainda.'}</p>`}${n === 'contrata' && ps.length === 0 ? '' : ''}`; }).join('')}
+  ${pontes.length ? `<h3 class="bd-h">Caminhos por quem trabalha com ${esc(nomeLegivel(no.nome))}</h3><ul class="bd-lig">${pontes.map((x) => `<li><button type="button" class="chip sm" data-org="${esc(x.org)}">${esc(nomeLegivel(x.org))}</button> <b>${esc(x.p.nome)}</b> · ${esc(x.p.cargo)} <span class="bd-nv n-${nivelDe(x.p)}">${esc(rotuloNivel(nivelDe(x.p)))}</span></li>`).join('')}</ul>` : ''}
   <div class="dacts fim">${ehAlvo(no.nome) ? `<a class="tag ok" href="#captacao">Já é alvo da Captação</a>` : `<button type="button" id="bdAlvo">Virar alvo da Captação</button>`}</div>
  </div>`;
     d._ret = btn; d.showModal(); $<HTMLElement>('#bdX').focus();
@@ -126,12 +162,14 @@ export function montar(root: HTMLElement): () => void {
   $('#bdD').addEventListener('close', () => { const d = $<Dialogo>('#bdD'); if (d._ret && d._ret.isConnected) d._ret.focus(); });
   root.addEventListener('click', (ev) => {
     const el = elDe(ev);
+    const nv = el.closest<HTMLElement>('[data-n]'); if (nv) { F.n = (nv.dataset.n || '') as Nivel | ''; lim = 60; render(); root.querySelector<HTMLElement>(`[data-n="${F.n}"]`)?.focus(); return; }
     const v = el.closest<HTMLElement>('[data-v]'); if (v) { F.v = v.dataset.v as Visao; lim = 60; render(); root.querySelector<HTMLElement>(`[data-v="${F.v}"]`)?.focus(); return; }
     if (el.id === 'bdM') { lim += 60; render(); return; }
     const org = el.closest<HTMLElement>('[data-org]'); if (org) { const dd = $<Dialogo>('#bdD'); if (dd.open) dd.close(); abrirOrg(org.dataset.org || '', org); return; }
     const be = el.closest<HTMLElement>('[data-e]'); if (be) { const e = G.empresas.find((x) => x.k === be.dataset.e); if (e) detalhe(e, 'e', be); return; }
     const ba = el.closest<HTMLElement>('[data-a]'); if (ba) { const a = G.agencias.find((x) => x.k === ba.dataset.a); if (a) detalhe(a, 'a', ba); }
   });
+  root.addEventListener('keydown', (ev) => { const g = (ev.target as Element).closest?.('svg [data-org]'); if (g && (ev.key === 'Enter' || ev.key === ' ')) { ev.preventDefault(); (g as SVGGElement).dispatchEvent(new MouseEvent('click', { bubbles: true })); } });
   $<HTMLInputElement>('#bdQ').oninput = (e) => { F.q = (e.target as HTMLInputElement).value; lim = 60; render(); };
   $<HTMLSelectElement>('#bdO').onchange = (e) => { F.o = (e.target as HTMLSelectElement).value; render(); };
   render();

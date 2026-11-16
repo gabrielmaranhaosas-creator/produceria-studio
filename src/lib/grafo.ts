@@ -7,9 +7,24 @@ import { chave, mesmaEmpresa } from './nomes';
 
 export interface Fonte { url: string; data?: string }
 export interface Ligacao { empresa: string; agencia: string; disciplina: string; data: string; tipo: string; fonte: string }
+export type Nivel = 'contrata' | 'aprova' | 'lidera';
 export interface PessoaMapa {
-  id: string; nome: string; cargo: string; organizacao: string; area?: string;
+  id: string; nome: string; cargo: string; organizacao: string; area?: string; nivel?: Nivel; campanha?: string;
   linkedin?: string; instagram?: string; fonte: string; data?: string;
+}
+/** Os três níveis, na ordem em que a Produceria deve procurar as pessoas. */
+export const NIVEIS: [Nivel, string, string][] = [
+  ['contrata', 'Contrata produção', 'Produção gráfica, RTV, art buyer, finalização, produção e conteúdo: quem pede orçamento e manda o job.'],
+  ['aprova', 'Aprova e gerencia', 'Gerentes de marca e marketing, direção de atendimento, de produção e de criação: quem aprova fornecedor e campanha.'],
+  ['lidera', 'Alta liderança', 'CEO, CMO, VP e sócios: decidem a estratégia, raramente o fornecedor de produção.'],
+];
+/** Nível de uma pessoa pelo cargo, quando a fonte não diz. */
+export function nivelDe(p: { cargo?: string; nivel?: Nivel }): Nivel {
+  if (p.nivel) return p.nivel;
+  const c = String(p.cargo || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+  if (/\b(ceo|cmo|cco|coo|cfo|cgo|chief|presidente|vice|vp|socio|socia|fundador|fundadora|founder|partner|global)\b/.test(c)) return 'lidera';
+  if (/(produtor|produtora|producao|producer|rtv|art ?buyer|finaliza|tratamento|arte[- ]final|designer|analista|assistente|coordenador|coordenadora|traffic|trafego|conteudo|social media|especialista)/.test(c) && !/^dire/.test(c)) return 'contrata';
+  return 'aprova';
 }
 export interface EmpresaMapa {
   id?: string; nome: string; setor?: string; grupo?: string; site?: string; instagram?: string; linkedin?: string;
