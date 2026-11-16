@@ -769,7 +769,7 @@ describe('Casca própria', () => {
   it('busca Ctrl K acha telas, serviços, alvos e licitações', async () => {
     const { buscarTudo } = await import('../src/casca/casca');
     const d = { alvos: [{ id: 'a', nome: 'Agência Outdoor Brasil', status: 'Mapeado' }], b2g: [{ id: 'b', objeto: 'Locação de outdoor', orgao: 'Prefeitura' }], frentes: [], swot: [] };
-    expect(buscarTudo('', d).length).toBe(24);
+    expect(buscarTudo('', d).length).toBe(26);
     const r = buscarTudo('outdoor', d);
     expect(r.some((x) => x.tipo === 'Serviço')).toBe(true);
     expect(r.find((x) => x.tipo === 'Alvo')?.href).toBe('#captacao');
@@ -915,5 +915,51 @@ describe('Histórico: desfazer, lixeira e voltar', () => {
     expect(raiz.querySelector('#lc-tab-radar')?.getAttribute('aria-selected')).toBe('true');
     location.hash = '#b2g/habilitacao'; window.dispatchEvent(new HashChangeEvent('hashchange'));
     expect(raiz.querySelector('#lc-tab-habilitacao')?.getAttribute('aria-selected')).toBe('true');
+  });
+});
+
+describe('Alertas comerciais', () => {
+  const inicial = {
+    alertas: {
+      'ac-1': { data: hoje, tipo: 'conta', prioridade: 'alta', titulo: 'Agência Z ganha conta de banco', fato: 'Fato.', empresas: ['Banco X'], agencias: ['Agência Z'], pessoas: [{ nome: 'Ana Lima', cargo: 'CMO', organizacao: 'Banco X' }], acao: { oferta: 'Adaptação de peças', primeiroPasso: 'Escrever para a Ana' }, fontes: [{ veiculo: 'M&M', url: 'https://exemplo.com/a' }] },
+      'ac-2': { data: '2026-01-02', tipo: 'verba', prioridade: 'baixa', titulo: 'Velho', status: 'feito' },
+    },
+    alvos: {},
+  };
+  it('mostra os abertos com pessoas e ação proposta, e avança a situação', async () => {
+    const db = bancoFalso(inicial);
+    const { raiz, desmontar } = await montar('alertas', db);
+    await espera(30);
+    expect(raiz.querySelectorAll('.ac-it').length).toBe(1);
+    expect(raiz.textContent).toContain('Ana Lima');
+    expect(raiz.textContent).toContain('Ação comercial proposta');
+    raiz.querySelector<HTMLButtonElement>('[data-x="andamento"]')!.click();
+    await espera();
+    expect(db.dados.alertas['ac-1'].status).toBe('andamento');
+    raiz.querySelector<HTMLButtonElement>('[data-x="alvo"]')!.click();
+    await espera();
+    expect(db.dados.alvos['al-agencia-z']?.origem).toBe('Alertas comerciais');
+    desmontar();
+  });
+});
+
+describe('Big Data do mercado', () => {
+  it('liga anunciante, agência e pessoa vindos do banco', async () => {
+    const db = bancoFalso({
+      movimentos: { 'mv-1': { data: '2026-10-26', anunciante: 'Sanofi', agencia: 'Máquina', escopo: 'Marca', fonte: 'https://exemplo.com/m' } },
+      mapa_empresas: { 'em-sanofi': { nome: 'Sanofi', setor: 'Farmacêutica' } },
+      mapa_agencias: {},
+      mapa_pessoas: { 'pe-1': { nome: 'Joana Reis', cargo: 'Diretora de marketing', organizacao: 'Sanofi', fonte: 'https://exemplo.com/p' } },
+      alvos: {},
+    });
+    const { raiz, desmontar } = await montar('bigdata', db);
+    await espera(40);
+    expect(raiz.textContent).toContain('Sanofi');
+    raiz.querySelector<HTMLButtonElement>('[data-e="sanofi"]')!.click();
+    await espera();
+    const d = raiz.querySelector('#bdD')!;
+    expect(d.textContent).toContain('Máquina');
+    expect(d.textContent).toContain('Joana Reis');
+    desmontar();
   });
 });

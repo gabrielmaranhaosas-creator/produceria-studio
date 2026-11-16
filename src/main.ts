@@ -19,6 +19,8 @@ import tabela from './estilos/tabela.css?inline';
 import gestao from './estilos/gestao.css?inline';
 import oficina from './estilos/oficina.css?inline';
 import * as pCentral from './paginas/central';
+import * as pAlertas from './paginas/alertas';
+import * as pBigdata from './paginas/bigdata';
 import * as pAgenda from './paginas/agenda';
 import * as pCasos from './paginas/casos';
 import * as pContas from './paginas/mapa-contas';
@@ -49,6 +51,8 @@ import type { Montar } from './paginas/dom';
 
 const paginas: Record<string, Montar> = {
   central: pCentral.montar,
+  alertas: pAlertas.montar,
+  bigdata: pBigdata.montar,
   agenda: pAgenda.montar,
   casos: pCasos.montar,
   contas: pContas.montar,

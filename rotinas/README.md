@@ -5,7 +5,7 @@ Horários em America/Sao_Paulo.
 
 | Tarefa | Quando | O que faz | Estado |
 |---|---|---|---|
-| Central de notícias · coleta diária | dias úteis 07:12 | Notícias de mercado (contas, licitações, in-house, negócios) → `noticias` e `movimentos` | ativa |
+| Central de notícias · coleta diária | todo dia 07:12 | Notícias de mercado → `noticias` e `movimentos`; alertas comerciais com ação proposta para o Sid → `alertas`; Big Data (pessoas, anunciantes, agências) → `mapa_pessoas`, `mapa_empresas`, `mapa_agencias` | ativa |
 | Captação · radar semanal de alvos | sexta 08:35 | Transforma os sinais da semana em até 10 alvos, com próximo toque | ativa |
 | Captação · triagem semanal B2B | segunda 08:47 | Recalcula a nota dos alvos (`jobs/captacao/nota.py`) e aponta quem abordar | ativa |
 | Cérebro de licitações · varredura diária | todo dia 06:17 | Varre o PNCP (`jobs/cerebro`), grava o radar `b2g`, arquiva vencidas há 60+ dias; uma vez por mês (a partir do dia 5) coleta o PCA dos órgãos (`jobs/pca`) → `pca` | ativa |

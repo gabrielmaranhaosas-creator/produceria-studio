@@ -67,7 +67,7 @@
   // O que não funciona fora do Claude sai da tela: páginas que dependem da IA ou das rotinas, e os botões que gravam
   // dados ou consultam a IA. Navegar, filtrar, buscar, ler e baixar continuam.
   var PAGINAS_FORA = ['atelie', 'agentes', 'rotinas', 'lixeira'];
-  var BOTOES_FORA = /^(Salvar|Salva|Arquivar|Desarquivar|Editar|Excluir|Adicionar|Adicionar caso|Adicionar conta|Importar dados|Novo alvo|Nova oferta|Nova oportunidade|Nova ficha|Salvar ficha|Nova conversa|Enviar|Registrar contato|Adiar 2 dias úteis|Disputar|Monitorar|Levar|Levar para o funil|Marcar como perdida|Carregar base da pesquisa|Revisar matriz|Cruzar \(TOWS\)|Diagnóstico de diversificação|Ler edital ou aviso|Pedir leitura|Zerar desconto|Remover exemplos.*|Aplicar aos .*|Virar alvo.*|Virar frente →|\+|(Mapeado|Pesquisado|Abordado|Conversa|Proposta|Cliente|Contato|Qualificação|Negociação|Ganha|Ganho) →)$/;
+  var BOTOES_FORA = /^(Em andamento|Feito|Reabrir|Descartar|Salvar|Salva|Arquivar|Desarquivar|Editar|Excluir|Adicionar|Adicionar caso|Adicionar conta|Importar dados|Novo alvo|Nova oferta|Nova oportunidade|Nova ficha|Salvar ficha|Nova conversa|Enviar|Registrar contato|Adiar 2 dias úteis|Disputar|Monitorar|Levar|Levar para o funil|Marcar como perdida|Carregar base da pesquisa|Revisar matriz|Cruzar \(TOWS\)|Diagnóstico de diversificação|Ler edital ou aviso|Pedir leitura|Zerar desconto|Remover exemplos.*|Aplicar aos .*|Virar alvo.*|Virar frente →|\+|(Mapeado|Pesquisado|Abordado|Conversa|Proposta|Cliente|Contato|Qualificação|Negociação|Ganha|Ganho) →)$/;
   function limpar() {
     var nav = document.querySelectorAll('a[href^="#"]');
     for (var i = 0; i < nav.length; i++) {
