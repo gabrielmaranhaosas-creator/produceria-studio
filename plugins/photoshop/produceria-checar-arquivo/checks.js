@@ -42,10 +42,22 @@ function analisar(info, opcoes) {
     add("AVISO", "Resolução", "Não foi possível ler a resolução.");
   } else if (impressao && res < 300) {
     add("ERRO", "Resolução", res + " ppi. Para impressão o esperado é 300 ppi ou mais.");
-  } else if (!impressao && res < 72) {
-    add("ERRO", "Resolução", res + " ppi. Para tela o esperado é 72 ppi ou mais.");
+  } else if (!impressao) {
+    add("INFO", "Resolução", res + " ppi. Em digital, confira principalmente as dimensões em pixels e o spec do job; ppi isolado não aprova ou reprova o arquivo.");
   } else {
     add("OK", "Resolução", res + " ppi.");
+  }
+
+  if (!impressao) {
+    const w = Number(info.largura), h = Number(info.altura), alvo = opcoes.alvo || {};
+    if (alvo.largura !== "" && alvo.largura !== undefined || alvo.altura !== "" && alvo.altura !== undefined) {
+      const aw = Number(alvo.largura), ah = Number(alvo.altura);
+      if (![aw, ah].every((n) => Number.isInteger(n) && n > 0 && n <= 30000)) {
+        add("ERRO", "Dimensões do job", "Preencha largura e altura inteiras positivas em pixels (até 30000 nesta versão).");
+      } else if (w !== aw || h !== ah) {
+        add("ERRO", "Dimensões do job", w + "×" + h + " px; o job pede " + aw + "×" + ah + " px.");
+      } else add("OK", "Dimensões do job", w + "×" + h + " px, conforme o alvo informado.");
+    } else add("MANUAL", "Dimensões do job", (w > 0 && h > 0 ? w + "×" + h + " px. " : "") + "Informe o alvo do plano de mídia para comparar.");
   }
 
   // 5. Texto

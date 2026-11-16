@@ -247,9 +247,9 @@ describe('pacotes, tutorial e roteiro', () => {
     const md = tutorialMarkdown();
     expect(md).toContain('UnifiedPluginInstallerAgent');
     expect(md).toContain('### Produceria Guias');
-    const r = relatorio({ 'guias-v1.0.2': { id: 'guias-v1.0.2', plugin: 'guias', versao: '1.0.2', passos: { 0: 'ok', 1: 'falhou' }, notas: { 1: 'guia em 270' }, em: '' } }, { id: 'ambiente', ps: '26.1', mac: '15.7' }, '2026-11-11');
+    const r = relatorio({ 'guias-v1.1.0': { id: 'guias-v1.1.0', plugin: 'guias', versao: '1.1.0', passos: { 0: 'ok', 1: 'falhou' }, notas: { 1: 'guia em 270' }, em: '' } }, { id: 'ambiente', ps: '26.1', mac: '15.7' }, '2026-11-11');
     expect(r).toContain('Photoshop: 26.1 · macOS: 15.7');
-    expect(r).toContain('## Produceria Guias v1.0.2 · 1 passou, 1 falhou, 2 sem teste');
+    expect(r).toContain('## Produceria Guias v1.1.0 · 1 passou, 1 falhou, 3 sem teste');
     expect(r).toContain('Nota: guia em 270');
   });
 });

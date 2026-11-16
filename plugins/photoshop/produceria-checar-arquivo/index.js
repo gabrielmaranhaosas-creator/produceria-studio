@@ -45,6 +45,8 @@ function coletar(doc) {
     modo: String(seguro(() => doc.mode, "")),
     perfil: seguro(() => doc.colorProfileName, null),
     resolucao: seguro(() => doc.resolution, null),
+    largura: seguro(() => Number(doc.width), null),
+    altura: seguro(() => Number(doc.height), null),
     camadas,
   };
 }
@@ -80,7 +82,9 @@ document.getElementById("btnChecar").addEventListener("click", () => {
     if (!doc) { mensagem("Abra um documento no Photoshop e clique de novo."); return; }
     const destino = valorDe(document.getElementById("destino"));
     const info = coletar(doc);
-    mostrar(analisar(info, { destino, fontesInstaladas: fontesInstaladas() }));
+    mostrar(analisar(info, { destino, fontesInstaladas: fontesInstaladas(), alvo: {
+      largura: document.getElementById("larguraAlvo").value.trim(), altura: document.getElementById("alturaAlvo").value.trim(),
+    } }));
   } catch (e) {
     mensagem("Erro ao checar: " + (e && e.message ? e.message : e));
   }

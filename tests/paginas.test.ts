@@ -668,10 +668,10 @@ describe('Ferramentas da casa (Oficina)', () => {
     raiz.querySelector<HTMLButtonElement>('[data-plugin="guias"]')!.click();
     raiz.querySelector<HTMLButtonElement>('[data-res="ok"][data-i="0"]')!.click();
     await espera(30);
-    expect((db.dados.testes_plugins as any)['guias-v1.0.2'].passos).toEqual({ 0: 'ok' });
+    expect((db.dados.testes_plugins as any)['guias-v1.1.0'].passos).toEqual({ 0: 'ok' });
     const nota = raiz.querySelector<HTMLInputElement>('[data-nota="1"]')!; nota.value = 'guia em 270'; nota.dispatchEvent(new Event('change', { bubbles: true }));
     await espera(30);
-    expect((db.dados.testes_plugins as any)['guias-v1.0.2'].notas['1']).toBe('guia em 270');
+    expect((db.dados.testes_plugins as any)['guias-v1.1.0'].notas['1']).toBe('guia em 270');
     (desmontar as () => void)();
   });
 

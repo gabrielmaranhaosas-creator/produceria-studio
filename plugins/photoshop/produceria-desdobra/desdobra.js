@@ -23,14 +23,14 @@ function lerFormatos(texto, ppi) {
     let nome, w, h;
     const p = t.split(";").map((x) => x.trim());
     const m = /^(?:([^:;]+):\s*)?(\d+(?:[.,]\d+)?)\s*[x×X]\s*(\d+(?:[.,]\d+)?)\s*(px|pixels?|mm|cm)?$/i.exec(t);
-    if (p.length === 3) { nome = limpar(p[0]); w = parseInt(p[1], 10); h = parseInt(p[2], 10); }
+    if (p.length === 3 && /^\d+$/.test(p[1]) && /^\d+$/.test(p[2])) { nome = limpar(p[0]); w = Number(p[1]); h = Number(p[2]); }
     else if (m) {
       const un = (m[4] || "px").toLowerCase(), num = (s) => parseFloat(s.replace(",", "."));
       const fator = un === "mm" ? res / 25.4 : un === "cm" ? res / 2.54 : 1;
       w = Math.round(num(m[2]) * fator); h = Math.round(num(m[3]) * fator);
       nome = limpar(m[1] || (un === "mm" || un === "cm" ? m[2] + "x" + m[3] + un : w + "x" + h));
     }
-    if (!nome || !(w > 0) || !(h > 0) || w > 30000 || h > 30000) {
+    if (!nome || !Number.isFinite(w) || !Number.isFinite(h) || !(w > 0) || !(h > 0) || w > 30000 || h > 30000) {
       erros.push("Linha " + (i + 1) + " (\"" + t + "\"): use nome;largura;altura (ex.: stories;1080;1920) ou medidas (ex.: 1920x1080 ou 29,7x32 cm).");
       return;
     }

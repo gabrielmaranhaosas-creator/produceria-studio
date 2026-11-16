@@ -19,6 +19,7 @@ function calcular(doc) {
   if ($("gCentro").checked) guias.push(...G.guiasCentro(w, h));
   if ($("gTercos").checked) guias.push(...G.guiasTercos(w, h));
   if ($("gStories").checked) guias.push(...G.guiasStories(w, h, $("pctStories").value));
+  if ($("gPersonalizada").checked) guias.push(...G.guiasSeguras(w, h, $("segTopo").value, $("segDireita").value, $("segBase").value, $("segEsquerda").value));
   if ($("gColunas").checked) guias.push(...G.guiasColunas(w, $("colunas").value, $("calha").value, $("margemCol").value));
   return { guias: G.limpar(guias, w, h), w, h, ppi };
 }

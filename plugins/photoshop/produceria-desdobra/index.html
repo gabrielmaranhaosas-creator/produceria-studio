@@ -5,25 +5,32 @@
   <style>
     body { font-size: 12px; padding: 8px; }
     label { display: block; margin: 6px 0 2px; }
-    input[type=text], select, textarea, button { width: 100%; margin-bottom: 6px; box-sizing: border-box; }
+    input[type=text], input[type=number], select, textarea, button { width: 100%; margin-bottom: 6px; box-sizing: border-box; }
     textarea { height: 150px; font-family: monospace; }
     .linha { margin: 3px 0; }
     #resumo { margin: 8px 0; font-weight: bold; }
     .item { margin: 3px 0; padding: 3px 0; border-bottom: 1px solid #77777755; }
     .nota { opacity: 0.8; margin: 4px 0; }
+    fieldset { border: 1px solid #77777755; padding: 8px; margin: 10px 0; }
+    h2 { font-size: 14px; margin: 12px 0 6px; }
+    .medidas { display: flex; }
+    .medidas label { flex: 1; margin-right: 6px; }
   </style>
 </head>
 <body>
-  <div class="nota">Cria uma cópia do documento aberto para cada formato. O arquivo original não é alterado.</div>
+  <div class="nota">Adaptação de campanhas em cópias editáveis. Motor por regras em piloto; cada resultado exige revisão visual.</div>
+  <h2>1. Identifique a campanha</h2>
   <label for="cliente">Cliente</label><input type="text" id="cliente" placeholder="SICREDI">
   <label for="campanha">Campanha</label><input type="text" id="campanha" placeholder="natal">
   <label for="versao">Versão</label><input type="text" id="versao" value="1">
 
   <label for="modo">Como encaixar</label>
   <select id="modo">
+    <option value="camadas">Adaptar por papéis das camadas (piloto)</option>
     <option value="cobrir">Cobrir (preenche o formato e corta o excesso)</option>
     <option value="conter">Conter (mostra tudo; sobra área vazia)</option>
   </select>
+  <div class="nota">Cobrir e Conter são encaixes globais. A adaptação por camadas preserva proporções e reposiciona unidades; não refaz quebras de texto nem expande fundos por IA.</div>
   <label for="ancora">Ponto de foco do corte</label>
   <select id="ancora">
     <option value="MIDDLECENTER">Centro</option>
@@ -32,6 +39,14 @@
     <option value="MIDDLELEFT">Esquerda</option>
     <option value="MIDDLERIGHT">Direita</option>
   </select>
+
+  <h2>2. Leia os KVs e confira as camadas</h2>
+  <div class="nota">Deixe um KV ativo no Photoshop e clique abaixo. Repita para adicionar versões horizontal, vertical ou quadrada. A fonte mais próxima de cada proporção será escolhida.</div>
+  <button id="btnAdicionarKv">Adicionar ou atualizar KV aberto</button>
+  <div id="quantidadeKvs" class="nota"></div>
+  <div id="mapa"></div>
+
+  <h2>3. Defina formatos e margens</h2>
 
   <label for="pacote">Pacote de formatos</label>
   <select id="pacote">
@@ -43,17 +58,34 @@
   </select>
   <label for="formatos">Formatos (um por linha: nome;largura;altura)</label>
   <textarea id="formatos"></textarea>
+  <div class="nota">Aceita 1080x1920 ou nome;largura;altura. Os pacotes são exemplos editáveis, não especificações atualizadas dos veículos.</div>
+  <fieldset>
+    <legend>Área segura da adaptação (% do formato)</legend>
+    <div class="medidas">
+      <label for="topoSeguro">Topo<input type="number" id="topoSeguro" value="5" min="0" max="49"></label>
+      <label for="baseSegura">Base<input type="number" id="baseSegura" value="5" min="0" max="49"></label>
+      <label for="lateralSegura">Laterais<input type="number" id="lateralSegura" value="5" min="0" max="49"></label>
+    </div>
+    <div class="nota">5% é apenas um ponto de partida interno. Use as margens do plano de mídia. Efeitos, máscaras e legibilidade exigem conferência.</div>
+  </fieldset>
+  <button id="btnDiagnosticar">Diagnosticar formatos sem criar arquivos</button>
 
-  <div class="linha"><input type="checkbox" id="salvar"> <label style="display:inline" for="salvar">Salvar um PSD de cada formato</label></div>
-  <button id="btnPasta">Escolher pasta para os PSD</button>
+  <h2>4. Gere e revise as entregas</h2>
+  <div class="linha"><input type="checkbox" id="salvar"> <label style="display:inline" for="salvar">Salvar PSDs em uma nova pasta de rodada</label></div>
+  <div class="linha"><input type="checkbox" id="saidaJpg"> <label style="display:inline" for="saidaJpg">Também JPG (RGB de 8 bits)</label></div>
+  <div class="linha"><input type="checkbox" id="saidaPng"> <label style="display:inline" for="saidaPng">Também PNG (RGB de 8 bits)</label></div>
+  <div class="nota">Sem salvar, as cópias ficam abertas (até 12 formatos). Ao salvar, a rodada contém PSD/, JPG/, PNG/ conforme a seleção e relatorio.json; cada cópia de trabalho é fechada.</div>
+  <button id="btnPasta">Escolher pasta de saída</button>
   <label for="caminho">Ou cole o caminho da pasta (vazio = pasta "desdobra" ao lado do KV)</label>
   <input type="text" id="caminho" placeholder="/Users/voce/Desktop/job ou C:\job">
   <div id="pasta" class="nota"></div>
 
-  <button id="btnDesdobrar">Desdobrar</button>
-  <div id="resumo"></div>
+  <button id="btnDesdobrar">Gerar cópias para revisão</button>
+  <button id="btnCancelar" disabled>Cancelar lote</button>
+  <button id="btnRelatorio" disabled>Salvar relatório da última rodada</button>
+  <div id="resumo" role="status" aria-live="polite"></div>
   <div id="resultado"></div>
-  <div class="nota">Desdobra KV v1.2.0</div>
+  <div class="nota">Classificação e escore são heurísticos. Confira composição, conteúdo, nitidez, logo e texto legal antes da entrega.</div>
   <script src="index.js"></script>
 </body>
 </html>

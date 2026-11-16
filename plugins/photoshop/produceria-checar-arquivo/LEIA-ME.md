@@ -1,4 +1,4 @@
-# Produceria Checar Arquivo (v1.0.0)
+# Produceria Checar Arquivo (v1.1.0)
 
 Painel do Photoshop que lê o documento aberto e lista problemas de arte-final. Não altera o arquivo.
 
@@ -19,3 +19,7 @@ Nome do arquivo (CLIENTE_campanha_formato_v01), modo de cor, perfil, resolução
 
 ## Se der erro
 Copie a mensagem do painel e a versão do Photoshop e envie para ajuste.
+
+## Dimensões digitais — 1.1.0
+
+Em Digital, preencha largura e altura do job em pixels para conferir o canvas. Um alvo incompleto ou diferente gera erro. Sem alvo, a comparação fica manual. O PPI é informativo para tela; não reprova sozinho um documento com pixels corretos. Os perfis, limites de arquivo e demais exigências do veículo continuam sujeitos ao briefing e à revisão. Homologação no Photoshop permanece pendente.

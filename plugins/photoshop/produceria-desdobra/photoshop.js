@@ -1,0 +1,148 @@
+const { app, core, constants } = require("photoshop");
+const A = require("./adaptacao.js");
+const { calcularEscala } = require("./desdobra.js");
+const seguro = (fn, padrao) => { try { const v = fn(); return v === undefined ? padrao : v; } catch (_) { return padrao; } };
+const numero = (v) => Number(v && v._value !== undefined ? v._value : v);
+
+function medir(camada) {
+  const b = camada.boundsNoEffects || camada.bounds;
+  return { left: numero(b.left), top: numero(b.top), right: numero(b.right), bottom: numero(b.bottom) };
+}
+
+function estrutura(camada) {
+  return [camada.name, String(camada.kind), seguro(() => camada.visible, true),
+    seguro(() => camada.textItem.contents, ""), seguro(() => medir(camada), null),
+    Array.from(seguro(() => camada.layers, []) || []).map(estrutura)];
+}
+
+function riscos(camada) {
+  if (seguro(() => camada.isBackgroundLayer, false)) return "converta a camada especial Background em camada comum no KV de teste";
+  if (seguro(() => camada.locked, false)) return "há trava de transformação; desbloqueie a unidade no KV de teste";
+  if (seguro(() => camada.isClippingMask, false)) return "máscara de recorte fora de grupo; agrupe a cadeia antes de adaptar";
+  if (Array.from(seguro(() => camada.linkedLayers, []) || []).some((l) => l.id !== camada.id)) return "camadas vinculadas; remova vínculos ou agrupe antes de adaptar";
+  for (const filha of Array.from(seguro(() => camada.layers, []) || [])) {
+    if (Array.from(seguro(() => filha.linkedLayers, []) || []).some((l) => l.id !== filha.id)) return "grupo contém camadas vinculadas; confira a estrutura antes de adaptar";
+    if (seguro(() => filha.layers && filha.layers.length, false)) {
+      const r = riscos(filha);
+      if (r) return r;
+    }
+  }
+  return "";
+}
+
+function lerMestre(doc, papeis) {
+  const m = { id: doc.id, nome: doc.name, largura: numero(doc.width), altura: numero(doc.height),
+    ppi: numero(doc.resolution), modo: String(seguro(() => doc.mode, "")), bits: String(seguro(() => doc.bitsPerChannel, "")),
+    pranchetas: seguro(() => doc.artboards.length > 0, false), historico: seguro(() => doc.activeHistoryState.id, null), camadas: [] };
+  m.camadas = Array.from(doc.layers).map((l, i) => {
+    const chave = String(i), filhas = Array.from(seguro(() => l.layers, []) || []);
+    const c = { chave, nome: l.name, tipo: String(l.kind), bounds: seguro(() => medir(l), null),
+      visivel: seguro(() => l.visible, true) && numero(seguro(() => l.opacity, 100)) > 0,
+      conteudo: seguro(() => l.textItem.contents, ""), fontePx: seguro(() => numero(l.textItem.characterStyle.size) * m.ppi / 72, null),
+      estrutura: estrutura(l), risco: riscos(l),
+      grupoMisto: new Set(filhas.filter((f) => seguro(() => f.visible, true)).map((f) => A.identificar({ nome: f.name, tipo: f.kind }).papel)).size > 1 };
+    return Object.assign(c, A.identificar(c, papeis && papeis[chave]));
+  });
+  m.assinatura = A.assinatura(m);
+  return m;
+}
+
+function documento(id) {
+  const d = Array.from(app.documents).find((x) => x.id === id);
+  if (!d) throw new Error("O KV foi fechado. Adicione-o novamente e refaça o diagnóstico.");
+  return d;
+}
+
+function conferirFonte(plano) {
+  const d = documento(plano.mestreId);
+  const atual = lerMestre(d);
+  if (atual.assinatura !== plano.assinatura || plano.historico != null && atual.historico !== plano.historico) {
+    throw new Error("O KV mudou depois do diagnóstico. Leia o mapa e diagnostique novamente.");
+  }
+  return d;
+}
+
+function conferirWeb(doc, extensoes) {
+  if (extensoes.some((e) => e !== "psd") && (!/rgb/i.test(String(doc.mode)) || !/^(8|eight)$/i.test(String(doc.bitsPerChannel)))) {
+    throw new Error("JPG/PNG desta versão exigem RGB de 8 bits. Prepare uma cópia RGB/8 ou escolha só PSD. Não há conversão de cor automática.");
+  }
+}
+
+async function salvar(copia, pasta, nome, extensoes, arquivos) {
+  conferirWeb(copia, extensoes);
+  for (const ext of extensoes) {
+    let dir;
+    try { dir = await pasta.getEntry(ext.toUpperCase()); } catch (_) { dir = await pasta.createFolder(ext.toUpperCase()); }
+    if (!dir.isFolder) throw new Error("Destino " + ext.toUpperCase() + " não é uma pasta.");
+    const arq = await dir.createFile(nome + "." + ext, { overwrite: false });
+    try {
+      if (ext === "psd") await copia.saveAs.psd(arq, { embedColorProfile: true }, true);
+      else if (ext === "jpg") await copia.saveAs.jpg(arq, { quality: 10, embedColorProfile: true }, true);
+      else if (ext === "png") await copia.saveAs.png(arq, {}, true);
+      else throw new Error("Formato de saída não suportado: " + ext);
+      arquivos.push({ formato: ext, caminho: arq.nativePath, status: "gravado" });
+    } catch (e) {
+      // Não anunciar placeholder vazio como entrega válida; conservar evidência se a remoção falhar.
+      try { await arq.delete(); } catch (_) { arquivos.push({ formato: ext, caminho: arq.nativePath, status: "incompleto" }); }
+      throw e;
+    }
+  }
+}
+
+async function gerar(plano, opcoes, controle) {
+  const arquivos = [];
+  let copia = null, sucesso = false;
+  const verificarCancelamento = (ctx) => { if ((controle && controle.cancelado) || ctx.isCancelled) throw new Error("Cancelado antes de concluir este formato."); };
+  try {
+    await core.executeAsModal(async (ctx) => {
+      const fonte = conferirFonte(plano);
+      if (opcoes.pasta) conferirWeb(fonte, opcoes.extensoes);
+      verificarCancelamento(ctx);
+      copia = await fonte.duplicate(opcoes.nome);
+      if (opcoes.modo === "camadas") {
+        // Primeiro expandir, nunca recortar o KV antes de mover seu conteúdo.
+        await copia.resizeCanvas(Math.max(plano.alvo.largura, numero(fonte.width)), Math.max(plano.alvo.altura, numero(fonte.height)), constants.AnchorPosition.TOPLEFT);
+        for (const e of plano.elementos) {
+          verificarCancelamento(ctx);
+          const l = copia.layers[Number(e.chave)];
+          if (!l || l.name !== e.nome || String(l.kind) !== e.tipo) throw new Error("Estrutura da cópia mudou: “" + e.nome + "”.");
+          await l.scale(e.escala * 100, e.escala * 100, constants.AnchorPosition.MIDDLECENTER);
+          const b = medir(l);
+          await l.translate((e.bounds.left + e.bounds.right - b.left - b.right) / 2, (e.bounds.top + e.bounds.bottom - b.top - b.bottom) / 2);
+          if (!["fundo", "decoracao"].includes(e.papel)) {
+            const final = medir(l), a = plano.area;
+            if (final.left < a.left - 2 || final.top < a.top - 2 || final.right > a.right + 2 || final.bottom > a.bottom + 2) {
+              throw new Error(e.nome + ": limites reais ficaram fora da área segura. Confira fonte, máscara e efeitos.");
+            }
+          }
+        }
+        await copia.resizeCanvas(plano.alvo.largura, plano.alvo.altura, constants.AnchorPosition.TOPLEFT);
+      } else {
+        const dim = calcularEscala(numero(fonte.width), numero(fonte.height), plano.alvo.largura, plano.alvo.altura, opcoes.modo);
+        await copia.resizeImage(dim.largura, dim.altura);
+        await copia.resizeCanvas(plano.alvo.largura, plano.alvo.altura, opcoes.ancora);
+      }
+      verificarCancelamento(ctx);
+      if (opcoes.pasta) await salvar(copia, opcoes.pasta, opcoes.nome, opcoes.extensoes, arquivos);
+      sucesso = true;
+    }, { commandName: "PRODUCERIA: " + plano.alvo.nome });
+    return { arquivos, documento: copia && copia.id };
+  } catch (e) {
+    e.arquivos = arquivos;
+    throw e;
+  } finally {
+    // Modal por formato. Descartar somente a cópia criada nesta execução.
+    if (copia && (!sucesso || opcoes.pasta)) {
+      try { await core.executeAsModal(async () => { copia.closeWithoutSaving(); }, { commandName: "PRODUCERIA: fechar cópia de trabalho" }); }
+      catch (e) {
+        if (sucesso) {
+          const falha = new Error("Saídas gravadas, mas não foi possível fechar a cópia. Confira documentos abertos. " + e.message);
+          falha.arquivos = arquivos;
+          throw falha;
+        }
+      }
+    }
+  }
+}
+
+module.exports = { lerMestre, documento, conferirFonte, conferirWeb, gerar, medir };

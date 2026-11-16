@@ -5,7 +5,7 @@
   <style>
     body { font-size: 12px; padding: 8px; }
     label { display: block; margin: 6px 0 2px; }
-    select, button { width: 100%; margin-bottom: 6px; }
+    select, input, button { width: 100%; margin-bottom: 6px; }
     #resumo { margin: 8px 0; font-weight: bold; }
     .item { margin: 4px 0; padding: 4px 0; border-bottom: 1px solid #77777755; }
     .tag { font-weight: bold; }
@@ -15,10 +15,12 @@
   <label for="destino">Destino do arquivo</label>
   <select id="destino">
     <option value="impressao">Impressão (CMYK, 300 ppi)</option>
-    <option value="digital">Digital (RGB, 72 ppi ou mais)</option>
+    <option value="digital">Digital (RGB e dimensões do job em pixels)</option>
   </select>
+  <label for="larguraAlvo">Largura esperada em pixels (opcional; digital)</label><input type="number" id="larguraAlvo" min="1" max="30000">
+  <label for="alturaAlvo">Altura esperada em pixels (opcional; digital)</label><input type="number" id="alturaAlvo" min="1" max="30000">
   <button id="btnChecar">Checar arquivo</button>
-  <div id="resumo"></div>
+  <div id="resumo" role="status" aria-live="polite"></div>
   <div id="resultado"></div>
   <script src="index.js"></script>
 </body>

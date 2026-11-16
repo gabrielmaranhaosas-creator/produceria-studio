@@ -28,11 +28,24 @@ const guiasTercos = (w, h) => [1, 2].flatMap((k) => [
 ]);
 
 // Stories e reels (9:16): faixa de cerca de 14% no topo e na base fica sob a interface do app.
-// Recomendação de mercado (Meta): confira o spec vigente do veículo antes de fechar.
+// Exemplo de reserva de interface: confira o placement e o spec do job.
 function guiasStories(w, h, pct) {
   const p = Number(pct) > 0 ? Number(pct) : 14;
   const d = Math.round((h * p) / 100);
   return [{ dir: "h", pos: d, motivo: "área segura do topo (" + p + "%)" }, { dir: "h", pos: h - d, motivo: "área segura da base (" + p + "%)" }];
+}
+
+// Área segura assimétrica definida pelo job, em percentuais. Não é um spec de plataforma.
+function guiasSeguras(w, h, topo, direita, base, esquerda) {
+  const valores = [topo, direita, base, esquerda].map(Number);
+  if (!valores.every((n) => Number.isFinite(n) && n >= 0 && n < 100) ||
+      valores[0] + valores[2] >= 100 || valores[1] + valores[3] >= 100) {
+    throw new Error("Margens percentuais inválidas: deixe uma área segura positiva.");
+  }
+  return [{ dir: "h", pos: Math.round(h * valores[0] / 100), motivo: "topo seguro do job" },
+    { dir: "h", pos: Math.round(h * (1 - valores[2] / 100)), motivo: "base segura do job" },
+    { dir: "v", pos: Math.round(w * valores[3] / 100), motivo: "lateral esquerda do job" },
+    { dir: "v", pos: Math.round(w * (1 - valores[1] / 100)), motivo: "lateral direita do job" }];
 }
 
 // Colunas: n colunas com calha (gutter) dentro das margens laterais, todas em pixels.
@@ -62,4 +75,4 @@ function limpar(guias, w, h) {
   });
 }
 
-module.exports = { mmParaPx, guiasImpresso, guiasCentro, guiasTercos, guiasStories, guiasColunas, limpar };
+module.exports = { mmParaPx, guiasImpresso, guiasCentro, guiasTercos, guiasStories, guiasSeguras, guiasColunas, limpar };

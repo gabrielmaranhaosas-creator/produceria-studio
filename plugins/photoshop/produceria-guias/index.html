@@ -37,7 +37,16 @@
     <div class="linha"><input type="checkbox" id="gStories"><label for="gStories" style="display:inline">Stories e reels: área segura</label></div>
     <label for="pctStories">Faixa no topo e na base (% da altura)</label>
     <input type="number" id="pctStories" value="14" min="1" max="30">
-    <div class="nota">14% é a recomendação de mercado para a interface do app. Confira o spec vigente do veículo.</div>
+    <div class="nota">14% é um exemplo de reserva de interface. Confirme as medidas do placement e do job.</div>
+  </fieldset>
+
+  <fieldset>
+    <div class="linha"><input type="checkbox" id="gPersonalizada"><label for="gPersonalizada" style="display:inline">Área segura do job (assimétrica)</label></div>
+    <label for="segTopo">Topo (%)</label><input type="number" id="segTopo" value="5" min="0" max="99">
+    <label for="segBase">Base (%)</label><input type="number" id="segBase" value="5" min="0" max="99">
+    <label for="segEsquerda">Esquerda (%)</label><input type="number" id="segEsquerda" value="5" min="0" max="99">
+    <label for="segDireita">Direita (%)</label><input type="number" id="segDireita" value="5" min="0" max="99">
+    <div class="nota">Use os mesmos valores do Desdobra para conferir o resultado. As margens são fornecidas pelo job, sem validação automática do veículo.</div>
   </fieldset>
 
   <fieldset>
