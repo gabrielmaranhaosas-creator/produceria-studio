@@ -9,7 +9,7 @@ import { banco, type Banco } from '../lib/db';
 import { quemSou } from '../lib/arquivos';
 import { seletor, abaNoEndereco, comId } from './dom';
 import { navOficina, cabecalho, baixarArquivo } from './oficina';
-import { PLUGINS, ROTEIRO, TUTORIAL, NOME_PACOTE, pacoteCompleto, pacotePlugin, tutorialMarkdown, type Plugin } from '../oficina/kit-plugins';
+import { ehComando, PLUGINS, ROTEIRO, TUTORIAL, NOME_PACOTE, pacoteCompleto, pacotePlugin, tutorialMarkdown, type Plugin } from '../oficina/kit-plugins';
 
 export const ARQUIVOS_BRIDGE: [string, string][] = [['manifest.json', manifesto], ['index.html', indice], ['main.js', principal], ['LEIAME.md', leiame]];
 export const INTEGRACOES = [
@@ -99,7 +99,7 @@ export function montar(root: HTMLElement): () => void {
       <nav class="pl-indice" aria-label="Partes do tutorial"><span class="lab">Neste tutorial</span><ol>${TUTORIAL.map((s) => `<li><a href="#plugins/instalar" data-ir="${s.id}">${esc(s.titulo)}</a></li>`).join('')}</ol>
         <p class="note">Caminho A é o normal. Use o C se o duplo clique não instalar e o B para testar e recarregar correções.</p></nav>
       <div class="pl-partes">${TUTORIAL.map((s) => `<section class="pl-parte" id="tut-${s.id}" aria-labelledby="tut-h-${s.id}"><h2 class="d d-sub" id="tut-h-${s.id}">${esc(s.titulo)}</h2>${s.intro ? `<p class="measure">${esc(s.intro)}</p>` : ''}
-        ${s.etapas.map((e) => `<div class="pl-etapa"><h3>${esc(e.titulo)}</h3><ol>${e.passos.map((p) => p.startsWith('"/') ? `<li class="pl-cmd"><code>${esc(p)}</code><button type="button" class="lnk" data-copia="${esc(p)}">Copiar comando</button></li>` : `<li>${esc(p)}</li>`).join('')}</ol>
+        ${s.etapas.map((e) => `<div class="pl-etapa"><h3>${esc(e.titulo)}</h3><ol>${e.passos.map((p) => ehComando(p) ? `<li class="pl-cmd"><code>${esc(p)}</code><button type="button" class="lnk" data-copia="${esc(p)}">Copiar comando</button></li>` : `<li>${esc(p)}</li>`).join('')}</ol>
           ${e.ver ? `<p class="pl-ver"><span class="lab">O que você deve ver</span>${esc(e.ver)}</p>` : ''}${e.atencao ? `<p class="pl-atencao"><span class="lab">Atenção</span>${esc(e.atencao)}</p>` : ''}</div>`).join('')}</section>`).join('')}</div></div>`;
     $('#plO').onclick = async (e) => {
       const t = e.target as HTMLElement;

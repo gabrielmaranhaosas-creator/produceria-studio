@@ -1,5 +1,8 @@
 const { app, core } = require("photoshop");
 const C = require("./camadas.js");
+// Leituras seguras: algumas versões do UXP não preenchem .value de <select>, e app.activeDocument pode lançar erro sem documento aberto.
+const valorDe = (el) => (el && el.value ? el.value : (el && el.options && el.selectedIndex >= 0 && el.options[el.selectedIndex] ? el.options[el.selectedIndex].value : ""));
+const docAtivo = () => { try { return app.activeDocument || null; } catch (e) { return null; } };
 
 const $ = (id) => document.getElementById(id);
 const msg = (e) => (e && e.message ? e.message : String(e));
@@ -16,15 +19,15 @@ function todas(lista, saida) {
   return saida;
 }
 function alvo(doc) {
-  if ($("escopo").value === "todas") return todas(doc.layers, []).filter((c) => !seguro(() => c.isBackgroundLayer, false));
+  if (valorDe($("escopo")) === "todas") return todas(doc.layers, []).filter((c) => !seguro(() => c.isBackgroundLayer, false));
   return Array.from(doc.activeLayers || []);
 }
-function docAberto() { const d = app.activeDocument; if (!d) resumo("Abra um documento no Photoshop e clique de novo."); return d; }
+function docAberto() { const d = docAtivo(); if (!d) resumo("Abra um documento no Photoshop e clique de novo."); return d; }
 
 async function renomear(rotulo, transformar) {
   const doc = docAberto(); if (!doc) return;
   const camadas = alvo(doc);
-  if (!camadas.length) { resumo($("escopo").value === "todas" ? "O documento não tem camadas para renomear." : "Selecione as camadas no painel Camadas e clique de novo."); return; }
+  if (!camadas.length) { resumo(valorDe($("escopo")) === "todas" ? "O documento não tem camadas para renomear." : "Selecione as camadas no painel Camadas e clique de novo."); return; }
   const mudancas = [];
   try {
     await core.executeAsModal(async () => {

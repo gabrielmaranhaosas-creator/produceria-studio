@@ -1,5 +1,8 @@
 const { app, core, constants } = require("photoshop");
 const G = require("./guias.js");
+// Leituras seguras: algumas versões do UXP não preenchem .value de <select>, e app.activeDocument pode lançar erro sem documento aberto.
+const valorDe = (el) => (el && el.value ? el.value : (el && el.options && el.selectedIndex >= 0 && el.options[el.selectedIndex] ? el.options[el.selectedIndex].value : ""));
+const docAtivo = () => { try { return app.activeDocument || null; } catch (e) { return null; } };
 
 const $ = (id) => document.getElementById(id);
 const msg = (e) => (e && e.message ? e.message : String(e));
@@ -18,7 +21,7 @@ function calcular(doc) {
 }
 
 $("btnAplicar").addEventListener("click", async () => {
-  const doc = app.activeDocument;
+  const doc = docAtivo();
   if (!doc) { resumo("Abra um documento no Photoshop e clique de novo."); return; }
   let r;
   try { r = calcular(doc); } catch (e) { resumo(msg(e)); return; }
@@ -39,7 +42,7 @@ $("btnAplicar").addEventListener("click", async () => {
 });
 
 $("btnRemover").addEventListener("click", async () => {
-  const doc = app.activeDocument;
+  const doc = docAtivo();
   if (!doc) { resumo("Abra um documento no Photoshop e clique de novo."); return; }
   try {
     await core.executeAsModal(async () => { doc.guides.removeAll(); }, { commandName: "Produceria: remover guias" });

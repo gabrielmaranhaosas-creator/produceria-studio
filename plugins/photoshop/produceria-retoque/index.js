@@ -1,6 +1,9 @@
 const { app, core, constants, action } = require("photoshop");
 const { localFileSystem } = require("uxp").storage;
 const { proximaVersao, CAMADAS_RETOQUE, NOME_GRUPO } = require("./versao.js");
+// Leituras seguras: algumas versões do UXP não preenchem .value de <select>, e app.activeDocument pode lançar erro sem documento aberto.
+const valorDe = (el) => (el && el.value ? el.value : (el && el.options && el.selectedIndex >= 0 && el.options[el.selectedIndex] ? el.options[el.selectedIndex].value : ""));
+const docAtivo = () => { try { return app.activeDocument || null; } catch (e) { return null; } };
 
 const $ = (id) => document.getElementById(id);
 const msg = (e) => (e && e.message ? e.message : String(e));
@@ -8,7 +11,7 @@ function resumo(t) { $("resumo").textContent = t; $("resultado").innerHTML = "";
 function linha(t) { const d = document.createElement("div"); d.className = "item"; d.textContent = t; $("resultado").appendChild(d); }
 
 function docAberto() {
-  const d = app.activeDocument;
+  const d = docAtivo();
   if (!d) resumo("Abra um documento no Photoshop e clique de novo.");
   return d;
 }

@@ -1,10 +1,21 @@
 const { app, core } = require("photoshop");
 const { localFileSystem } = require("uxp").storage;
 const P = require("./prova.js");
+// Leituras seguras: algumas versões do UXP não preenchem .value de <select>, e app.activeDocument pode lançar erro sem documento aberto.
+const valorDe = (el) => (el && el.value ? el.value : (el && el.options && el.selectedIndex >= 0 && el.options[el.selectedIndex] ? el.options[el.selectedIndex].value : ""));
+const docAtivo = () => { try { return app.activeDocument || null; } catch (e) { return null; } };
 
 const $ = (id) => document.getElementById(id);
 const msg = (e) => (e && e.message ? e.message : String(e));
 let pasta = null;
+// Memória do painel: a pasta escolhida volta na próxima abertura (token persistente do UXP) e os campos ficam salvos.
+async function lembrarPasta(chave, pasta) { try { localStorage.setItem(chave, await localFileSystem.createPersistentToken(pasta)); } catch (e) { /* sem memória: escolhe de novo */ } }
+async function pastaLembrada(chave) { try { const t = localStorage.getItem(chave); return t ? await localFileSystem.getEntryForPersistentToken(t) : null; } catch (e) { return null; } }
+function lembrarCampos(chave, ids) {
+  try { const s = JSON.parse(localStorage.getItem(chave) || "{}"); ids.forEach((id) => { const el = document.getElementById(id); if (el && s[id] !== undefined) { if (el.type === "checkbox") el.checked = !!s[id]; else el.value = s[id]; } }); } catch (e) { /* primeira vez */ }
+  const salvar = () => { try { const s = {}; ids.forEach((id) => { const el = document.getElementById(id); if (el) s[id] = el.type === "checkbox" ? el.checked : el.value; }); localStorage.setItem(chave, JSON.stringify(s)); } catch (e) { /* sem armazenamento */ } };
+  ids.forEach((id) => { const el = document.getElementById(id); if (el) { el.addEventListener("change", salvar); el.addEventListener("input", salvar); } });
+}
 function resumo(t) { $("resumo").textContent = t; $("resultado").innerHTML = ""; }
 function linha(t) { const d = document.createElement("div"); d.className = "item"; d.textContent = t; $("resultado").appendChild(d); }
 
@@ -45,13 +56,13 @@ async function gerarProva(doc, o) {
 }
 
 $("btnPasta").addEventListener("click", async () => {
-  try { const p = await localFileSystem.getFolder(); if (p) { pasta = p; $("pasta").textContent = "Pasta: " + p.nativePath; } }
+  try { const p = await localFileSystem.getFolder(); if (p) { pasta = p; $("pasta").textContent = "Pasta: " + p.nativePath; lembrarPasta("prova.pasta", p); } }
   catch (e) { $("pasta").textContent = "Não foi possível escolher a pasta: " + msg(e); }
 });
 
 $("btnProva").addEventListener("click", async () => {
   if (!pasta) { resumo("Escolha a pasta das provas primeiro."); return; }
-  const docs = $("todos").checked ? Array.from(app.documents) : (app.activeDocument ? [app.activeDocument] : []);
+  const docs = $("todos").checked ? Array.from(app.documents) : (docAtivo() ? [docAtivo()] : []);
   if (!docs.length) { resumo("Abra um documento no Photoshop e clique de novo."); return; }
   const o = {
     cliente: $("cliente").value.trim(), campanha: $("campanha").value.trim(), marca: $("marca").value.trim(),
@@ -71,3 +82,6 @@ $("btnProva").addEventListener("click", async () => {
   erros.forEach((t) => linha("[ERRO] " + t));
   feitos.forEach((t) => linha("[OK] " + t));
 });
+
+lembrarCampos("prova.campos", ["cliente", "campanha", "marca", "opacidade", "diagonal", "maxLado", "qualidade", "todos"]);
+pastaLembrada("prova.pasta").then((p) => { if (p) { pasta = p; $("pasta").textContent = "Pasta (lembrada): " + p.nativePath; } });

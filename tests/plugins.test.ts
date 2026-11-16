@@ -40,6 +40,31 @@ describe('manifestos e arquivos dos plugins do Photoshop', () => {
     const js = ler(p, 'index.js');
     for (const [, id] of js.matchAll(/\$\("([A-Za-z0-9]+)"\)/g)) expect(html, `#${id} em ${p}`).toContain(`id="${id}"`);
     expect(ler(p, 'LEIA-ME.md')).not.toMatch(/sandra/i);
+    // leituras que quebravam em algumas versões do UXP: documento ativo sem documento e .value de <select>
+    expect(js).not.toMatch(/=\s*app\.activeDocument\b|\?\s*\[app\.activeDocument\]/);
+    for (const [, id] of html.matchAll(/<select id="([A-Za-z0-9]+)"/g)) expect(js, `#${id} em ${p}`).not.toContain(`$("${id}").value`);
+    // saveAs não tem PDF no Photoshop: PDF só pelo batchPlay
+    expect(js).not.toContain('saveAs.pdf');
+  });
+});
+
+describe('melhorias da v1.1', () => {
+  it('pacotes de formatos da Desdobra são válidos', () => {
+    const D = req('photoshop/produceria-desdobra/desdobra.js');
+    for (const [k, p] of Object.entries(D.PACOTES) as [string, { lista: string }][]) {
+      const r = D.lerFormatos(p.lista, 300);
+      expect(r.erros, k).toEqual([]);
+      expect(r.formatos.length, k).toBeGreaterThan(3);
+    }
+  });
+  it('Exportador gera PDF pelo comando Salvar como, em cópia', () => {
+    const js = ler('produceria-exportador', 'index.js');
+    expect(js).toContain('photoshopPDFFormat');
+    expect(js).toContain('createSessionToken');
+    expect(js).toMatch(/copy: true/);
+  });
+  it('painéis com pasta de saída lembram a pasta', () => {
+    for (const p of ['produceria-desdobra', 'produceria-exportador', 'produceria-prova']) expect(ler(p, 'index.js')).toContain('createPersistentToken');
   });
 });
 
@@ -160,13 +185,14 @@ describe('pacotes, tutorial e roteiro', () => {
     expect(nomesZip(pacotePlugin(PLUGINS[0]))).toContain('produceria-desdobra.ccx');
   });
   it('tutorial cobre os três caminhos e o relatório marca cada passo', () => {
-    expect(TUTORIAL.map((s) => s.id)).toEqual(['antes', 'baixar', 'caminho-a', 'caminho-c', 'caminho-b', 'ae', 'remover', 'relatar']);
+    expect(TUTORIAL.map((s) => s.id)).toEqual(['antes', 'baixar', 'caminho-a', 'caminho-c', 'caminho-b', 'usar', 'ae', 'remover', 'relatar']);
+    expect(tutorialMarkdown()).toContain('UnifiedPluginInstallerAgent.exe" /install');
     const md = tutorialMarkdown();
     expect(md).toContain('UnifiedPluginInstallerAgent');
     expect(md).toContain('### Produceria Guias');
-    const r = relatorio({ 'guias-v1.0.0': { id: 'guias-v1.0.0', plugin: 'guias', versao: '1.0.0', passos: { 0: 'ok', 1: 'falhou' }, notas: { 1: 'guia em 270' }, em: '' } }, { id: 'ambiente', ps: '26.1', mac: '15.7' }, '2026-11-11');
+    const r = relatorio({ 'guias-v1.0.1': { id: 'guias-v1.0.1', plugin: 'guias', versao: '1.0.1', passos: { 0: 'ok', 1: 'falhou' }, notas: { 1: 'guia em 270' }, em: '' } }, { id: 'ambiente', ps: '26.1', mac: '15.7' }, '2026-11-11');
     expect(r).toContain('Photoshop: 26.1 · macOS: 15.7');
-    expect(r).toContain('## Produceria Guias v1.0.0 · 1 passou, 1 falhou, 2 sem teste');
+    expect(r).toContain('## Produceria Guias v1.0.1 · 1 passou, 1 falhou, 2 sem teste');
     expect(r).toContain('Nota: guia em 270');
   });
 });

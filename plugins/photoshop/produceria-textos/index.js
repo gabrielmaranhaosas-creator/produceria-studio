@@ -1,6 +1,9 @@
 const { app, core } = require("photoshop");
 const { localFileSystem, formats } = require("uxp").storage;
 const { serializar, interpretar, precisaAplicar } = require("./csv.js");
+// Leituras seguras: algumas versões do UXP não preenchem .value de <select>, e app.activeDocument pode lançar erro sem documento aberto.
+const valorDe = (el) => (el && el.value ? el.value : (el && el.options && el.selectedIndex >= 0 && el.options[el.selectedIndex] ? el.options[el.selectedIndex].value : ""));
+const docAtivo = () => { try { return app.activeDocument || null; } catch (e) { return null; } };
 
 const $ = (id) => document.getElementById(id);
 const msg = (e) => (e && e.message ? e.message : String(e));
@@ -30,7 +33,7 @@ function camadasDeTexto(lista, saida) {
 
 $("btnExportar").addEventListener("click", async () => {
   try {
-    const docs = $("todos").checked ? Array.from(app.documents) : (app.activeDocument ? [app.activeDocument] : []);
+    const docs = $("todos").checked ? Array.from(app.documents) : (docAtivo() ? [docAtivo()] : []);
     if (docs.length === 0) { mensagem("Abra um documento no Photoshop e clique de novo."); return; }
     const linhas = [];
     for (const doc of docs) {

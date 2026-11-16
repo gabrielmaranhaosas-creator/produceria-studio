@@ -2,7 +2,7 @@
   "manifestVersion": 5,
   "id": "br.com.produceria.bridge",
   "name": "Produceria Bridge",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "main": "index.html",
   "host": { "app": "PS", "minVersion": "24.0.0" },
   "entrypoints": [
@@ -17,7 +17,7 @@
   ],
   "requiredPermissions": {
     "localFileSystem": "fullAccess",
-    "network": { "domains": ["https://api.magnific.com"] }
+    "network": { "domains": "all" }
   },
   "icons": []
 }

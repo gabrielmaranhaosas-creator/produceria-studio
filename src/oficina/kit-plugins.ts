@@ -48,7 +48,7 @@ export const AFTER_EFFECTS: [string, string][] = Object.entries(ARQ)
   .filter(([k]) => k.includes('/plugins/after-effects/'))
   .map(([k, v]): [string, string] => [k.split('/plugins/after-effects/')[1], v]);
 
-const VERSAO_KIT = '1.1';
+const VERSAO_KIT = '1.2';
 export const NOME_PACOTE = `Produceria-Plugins-v${VERSAO_KIT}.zip`;
 
 /** O .ccx: os arquivos do plugin na raiz (sem o LEIA-ME, que não faz parte do plugin). */
@@ -82,10 +82,11 @@ PASTAS
 TUTORIAL.md ........................ passo a passo completo de instalação, uso e teste (o mesmo da aba Instalar do Studio)
 
 ANTES DE COMEÇAR
-- Photoshop 2023 (versão 24.2) ou mais novo. Veja em Photoshop > Sobre o Photoshop.
+- Mac ou Windows, com o app Creative Cloud aberto e com login.
+- Photoshop 2023 (versão 24.2) ou mais novo. Mac: Photoshop > Sobre o Photoshop. Windows: Ajuda > Sobre o Photoshop.
+- Descompacte este pacote em Downloads e renomeie a pasta para Produceria-Plugins.
 - Teste sempre numa CÓPIA de arquivo, nunca no original de cliente.
-- Nenhum destes painéis foi aberto ainda dentro do Photoshop: esta é a primeira rodada de testes.
-  Anote cada resultado no Studio, em Oficina > Plugins > Roteiro de teste.
+- Siga o TUTORIAL.md: instalação (seções 1 a 4), uso (seção 5) e roteiro de teste (fim do arquivo).
 `;
 }
 
@@ -94,42 +95,56 @@ ANTES DE COMEÇAR
 export interface Etapa { titulo: string; passos: string[]; ver?: string; atencao?: string }
 export interface Secao { id: string; titulo: string; intro?: string; etapas: Etapa[] }
 
-const CMD_UPIA = '"/Library/Application Support/Adobe/Adobe Desktop Common/RemoteComponents/UPI/UnifiedPluginInstallerAgent/UnifiedPluginInstallerAgent.app/Contents/MacOS/UnifiedPluginInstallerAgent" --install ~/Downloads/Produceria-Plugins/1-instaladores-ccx/produceria-guias.ccx';
+const CMD_MAC = '"/Library/Application Support/Adobe/Adobe Desktop Common/RemoteComponents/UPI/UnifiedPluginInstallerAgent/UnifiedPluginInstallerAgent.app/Contents/MacOS/UnifiedPluginInstallerAgent" --install ~/Downloads/Produceria-Plugins/1-instaladores-ccx/produceria-guias.ccx';
+const CMD_WIN = '"C:\\Program Files\\Common Files\\Adobe\\Adobe Desktop Common\\RemoteComponents\\UPI\\UnifiedPluginInstallerAgent\\UnifiedPluginInstallerAgent.exe" /install "%USERPROFILE%\\Downloads\\Produceria-Plugins\\1-instaladores-ccx\\produceria-guias.ccx"';
+/** Linhas de comando (vão em bloco de código no tutorial). */
+export const ehComando = (p: string): boolean => p === CMD_MAC || p === CMD_WIN;
 
 export const TUTORIAL: Secao[] = [
-  { id: 'antes', titulo: '0. Antes de começar (5 minutos)', etapas: [
-    { titulo: 'Confira a versão do Photoshop', passos: ['Abra o Photoshop.', 'No menu Photoshop (no topo da tela, ao lado da maçã), clique em "Sobre o Photoshop".', 'Anote o número da versão que aparece na janela (por exemplo 26.1). Feche a janela.'], ver: 'Versão 24.2 ou maior: todos os painéis funcionam. Entre 23.3 e 24.1: todos menos o Prova. Abaixo de 23.3: atualize pelo app Creative Cloud antes de seguir.' },
-    { titulo: 'Separe os arquivos de teste', passos: ['Crie no Mac uma pasta "Teste plugins" na Mesa (Desktop).', 'Copie para ela dois ou três PSDs que NÃO sejam de cliente, ou peças antigas já entregues: um KV com camadas de texto, uma foto de pessoa e uma peça com várias camadas.', 'Trabalhe sempre nessas cópias.'], atencao: 'Os painéis foram escritos e testados fora do Photoshop. Esta é a primeira vez que vão rodar de verdade: não use arquivo de cliente em produção até o roteiro de teste passar.' },
+  { id: 'antes', titulo: '0. Antes de começar (10 minutos)', intro: 'Este tutorial serve para qualquer computador, Mac ou Windows, mesmo um que nunca teve nada da Produceria. Onde o caminho muda, o passo diz "No Mac" e "No Windows".', etapas: [
+    { titulo: 'O que precisa ter no computador', passos: ['Photoshop 2023 (versão 24.2) ou mais novo, instalado pelo app Creative Cloud e com a licença ativa (login feito).', 'O app Creative Cloud aberto e com login (é ele que instala os plugins).', 'No Windows, uma conta com permissão de administrador ou alguém de TI por perto: o instalador da Adobe pode pedir confirmação.', 'Para o script de vídeo: After Effects 2022 ou mais novo (opcional).'] },
+    { titulo: 'Confira a versão do Photoshop', passos: ['Abra o Photoshop.', 'No Mac: menu Photoshop (no topo, ao lado da maçã) > Sobre o Photoshop. No Windows: menu Ajuda > Sobre o Photoshop.', 'Anote o número da versão (por exemplo 26.1) e feche a janela.'], ver: 'Versão 24.2 ou maior: todos os painéis funcionam. Entre 23.3 e 24.1: todos menos o Prova. Abaixo de 23.3: atualize pelo app Creative Cloud (Aplicativos > Atualizações) antes de seguir.' },
+    { titulo: 'Separe arquivos de teste', passos: ['Crie uma pasta "Teste plugins" na Área de Trabalho (Mesa).', 'Copie para ela dois ou três PSDs que NÃO sejam de cliente em produção: um KV com camadas de texto, uma foto de pessoa e uma peça com várias camadas.', 'Trabalhe sempre nessas cópias.'], atencao: 'Primeira rodada de uso real: não use arquivo de cliente em produção até o roteiro de teste (seção 8) passar.' },
   ] },
-  { id: 'baixar', titulo: '1. Baixar os plugins (2 minutos)', etapas: [
-    { titulo: 'Baixe o pacote completo', passos: ['Aqui no Studio, aba "Plugins", clique em "Baixar todos os plugins (.zip)".', 'O Claude mostra uma confirmação com o nome do arquivo (' + NOME_PACOTE + '). Clique em Salvar.', 'O arquivo vai para a pasta Downloads do Mac.'] },
-    { titulo: 'Descompacte', passos: ['Abra o Finder e vá em Downloads.', 'Dê dois cliques em ' + NOME_PACOTE + '. O Mac cria uma pasta com o mesmo nome.', 'Renomeie essa pasta para "Produceria-Plugins" (clique uma vez no nome, Enter, digite e Enter de novo). Isso deixa os comandos do Caminho C iguais aos do tutorial.', 'Abra a pasta: dentro estão 1-instaladores-ccx, 2-codigo-fonte-para-UXP-Developer-Tool, 3-after-effects, TUTORIAL.md e LEIA-ME-PRIMEIRO.txt.'], ver: 'Na pasta 1-instaladores-ccx há ' + PLUGINS.length + ' arquivos terminados em .ccx, um por plugin.' },
+  { id: 'baixar', titulo: '1. Receber e abrir o pacote (5 minutos)', etapas: [
+    { titulo: 'Pegue o arquivo ' + NOME_PACOTE, passos: ['Ele chega por e-mail, WeTransfer, pendrive ou link da pasta da equipe. Também dá para baixar pelo Studio (ou pela cópia de consulta): Oficina > Plugins > "Baixar todos os plugins (.zip)".', 'Salve o arquivo na pasta Downloads do computador.'] },
+    { titulo: 'Descompacte com o nome certo', passos: ['No Mac: abra o Finder > Downloads e dê dois cliques no .zip. Aparece uma pasta com o mesmo nome.', 'No Windows: abra o Explorador de Arquivos > Downloads, clique com o botão direito no .zip > Extrair tudo... > Extrair.', 'Renomeie a pasta criada para Produceria-Plugins (exatamente assim, com hífen). Os comandos da seção 3 contam com esse nome.', 'Abra a pasta: dentro estão 1-instaladores-ccx, 2-codigo-fonte-para-UXP-Developer-Tool, 3-after-effects, TUTORIAL.md e LEIA-ME-PRIMEIRO.txt.'], ver: 'Na pasta 1-instaladores-ccx há ' + PLUGINS.length + ' arquivos terminados em .ccx, um por plugin.', atencao: 'No Windows, não abra o .ccx de dentro do .zip sem extrair: o instalador precisa do arquivo extraído.' },
   ] },
-  { id: 'caminho-a', titulo: '2. Instalar: Caminho A, duplo clique no .ccx (o mais simples)', intro: 'É o jeito de instalar que fica para sempre, como um plugin da loja. Faça um plugin primeiro (sugestão: Guias, que é o mais simples) e, se der certo, repita para os outros.', etapas: [
-    { titulo: 'Prepare', passos: ['Feche o Photoshop (menu Photoshop > Sair, ou Cmd + Q).', 'Abra o app Creative Cloud (ícone colorido na barra do Mac) e faça login, se pedir.'] },
-    { titulo: 'Instale um plugin', passos: ['No Finder, abra Produceria-Plugins > 1-instaladores-ccx.', 'Dê dois cliques em produceria-guias.ccx.', 'O Creative Cloud abre uma janela perguntando se quer instalar o plugin e avisando que ele não foi verificado pela Adobe (porque é da casa, não da loja). Clique em Instalar (ou OK).', 'Espere a mensagem de que o plugin foi instalado.'], ver: 'A janela some e o Creative Cloud mostra "Instalado". Em alguns Macs a confirmação aparece só como notificação no canto da tela.', atencao: 'Se o duplo clique abrir outro programa (por exemplo o Arquivador), clique no .ccx com o botão direito > Abrir com > Creative Cloud. Se o Creative Cloud recusar o arquivo, siga o Caminho C (Terminal) ou o Caminho B (UXP Developer Tool).' },
-    { titulo: 'Repita para os outros', passos: ['Faça o mesmo com cada .ccx da pasta: desdobra, retoque, checar-arquivo, exportador, textos, camadas, prova e bridge.'] },
-    { titulo: 'Abra o Photoshop e encontre os painéis', passos: ['Abra o Photoshop.', 'No menu do topo, clique em "Plug-ins". Cada plugin aparece com o nome (por exemplo "Produceria Guias") e, dentro dele, o painel ("Guias e áreas seguras").', 'Clique no painel: ele abre flutuando. Arraste pela barra de título até a lateral direita, junto dos outros painéis, para deixá-lo encaixado.'], ver: 'O painel abre com os campos e botões descritos no roteiro de teste. Painel em branco: feche e abra de novo pelo menu Plug-ins; se continuar, anote no roteiro.' },
+  { id: 'caminho-a', titulo: '2. Instalar: Caminho A, dois cliques no .ccx (o mais simples)', intro: 'Instala de vez, como um plugin da loja da Adobe. Faça um plugin primeiro (o Guias, que é o mais simples) e, se der certo, repita para os outros.', etapas: [
+    { titulo: 'Prepare', passos: ['Feche o Photoshop (Mac: Cmd + Q; Windows: Arquivo > Sair).', 'Abra o app Creative Cloud e confira se o login está feito.'] },
+    { titulo: 'Instale um plugin', passos: ['Abra Produceria-Plugins > 1-instaladores-ccx.', 'Dê dois cliques em produceria-guias.ccx.', 'O Creative Cloud abre uma janela avisando que o plugin não foi verificado pela Adobe (ele é da casa, não da loja) e pergunta se quer instalar. Clique em Instalar (ou OK).', 'Espere a confirmação de que o plugin foi instalado.'], ver: 'O Creative Cloud mostra "Instalado" (às vezes só como notificação no canto da tela).', atencao: 'Se os dois cliques abrirem outro programa (o descompactador, por exemplo): botão direito no .ccx > Abrir com > Creative Cloud (no Windows, "Adobe Unified Plugin Installer Agent" ou "Creative Cloud"). Se o Creative Cloud recusar, use o Caminho C (seção 3).' },
+    { titulo: 'Repita para os outros', passos: ['Faça o mesmo com cada .ccx: desdobra, retoque, checar-arquivo, exportador, textos, camadas, prova e bridge.'] },
+    { titulo: 'Abra o Photoshop e encaixe os painéis', passos: ['Abra o Photoshop.', 'No menu do topo, clique em "Plug-ins". Cada plugin aparece com o nome (por exemplo "Produceria Guias") e, dentro dele, o painel ("Guias e áreas seguras").', 'Clique no painel: ele abre flutuando. Arraste pela barra do título até a coluna de painéis da direita para deixá-lo encaixado.', 'Para guardar o arranjo: Janela > Área de trabalho > Nova área de trabalho, nome "Produceria".'], ver: 'O painel mostra campos e botões. Painel em branco: feche e abra de novo pelo menu Plug-ins; se continuar, anote no roteiro.' },
   ] },
-  { id: 'caminho-c', titulo: '3. Instalar: Caminho C, pelo Terminal (se o duplo clique não funcionar)', intro: 'Usa o mesmo instalador do Creative Cloud, chamado direto. Funciona com o Photoshop fechado.', etapas: [
-    { titulo: 'Rode o instalador', passos: ['Abra o Terminal (Cmd + Espaço, digite Terminal, Enter).', 'Copie o comando abaixo inteiro, cole no Terminal e aperte Enter. Ele instala o Guias; para os outros, troque só o final (produceria-guias.ccx) pelo nome de cada arquivo.', CMD_UPIA], ver: 'O Terminal responde com uma linha terminando em "Installation Successful" (ou parecida). Abra o Photoshop e procure em Plug-ins.', atencao: 'Se aparecer "No such file or directory", confira se a pasta se chama Produceria-Plugins e está em Downloads (passo 1).' },
+  { id: 'caminho-c', titulo: '3. Instalar: Caminho C, pela linha de comando (se os dois cliques não funcionarem)', intro: 'Chama direto o mesmo instalador do Creative Cloud. Funciona com o Photoshop fechado.', etapas: [
+    { titulo: 'No Mac (Terminal)', passos: ['Abra o Terminal (Cmd + Espaço, digite Terminal, Enter).', 'Copie o comando abaixo inteiro, cole no Terminal e aperte Enter. Ele instala o Guias; para os outros, troque só o final (produceria-guias.ccx) pelo nome de cada arquivo.', CMD_MAC], ver: 'O Terminal responde com uma linha terminando em "Installation Successful" (ou parecida).', atencao: 'Se aparecer "No such file or directory", confira se a pasta se chama Produceria-Plugins e está em Downloads.' },
+    { titulo: 'No Windows (Prompt de Comando)', passos: ['Clique em Iniciar, digite cmd, clique com o botão direito em "Prompt de Comando" > Executar como administrador.', 'Copie o comando abaixo inteiro, cole (botão direito na janela) e aperte Enter. Para os outros plugins, troque só o nome do .ccx no final.', CMD_WIN], ver: 'A janela responde que a instalação terminou com sucesso.', atencao: 'Se o Windows disser que o caminho não existe, o Creative Cloud pode estar em outra unidade: procure UnifiedPluginInstallerAgent.exe pela busca do Explorador e use o caminho encontrado.' },
   ] },
-  { id: 'caminho-b', titulo: '4. Instalar: Caminho B, UXP Developer Tool (plano de desenvolvedor)', intro: 'Carrega o plugin direto da pasta, sem empacotar. É o caminho mais garantido, e o que se usa para corrigir e recarregar durante os testes. O plugin carregado assim some quando o Photoshop fecha: carregue de novo a cada sessão.', etapas: [
-    { titulo: 'Instale o UXP Developer Tool', passos: ['Abra o app Creative Cloud > Todos os aplicativos.', 'Na busca, digite "UXP Developer Tools" e clique em Instalar.'] },
-    { titulo: 'Ative o modo de desenvolvedor no Photoshop', passos: ['No Photoshop: menu Photoshop > Configurações (ou Preferências) > Plug-ins.', 'Marque "Ativar o modo de desenvolvedor" (Enable Developer Mode) e clique em OK.', 'Feche e abra o Photoshop.'], atencao: 'Na primeira vez, o UXP Developer Tool também pede para ativar o modo de desenvolvedor e a senha do Mac. É normal.' },
-    { titulo: 'Adicione e carregue o plugin', passos: ['Com o Photoshop aberto, abra o UXP Developer Tool.', 'Clique em "Add Plugin" (canto superior direito).', 'Navegue até Produceria-Plugins > 2-codigo-fonte-para-UXP-Developer-Tool > produceria-guias e escolha o arquivo manifest.json.', 'O plugin entra na lista. Na linha dele, clique em "•••" (Actions) > "Load".', 'Volte ao Photoshop: o painel abre sozinho ou aparece no menu Plug-ins.'], ver: 'Na lista do UXP Developer Tool a linha do plugin mostra que está carregado. Se der erro, o botão "•••" > "Debug" abre o console com a mensagem: copie para o relatório.' },
-    { titulo: 'Para recarregar depois de uma correção', passos: ['Baixe o pacote novo e substitua a pasta.', 'No UXP Developer Tool: "•••" > "Reload".'] },
+  { id: 'caminho-b', titulo: '4. Instalar: Caminho B, UXP Developer Tool (plano de desenvolvedor)', intro: 'Carrega o plugin direto da pasta, sem instalar. É o caminho mais garantido e o que se usa para ver mensagens de erro. O plugin carregado assim some quando o Photoshop fecha: carregue de novo a cada sessão.', etapas: [
+    { titulo: 'Instale o UXP Developer Tool', passos: ['App Creative Cloud > Todos os aplicativos.', 'Busque "UXP Developer Tools" e clique em Instalar.'] },
+    { titulo: 'Ative o modo de desenvolvedor no Photoshop', passos: ['Mac: Photoshop > Configurações > Plug-ins. Windows: Editar > Preferências > Plug-ins.', 'Marque "Ativar o modo de desenvolvedor" (Enable Developer Mode) e clique em OK.', 'Feche e abra o Photoshop.'], atencao: 'Na primeira vez o UXP Developer Tool também pede para ativar o modo de desenvolvedor e a senha do computador. É normal.' },
+    { titulo: 'Adicione e carregue o plugin', passos: ['Com o Photoshop aberto, abra o UXP Developer Tool.', 'Clique em "Add Plugin" (canto superior direito).', 'Vá até Produceria-Plugins > 2-codigo-fonte-para-UXP-Developer-Tool > produceria-guias e escolha o arquivo manifest.json.', 'Na linha do plugin, clique em "•••" > "Load".', 'Volte ao Photoshop: o painel abre sozinho ou aparece no menu Plug-ins.'], ver: 'A linha do plugin indica que está carregado. Se der erro: "•••" > "Debug" abre o console com a mensagem; copie para o relatório.' },
+    { titulo: 'Recarregar depois de uma correção', passos: ['Substitua a pasta pela do pacote novo.', 'No UXP Developer Tool: "•••" > "Reload".'] },
   ] },
-  { id: 'ae', titulo: '5. After Effects: script de variações de template', etapas: [
-    { titulo: 'Rodar o script', passos: ['Abra o projeto com a composição-modelo e dê um clique nela no painel Projeto.', 'Dê às camadas de texto que mudam nomes iguais aos títulos das colunas do CSV (ex.: TXT_TITULO).', 'Menu Arquivo > Scripts > Executar arquivo de script...', 'Escolha Produceria-Plugins > 3-after-effects > produceria_variacoes_template.jsx.', 'Escolha o CSV (use exemplo_variacoes.csv para o primeiro teste).'], ver: 'Uma composição nova por linha do CSV, com os textos trocados. O script nunca apaga nada.' },
+  { id: 'usar', titulo: '5. Usar no dia a dia', intro: 'O que cada painel faz e a ordem de cliques. Todos trabalham no documento aberto e mostram embaixo dos botões o resumo do que fizeram (OK, AVISO, ERRO). Tudo que mexe no documento pode ser desfeito com Cmd + Z (Mac) ou Ctrl + Z (Windows).', etapas: [
+    { titulo: 'Desdobra KV: um KV em todos os formatos', passos: ['Abra o KV aprovado.', 'Preencha cliente, campanha e versão (os nomes saem no padrão CLIENTE_campanha_formato_v01).', 'Em "Pacote de formatos", escolha Redes sociais, Display, Vídeo e telas ou Impresso, ou escreva a sua lista (uma linha por formato: nome;largura;altura, ou 1920x1080, ou 29,7x42 cm).', 'Escolha Cobrir (preenche e corta) ou Conter (mostra tudo e sobra área) e o ponto de foco do corte.', 'Para já salvar os PSD: marque a opção e escolha a pasta (o painel lembra a pasta na próxima vez).', 'Clique em Desdobrar.'], ver: 'Um documento novo por formato, com o nome no padrão. O KV original não muda. A ampliação acima de 2x aparece como aviso para conferir a nitidez.' },
+    { titulo: 'Retoque Rápido: estrutura e separação de frequência', passos: ['Abra a foto. Botão 1 cria o grupo RETOQUE (Limpeza, Dodge, Burn, Cor).', 'Botão 2 liga e desliga o retoque para comparar antes e depois.', 'Botão 3 salva uma cópia com a versão seguinte no nome.', 'Botão 4: selecione a camada da foto, ajuste o raio (6 px é um bom começo) e crie a separação de frequência. Retoque textura na Alta e cor e tom na Baixa.'] },
+    { titulo: 'Checar Arquivo: pré-checagem antes de entregar', passos: ['Escolha o destino (Impressão ou Digital).', 'Clique em Checar arquivo e corrija o que vier como ERRO: modo de cor, perfil, resolução, fontes ausentes, camadas ocultas e nomes padrão.'] },
+    { titulo: 'Exportador: PNG, JPG e PDF no padrão', passos: ['Escolha a pasta de saída (fica lembrada).', 'Marque os formatos e a qualidade do JPG; marque "Todos os documentos abertos" para exportar a desdobra inteira de uma vez.', 'Clique em Exportar. Nenhum arquivo é sobrescrito: nomes repetidos ganham -2, -3.'] },
+    { titulo: 'Textos: revisão em planilha', passos: ['Exportar textos (CSV) gera uma planilha com o texto de cada camada.', 'A revisão preenche só a coluna texto_revisado e devolve o CSV.', 'Aplicar CSV revisado troca só o que mudou e pula a camada que alguém alterou depois da exportação.'] },
+    { titulo: 'Guias, Camadas e Prova', passos: ['Guias: escolha impresso (sangria e margem em mm), centro, terços, área segura de stories ou colunas, e clique em Criar guias.', 'Camadas: renomeie em lote (TXT_{n}), localize e substitua nos nomes, aplique os prefixos da casa e veja o relatório do que falta arrumar.', 'Prova: escolha a pasta (fica lembrada), preencha cliente e campanha e gere o JPG com marca d\'água e rodapé para aprovação.'] },
+    { titulo: 'Bridge: Studio, ficha do job e Magnific', passos: ['Carregue o pacote do job baixado no Studio (Oficina > Gráfica) para conferir o arquivo contra a ficha.', 'Para ampliar pelo Magnific: informe a chave da API (fica guardada no computador), escolha o fator e clique em ampliar. A imagem nova abre como documento.'], atencao: 'O Bridge é a versão 0.1: use para teste. A chave do Magnific é da conta da Produceria; não compartilhe.' },
   ] },
-  { id: 'remover', titulo: '6. Atualizar ou remover', etapas: [
-    { titulo: 'Plugin instalado pelo .ccx (Caminho A ou C)', passos: ['Photoshop: menu Plug-ins > Gerenciar plug-ins (abre o Creative Cloud).', 'Na linha do plugin, "•••" > Desinstalar.', 'Para atualizar: desinstale e instale o .ccx novo.'] },
-    { titulo: 'Plugin carregado pelo UXP Developer Tool (Caminho B)', passos: ['Na linha do plugin: "•••" > "Unload" para tirar do Photoshop, ou "Remove" para tirar da lista.'] },
+  { id: 'ae', titulo: '6. After Effects: variações de template', etapas: [
+    { titulo: 'Rodar o script', passos: ['Abra o projeto e dê um clique na composição-modelo no painel Projeto.', 'Dê às camadas de texto que mudam nomes iguais aos títulos das colunas do CSV (ex.: TXT_TITULO).', 'Arquivo > Scripts > Executar arquivo de script...', 'Escolha Produceria-Plugins > 3-after-effects > produceria_variacoes_template.jsx.', 'Escolha o CSV (para o primeiro teste, exemplo_variacoes.csv).'], ver: 'Uma composição nova por linha do CSV, com os textos trocados. O modelo não muda e nada é apagado.' },
   ] },
-  { id: 'relatar', titulo: '7. Como anotar e relatar um problema', etapas: [
-    { titulo: 'Para cada passo do roteiro', passos: ['Na aba "Roteiro de teste" do Studio, marque Passou ou Falhou em cada passo.', 'Se falhou: escreva na nota o que apareceu (copie a mensagem do painel, que fica abaixo dos botões) e o que esperava.', 'Tire um print (Cmd + Shift + 4 e arraste sobre a área) e guarde na pasta "Teste plugins".'] },
-    { titulo: 'No fim da rodada', passos: ['Preencha a versão do Photoshop e do macOS no topo do roteiro.', 'Clique em "Baixar relatório (.md)" e me mande o arquivo (ou cole o texto aqui no Claude). Eu corrijo e publico uma versão nova.'] },
+  { id: 'remover', titulo: '7. Atualizar ou remover', etapas: [
+    { titulo: 'Instalado pelo .ccx (Caminhos A e C)', passos: ['Photoshop: menu Plug-ins > Gerenciar plug-ins (abre o Creative Cloud).', 'Na linha do plugin, "•••" > Desinstalar.', 'Para atualizar: desinstale e instale o .ccx da versão nova.'] },
+    { titulo: 'Carregado pelo UXP Developer Tool (Caminho B)', passos: ['Na linha do plugin: "•••" > "Unload" tira do Photoshop; "Remove" tira da lista.'] },
+  ] },
+  { id: 'relatar', titulo: '8. Testar e relatar um problema', etapas: [
+    { titulo: 'Para cada passo do roteiro', passos: ['Siga o Roteiro de teste (no Studio, Oficina > Plugins > Roteiro de teste, ou no fim deste arquivo) e marque Passou ou Falhou.', 'Se falhou: copie a mensagem que o painel mostrou e escreva o que esperava.', 'Tire um print (Mac: Cmd + Shift + 4; Windows: Windows + Shift + S) e guarde na pasta "Teste plugins".'] },
+    { titulo: 'No fim da rodada', passos: ['Anote a versão do Photoshop e do sistema (macOS ou Windows).', 'No Studio, "Baixar relatório (.md)", ou mande este arquivo com as marcações, junto com os prints, para a Produceria. A correção sai numa versão nova do pacote.'] },
   ] },
 ];
 
@@ -143,6 +158,8 @@ export const ROTEIRO: Record<string, Passo[]> = {
     { fazer: 'Marque "Salvar um PSD de cada formato", clique em "Escolher pasta para os PSD", escolha a pasta "Teste plugins" e desdobre de novo.', esperado: 'A janela de pastas do Mac abre; depois os PSD aparecem na pasta com os mesmos nomes.' },
     { fazer: 'Troque o modo para Conter e desdobre.', esperado: 'A imagem inteira aparece em cada formato, com área vazia (transparente ou fundo) nas sobras.' },
     { fazer: 'Na lista de formatos, acrescente a linha "erro;abc;10" e clique em Desdobrar.', esperado: 'Mensagem pedindo para corrigir a lista e o erro da linha. Nenhum documento novo.' },
+    { fazer: 'Em "Pacote de formatos", escolha Display e depois Impresso.', esperado: 'A lista de formatos troca a cada escolha e o resumo diz qual pacote foi carregado. No Impresso, as medidas em mm e cm viram pixels pelo ppi do documento.' },
+    { fazer: 'Feche o painel (ou o Photoshop) e abra de novo.', esperado: 'Cliente, campanha, versão, lista e a pasta dos PSD voltam preenchidos ("Pasta (lembrada)").' },
   ],
   retoque: [
     { fazer: 'Abra uma foto de pessoa. Clique em "1. Montar estrutura de retoque".', esperado: 'Grupo RETOQUE com quatro camadas: Limpeza, Dodge, Burn (as duas em Luz suave, cinza neutro) e Cor.' },
@@ -161,7 +178,8 @@ export const ROTEIRO: Record<string, Passo[]> = {
   exportador: [
     { fazer: 'Escolha a pasta de teste, marque PNG e JPG, clique em Exportar.', esperado: 'Dois arquivos na pasta com o nome do documento, sem espaços. O documento aberto não muda.' },
     { fazer: 'Abra dois documentos com o mesmo nome (em pastas diferentes), marque "Todos os documentos abertos" e exporte.', esperado: 'O segundo sai com -2 no nome. Nenhum arquivo é sobrescrito.' },
-    { fazer: 'Marque PDF e exporte.', esperado: 'O PDF abre no Pré-visualização do Mac com a imagem correta.' },
+    { fazer: 'Marque PDF e exporte.', esperado: 'Um PDF na pasta, que abre no leitor de PDF com a imagem correta. (Na v1.0 o PDF sempre dava erro.)' },
+    { fazer: 'Feche e abra o painel.', esperado: 'A pasta de saída e os formatos marcados continuam escolhidos.' },
   ],
   textos: [
     { fazer: 'Abra um PSD com duas ou mais camadas de texto (salve uma CÓPIA antes). Clique em "Exportar textos (CSV)" e salve.', esperado: 'Um CSV que abre no Excel ou no Numbers com as colunas arquivo, id, camada, texto_original e texto_revisado (separadas por ponto e vírgula).' },
@@ -202,7 +220,7 @@ export function tutorialMarkdown(): string {
     if (s.intro) l.push(s.intro, '');
     for (const e of s.etapas) {
       l.push(`### ${e.titulo}`, '');
-      e.passos.forEach((p, i) => l.push(p.startsWith('"/') ? '```bash\n' + p + '\n```' : `${i + 1}. ${p}`));
+      e.passos.forEach((p, i) => l.push(ehComando(p) ? '```\n' + p + '\n```' : `${i + 1}. ${p}`));
       if (e.ver) l.push('', `**O que você deve ver:** ${e.ver}`);
       if (e.atencao) l.push('', `**Atenção:** ${e.atencao}`);
       l.push('');

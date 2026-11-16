@@ -53,4 +53,12 @@ function nomeDoc(cliente, campanha, formato, versao) {
   return limpar(cliente) + "_" + limpar(campanha) + "_" + limpar(formato) + "_v" + String(v).padStart(2, "0");
 }
 
-module.exports = { lerFormatos, calcularEscala, nomeDoc, limpar, PADRAO_FORMATOS };
+// Pacotes prontos de formatos (o painel preenche a lista; a pessoa pode editar antes de desdobrar).
+const PACOTES = {
+  redes: { nome: "Redes sociais", lista: PADRAO_FORMATOS },
+  display: { nome: "Display (Google e programática)", lista: "300x250;300;250\n336x280;336;280\n728x90;728;90\n970x250;970;250\n970x90;970;90\n300x600;300;600\n160x600;160;600\n320x50;320;50\n320x100;320;100\n468x60;468;60" },
+  telas: { nome: "Vídeo, telas e DOOH", lista: "full-hd-horizontal;1920;1080\nfull-hd-vertical;1080;1920\n4k-horizontal;3840;2160\ndooh-quadrado;1080;1080\nreels-capa;1080;1920\nyoutube-thumb;1280;720" },
+  impresso: { nome: "Impresso (pelo ppi do documento)", lista: "a4-retrato: 210x297 mm\na3-retrato: 297x420 mm\na2-retrato: 420x594 mm\nflyer-a5: 148x210 mm\ncartaz-50x70: 50x70 cm\nbanner-80x120: 80x120 cm" },
+};
+
+module.exports = { lerFormatos, calcularEscala, nomeDoc, limpar, PADRAO_FORMATOS, PACOTES };
