@@ -16,17 +16,20 @@ window.addEventListener("unhandledrejection", (e) => { const r = document.getEle
 // Memória do painel: a pasta escolhida volta na próxima abertura (token persistente do UXP) e os campos ficam salvos.
 async function lembrarPasta(chave, pasta) { try { localStorage.setItem(chave, await localFileSystem.createPersistentToken(pasta)); } catch (e) { /* sem memória: escolhe de novo */ } }
 async function pastaLembrada(chave) { try { const t = localStorage.getItem(chave); return t ? await localFileSystem.getEntryForPersistentToken(t) : null; } catch (e) { return null; } }
+// Guarda e devolve os campos do painel. Devolve a função de salvar, para quem muda um campo por código.
 function lembrarCampos(chave, ids) {
-  try { const s = JSON.parse(localStorage.getItem(chave) || "{}"); ids.forEach((id) => { const el = document.getElementById(id); if (el && s[id] !== undefined) { if (el.type === "checkbox") el.checked = !!s[id]; else el.value = s[id]; } }); } catch (e) { /* primeira vez */ }
-  const salvar = () => { try { const s = {}; ids.forEach((id) => { const el = document.getElementById(id); if (el) s[id] = el.type === "checkbox" ? el.checked : el.value; }); localStorage.setItem(chave, JSON.stringify(s)); } catch (e) { /* sem armazenamento */ } };
+  const por = (el, v) => { if (el.type === "checkbox") el.checked = !!v; else if (el.tagName === "SELECT" && el.options) { const i = Array.from(el.options).findIndex((o) => o.value === v); if (i >= 0) el.selectedIndex = i; } else el.value = v; };
+  try { const s = JSON.parse(localStorage.getItem(chave) || "{}"); ids.forEach((id) => { const el = document.getElementById(id); if (el && s[id] !== undefined) por(el, s[id]); }); } catch (e) { /* primeira vez */ }
+  const salvar = () => { try { const s = {}; ids.forEach((id) => { const el = document.getElementById(id); if (el) s[id] = el.type === "checkbox" ? el.checked : valorDe(el); }); localStorage.setItem(chave, JSON.stringify(s)); } catch (e) { /* sem armazenamento */ } };
   ids.forEach((id) => { const el = document.getElementById(id); if (el) { el.addEventListener("change", salvar); el.addEventListener("input", salvar); } });
+  return salvar;
 }
 
-lembrarCampos("desdobra.campos", ["cliente", "campanha", "versao", "modo", "ancora", "formatos", "salvar"]);
+const salvarCampos = lembrarCampos("desdobra.campos", ["cliente", "campanha", "versao", "modo", "ancora", "formatos", "salvar"]);
 if (!$("formatos").value.trim()) $("formatos").value = PADRAO_FORMATOS;
 $("pacote").addEventListener("change", () => {
   const p = PACOTES[valorDe($("pacote"))];
-  if (p) { $("formatos").value = p.lista; $("formatos").dispatchEvent(new Event("input")); $("resumo").textContent = "Pacote " + p.nome + " carregado: edite a lista se quiser."; }
+  if (p) { $("formatos").value = p.lista; salvarCampos(); $("resumo").textContent = "Pacote " + p.nome + " carregado: edite a lista se quiser."; }
 });
 pastaLembrada("desdobra.pasta").then((p) => { if (p) { pastaPSD = p; $("pasta").textContent = "Pasta (lembrada): " + p.nativePath; } });
 

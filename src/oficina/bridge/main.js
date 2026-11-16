@@ -7,7 +7,13 @@ let secure = null; try { secure = require('uxp').storage.secureStorage; } catch 
 
 let pacote = null; // { job, cliente, ficha: {larguraMm, alturaMm, sangriaMm, perfil, dpiMin, cores}, formatos: [{nome, largura, altura, unidade, dpi}] }
 const $ = (id) => document.getElementById(id);
+// Documento ativo sem quebrar quando não há nenhum aberto.
+const docAtivo = () => { try { return app.activeDocument || null; } catch (e) { return null; } };
+// Valor de um sp-picker: algumas versões do UXP não preenchem .value; lê o item marcado.
+const valorPicker = (el, padrao) => { try { if (el && el.value) return el.value; const m = el && el.querySelector('sp-menu-item[selected]'); return (m && m.getAttribute('value')) || padrao; } catch (e) { return padrao; } };
 const log = (m) => { $('log').textContent = m; };
+window.addEventListener('error', (e) => log('Erro no painel: ' + (e.message || e)));
+window.addEventListener('unhandledrejection', (e) => log('Erro no painel: ' + (e.reason && e.reason.message ? e.reason.message : String(e.reason))));
 const MM_POR_POL = 25.4;
 
 // ---------------------------------------------------------------- abas
@@ -37,7 +43,7 @@ function todasCamadas(layers, out = []) {
 function item(nome, ok, obs) { return { nome, status: ok === null ? 'conferir' : ok ? 'ok' : 'ajustar', obs }; }
 
 $('checar').addEventListener('click', async () => {
-  const doc = app.activeDocument;
+  const doc = docAtivo();
   if (!doc) { log('Abra um documento.'); return; }
   const r = [];
   const ficha = (pacote && pacote.ficha) || {};
@@ -80,7 +86,7 @@ const limpar = (s) => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').r
 
 $('desdobrar').addEventListener('click', async () => {
   if (!pacote || !(pacote.formatos || []).length) { log('Carregue um pacote do job com formatos (aba Pré-checagem).'); return; }
-  const base = app.activeDocument; if (!base) { log('Abra o KV mestre.'); return; }
+  const base = docAtivo(); if (!base) { log('Abra o KV mestre.'); return; }
   const pasta = await lfs.getFolder(); if (!pasta) return;
   const feitos = [];
   try {
@@ -105,7 +111,7 @@ $('desdobrar').addEventListener('click', async () => {
 
 // ---------------------------------------------------------------- exportar prova
 $('exportar').addEventListener('click', async () => {
-  const doc = app.activeDocument; if (!doc) { log('Abra a peça.'); return; }
+  const doc = docAtivo(); if (!doc) { log('Abra a peça.'); return; }
   const pasta = await lfs.getFolder(); if (!pasta) return;
   const nome = `${limpar(pacote?.job || 'job')}_${limpar($('peca').value || doc.title)}_v${limpar($('versao').value || '1')}.jpg`;
   try {
@@ -128,12 +134,24 @@ $('salvar-chave').addEventListener('click', async () => {
   if (!secure) { log('Este Photoshop não tem armazenamento seguro; digite a chave a cada uso.'); return; }
   await secure.setItem('magnific', $('chave').value.trim()); $('chave').value = ''; log('Chave guardada neste computador.');
 });
-const b64 = (buf) => { let s = ''; const u = new Uint8Array(buf); for (let i = 0; i < u.length; i += 0x8000) s += String.fromCharCode.apply(null, u.subarray(i, i + 0x8000)); return btoa(s); };
+// Base64 sem btoa (nem toda versão do UXP tem btoa).
+const B64 = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
+const b64 = (buf) => {
+  const u = new Uint8Array(buf), partes = [];
+  let s = '';
+  for (let i = 0; i < u.length; i += 3) {
+    const a = u[i], b = i + 1 < u.length ? u[i + 1] : 0, c = i + 2 < u.length ? u[i + 2] : 0, n = (a << 16) | (b << 8) | c;
+    s += B64[(n >> 18) & 63] + B64[(n >> 12) & 63] + (i + 1 < u.length ? B64[(n >> 6) & 63] : '=') + (i + 2 < u.length ? B64[n & 63] : '=');
+    if (s.length >= 0x10000) { partes.push(s); s = ''; }
+  }
+  partes.push(s);
+  return partes.join('');
+};
 const espera = (ms) => new Promise((r) => setTimeout(r, ms));
 
 $('upscale').addEventListener('click', async () => {
   const k = await chave(); if (!k) { log('Informe a chave da API Magnific.'); return; }
-  const doc = app.activeDocument; if (!doc) { log('Abra a imagem.'); return; }
+  const doc = docAtivo(); if (!doc) { log('Abra a imagem.'); return; }
   try {
     log('Exportando a imagem…');
     let png;
@@ -143,7 +161,7 @@ $('upscale').addEventListener('click', async () => {
       await doc.saveAs.png(f, { compression: 6 }, true);
       png = await f.read({ format: formats.binary });
     }, { commandName: 'Produceria · preparar upscale' });
-    const corpo = { image: b64(png), scale_factor: $('fator').value || '2x', optimized_for: $('otim').value || 'standard', creativity: Math.max(-10, Math.min(10, parseInt($('criatividade').value || '0', 10) || 0)) };
+    const corpo = { image: b64(png), scale_factor: valorPicker($('fator'), '2x'), optimized_for: valorPicker($('otim'), 'standard'), creativity: Math.max(-10, Math.min(10, parseInt($('criatividade').value || '0', 10) || 0)) };
     log('Enviando ao Magnific…');
     let r = await fetch(API, { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-magnific-api-key': k }, body: JSON.stringify(corpo) });
     let j = await r.json();

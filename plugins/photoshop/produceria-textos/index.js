@@ -4,6 +4,9 @@ const { serializar, interpretar, precisaAplicar } = require("./csv.js");
 // Leituras seguras: algumas versões do UXP não preenchem .value de <select>, e app.activeDocument pode lançar erro sem documento aberto.
 const valorDe = (el) => (el && el.value ? el.value : (el && el.options && el.selectedIndex >= 0 && el.options[el.selectedIndex] ? el.options[el.selectedIndex].value : ""));
 const docAtivo = () => { try { return app.activeDocument || null; } catch (e) { return null; } };
+// Qualquer erro inesperado aparece no próprio painel, em vez de sumir.
+window.addEventListener("error", (e) => { const r = document.getElementById("resumo"); if (r) r.textContent = "Erro no painel: " + (e.message || e); });
+window.addEventListener("unhandledrejection", (e) => { const r = document.getElementById("resumo"); if (r) r.textContent = "Erro no painel: " + (e.reason && e.reason.message ? e.reason.message : String(e.reason)); });
 
 const $ = (id) => document.getElementById(id);
 const msg = (e) => (e && e.message ? e.message : String(e));

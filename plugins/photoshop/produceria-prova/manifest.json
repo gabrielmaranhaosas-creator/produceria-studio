@@ -2,7 +2,7 @@
   "manifestVersion": 5,
   "id": "br.com.produceria.prova",
   "name": "Produceria Prova",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "main": "index.html",
   "host": { "app": "PS", "minVersion": "24.2.0" },
   "requiredPermissions": { "localFileSystem": "request" },

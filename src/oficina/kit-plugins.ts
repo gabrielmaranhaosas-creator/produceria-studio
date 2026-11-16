@@ -48,7 +48,7 @@ export const AFTER_EFFECTS: [string, string][] = Object.entries(ARQ)
   .filter(([k]) => k.includes('/plugins/after-effects/'))
   .map(([k, v]): [string, string] => [k.split('/plugins/after-effects/')[1], v]);
 
-const VERSAO_KIT = '1.2';
+const VERSAO_KIT = '1.2.1';
 export const NOME_PACOTE = `Produceria-Plugins-v${VERSAO_KIT}.zip`;
 
 /** O .ccx: os arquivos do plugin na raiz (sem o LEIA-ME, que não faz parte do plugin). */

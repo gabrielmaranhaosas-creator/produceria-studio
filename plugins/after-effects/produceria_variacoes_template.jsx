@@ -1,5 +1,5 @@
 /*
- Produceria Variações de Template v1.0.0 (After Effects, ExtendScript)
+ Produceria Variações de Template v1.1.0 (After Effects, ExtendScript)
 
  O que faz: a partir de uma composição-modelo e de uma planilha CSV, cria uma composição por linha,
  trocando o texto das camadas indicadas e, se quiser, a duração. Opcionalmente já coloca tudo na fila de render.
@@ -82,6 +82,32 @@ function pcInterpretar(linhasCsv) {
   return saida;
 }
 
+// Muda a duração da composição sem deixar o fim vazio: camadas que iam até o fim do modelo passam a ir até o novo fim,
+// e a área de trabalho cobre a composição inteira (é ela que a fila de render usa).
+function pcAjustarDuracao(comp, nova) {
+  var antiga = comp.duration, avisos = [], i, cam;
+  comp.duration = nova;
+  comp.workAreaStart = 0;
+  comp.workAreaDuration = nova;
+  if (nova <= antiga) { return avisos; }
+  for (i = 1; i <= comp.numLayers; i++) {
+    cam = comp.layer(i);
+    if (Math.abs(cam.outPoint - antiga) < 0.001) {
+      try { cam.outPoint = nova; } catch (e) { avisos.push(cam.name); }
+      if (cam.outPoint < nova - 0.001) { avisos.push(cam.name); }
+    }
+  }
+  return avisos;
+}
+
+// Troca o texto mesmo quando o Texto de origem tem quadros-chave (troca em cada quadro-chave).
+function pcTrocarTexto(prop, texto) {
+  var td, k;
+  if (prop.numKeys > 0) {
+    for (k = 1; k <= prop.numKeys; k++) { td = prop.keyValue(k); td.text = texto; prop.setValueAtKey(k, td); }
+  } else { td = prop.value; td.text = texto; prop.setValue(td); }
+}
+
 function pcLimparNome(s) { return String(s).replace(/[\\\/:*?"<>|]+/g, "-"); }
 
 function pcMain() {
@@ -119,18 +145,21 @@ function pcMain() {
   if (fila) { pasta = Folder.selectDialog("Pasta para os arquivos renderizados"); if (!pasta) { fila = false; } }
 
   app.beginUndoGroup("Produceria: variações de template");
-  var criadas = 0, i2;
+  var criadas = 0, i2, curtas = [];
   try {
     for (i2 = 0; i2 < lido.linhas.length; i2++) {
       var it = lido.linhas[i2];
       var nova = modelo.duplicate();
       nova.name = pcLimparNome(modelo.name + "_" + it.nome);
-      if (it.duracao !== null) { nova.duration = it.duracao; }
+      if (it.duracao !== null) {
+        var semFolego = pcAjustarDuracao(nova, it.duracao);
+        if (semFolego.length) { curtas.push(nova.name + ": " + semFolego.join(", ")); }
+      }
       for (c = 1; c <= nova.numLayers; c++) {
         var cam = nova.layer(c);
         if (it.textos.hasOwnProperty(cam.name)) {
           var prop = cam.property("Source Text");
-          if (prop) { var td = prop.value; td.text = it.textos[cam.name]; prop.setValue(td); }
+          if (prop) { pcTrocarTexto(prop, it.textos[cam.name]); }
         }
       }
       if (fila) {
@@ -143,6 +172,7 @@ function pcMain() {
     alert("Erro depois de " + criadas + " composição(ões): " + e.toString() + "\nUse Editar > Desfazer para voltar.");
   }
   app.endUndoGroup();
+  if (curtas.length) { lido.erros.push("Camadas que não chegam ao novo fim (vídeo ou pré-composição mais curtos que a duração pedida): " + curtas.join("; ")); }
   alert(criadas + " composição(ões) criada(s)." + (lido.erros.length ? "\n\nAvisos:\n" + lido.erros.join("\n") : ""));
 }
 

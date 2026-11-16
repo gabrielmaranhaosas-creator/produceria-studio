@@ -4,15 +4,21 @@ const { nomeSaida, seguePadrao, limitarQualidade } = require("./nomes.js");
 // Leituras seguras: algumas versões do UXP não preenchem .value de <select>, e app.activeDocument pode lançar erro sem documento aberto.
 const valorDe = (el) => (el && el.value ? el.value : (el && el.options && el.selectedIndex >= 0 && el.options[el.selectedIndex] ? el.options[el.selectedIndex].value : ""));
 const docAtivo = () => { try { return app.activeDocument || null; } catch (e) { return null; } };
+// Qualquer erro inesperado aparece no próprio painel, em vez de sumir.
+window.addEventListener("error", (e) => { const r = document.getElementById("resumo"); if (r) r.textContent = "Erro no painel: " + (e.message || e); });
+window.addEventListener("unhandledrejection", (e) => { const r = document.getElementById("resumo"); if (r) r.textContent = "Erro no painel: " + (e.reason && e.reason.message ? e.reason.message : String(e.reason)); });
 
 let pastaSaida = null;
 // Memória do painel: a pasta escolhida volta na próxima abertura (token persistente do UXP) e os campos ficam salvos.
 async function lembrarPasta(chave, pasta) { try { localStorage.setItem(chave, await localFileSystem.createPersistentToken(pasta)); } catch (e) { /* sem memória: escolhe de novo */ } }
 async function pastaLembrada(chave) { try { const t = localStorage.getItem(chave); return t ? await localFileSystem.getEntryForPersistentToken(t) : null; } catch (e) { return null; } }
+// Guarda e devolve os campos do painel. Devolve a função de salvar, para quem muda um campo por código.
 function lembrarCampos(chave, ids) {
-  try { const s = JSON.parse(localStorage.getItem(chave) || "{}"); ids.forEach((id) => { const el = document.getElementById(id); if (el && s[id] !== undefined) { if (el.type === "checkbox") el.checked = !!s[id]; else el.value = s[id]; } }); } catch (e) { /* primeira vez */ }
-  const salvar = () => { try { const s = {}; ids.forEach((id) => { const el = document.getElementById(id); if (el) s[id] = el.type === "checkbox" ? el.checked : el.value; }); localStorage.setItem(chave, JSON.stringify(s)); } catch (e) { /* sem armazenamento */ } };
+  const por = (el, v) => { if (el.type === "checkbox") el.checked = !!v; else if (el.tagName === "SELECT" && el.options) { const i = Array.from(el.options).findIndex((o) => o.value === v); if (i >= 0) el.selectedIndex = i; } else el.value = v; };
+  try { const s = JSON.parse(localStorage.getItem(chave) || "{}"); ids.forEach((id) => { const el = document.getElementById(id); if (el && s[id] !== undefined) por(el, s[id]); }); } catch (e) { /* primeira vez */ }
+  const salvar = () => { try { const s = {}; ids.forEach((id) => { const el = document.getElementById(id); if (el) s[id] = el.type === "checkbox" ? el.checked : valorDe(el); }); localStorage.setItem(chave, JSON.stringify(s)); } catch (e) { /* sem armazenamento */ } };
   ids.forEach((id) => { const el = document.getElementById(id); if (el) { el.addEventListener("change", salvar); el.addEventListener("input", salvar); } });
+  return salvar;
 }
 
 const $ = (id) => document.getElementById(id);
@@ -48,11 +54,12 @@ async function salvarPdf(doc, arquivo) {
   const token = await localFileSystem.createSessionToken(arquivo);
   await action.batchPlay([{
     _obj: "save",
-    as: { _obj: "photoshopPDFFormat", pdfPreserveEditing: false, pdfEmbedThumbnails: false, pdfCompatibilityLevel: { _enum: "pdfCompatibilityLevel", _value: "PDF17" } },
+    as: { _obj: "photoshopPDFFormat", pdfPreserveEditing: false, pdfEmbedThumbnails: false },
     in: { _path: token, _kind: "local" },
     documentID: doc.id,
     copy: true,
     lowerCase: true,
+    _options: { dialogOptions: "dontDisplay" },
   }], {});
 }
 
