@@ -37,7 +37,7 @@ describe('Bridge', () => {
     const b64 = new Function(main.slice(i, j) + ';return b64;')();
     for (const n of [0, 1, 2, 3, 100, 70001]) {
       const u = new Uint8Array(n).map((_, k) => (k * 37) % 256);
-      expect(b64(u.buffer)).toBe(Buffer.from(u).toString('base64'));
+      expect(b64(u.buffer)).toBe((globalThis as unknown as { Buffer: { from(u: Uint8Array): { toString(e: string): string } } }).Buffer.from(u).toString('base64'));
     }
     expect(main).not.toMatch(/btoa\(/);
   });

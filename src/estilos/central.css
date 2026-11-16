@@ -94,5 +94,13 @@
 .cn .bd-leg i.n-lidera{background:var(--ink-muted);width:7px;height:7px}
 .cn .bd-leg{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:12px;color:var(--ink-muted);padding:6px 4px 2px}
 .cn .bd-leg span{display:inline-flex;align-items:center;gap:6px}
+.cn .bd-crits{display:flex;flex-wrap:wrap;gap:4px;margin-top:4px}
+.cn .bd-radar{display:grid;gap:8px;border:1px solid var(--line);padding:12px 14px}
+.cn .bd-radar .bd-h{margin:0;display:flex;align-items:baseline;gap:6px}
+.cn .bd-nota{font:500 22px/1 var(--font-text);letter-spacing:0;color:var(--ink);margin-left:auto}
+.cn .bd-crit{list-style:none;margin:0;padding:0;display:grid;gap:4px}
+.cn .bd-crit li.nao{color:var(--ink-muted)}
+.cn .bd-crit li.nao b{font-weight:400}
+.cn .bd-acao{margin:0;padding-top:8px;border-top:1px solid var(--line)}
 .cn .bd-leg i{width:10px;height:10px;border-radius:50%;display:inline-block}
 .cn .bd-leg i.bd-vi{border:1.5px solid var(--ink);background:transparent}

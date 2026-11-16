@@ -26,11 +26,34 @@ export function nivelDe(p: { cargo?: string; nivel?: Nivel }): Nivel {
   if (/(produtor|produtora|producao|producer|rtv|art ?buyer|finaliza|tratamento|arte[- ]final|designer|analista|assistente|coordenador|coordenadora|traffic|trafego|conteudo|social media|especialista)/.test(c) && !/^dire/.test(c)) return 'contrata';
   return 'aprova';
 }
+/**
+ * Fora do radar: anunciantes que investem forte mas não estão na disputa das grandes contas, onde o craft da
+ * Produceria faz diferença. A nota não é opinião: soma os critérios que a fonte comprova (ou a rotina marcou).
+ */
+export type Criterio = 'imagem' | 'lancamentos' | 'varejo' | 'multicanal' | 'porta' | 'verba';
+export const CRITERIOS: [Criterio, number, string, string][] = [
+  ['imagem', 20, 'Muita imagem de produto ou de oferta', 'still, retoque e tratamento em escala, arte-final de embalagem'],
+  ['lancamentos', 20, 'Lançamentos e datas fortes o ano todo', 'desdobramento de KV, adaptação para cada peça e canal'],
+  ['varejo', 20, 'Ponto de venda, lojas ou revendas', 'produção gráfica, comunicação visual e materiais de PDV'],
+  ['multicanal', 15, 'TV, digital e OOH ao mesmo tempo', 'adaptação de formatos, motion, edição, HTML e DOOH'],
+  ['porta', 15, 'Time interno ou agência fora das redes globais', 'quem decide produção está perto e escolhe fornecedor'],
+  ['verba', 10, 'Verba ou faturamento publicado em alta', 'tem dinheiro para investir em produção agora'],
+];
+export interface Radar {
+  criterios: Criterio[]; porque: string; servicos?: string[]; acao?: string; desde?: string;
+  sinais?: { texto: string; fonte: string; data?: string }[];
+}
+/** Nota de encaixe do craft (0 a 100): soma dos pesos dos critérios comprovados. */
+export function notaEncaixe(r?: Pick<Radar, 'criterios'> | null): number {
+  if (!r) return 0;
+  const c = new Set(r.criterios || []);
+  return CRITERIOS.reduce((t, [k, peso]) => t + (c.has(k) ? peso : 0), 0);
+}
 export interface EmpresaMapa {
   id?: string; nome: string; setor?: string; grupo?: string; site?: string; instagram?: string; linkedin?: string;
   investimento?: { valor: number; ano: number; fonte: string; escala?: string } | null;
   agencias?: { agencia: string; disciplina?: string; desde?: string; fonte: string }[];
-  fontes?: string[]; nota?: string;
+  fontes?: string[]; nota?: string; radar?: Radar | null;
 }
 export interface AgenciaMapa {
   id?: string; nome: string; grupo?: string; perfil?: string; cidade?: string; site?: string; instagram?: string; linkedin?: string;
@@ -46,6 +69,7 @@ export interface MercadoBase {
 export interface NoEmpresa {
   k: string; nome: string; setor: string; grupo: string; ranking: number | null; investimento: EmpresaMapa['investimento'];
   ligacoes: Ligacao[]; pessoas: PessoaMapa[]; site: string; instagram: string; linkedin: string; fontes: string[]; ultima: string; nota: string;
+  radar: Radar | null;
 }
 export interface NoAgencia {
   k: string; nome: string; grupo: string; perfil: string; uf: string; cenp: number | null;
@@ -65,7 +89,7 @@ export function montarGrafo(o: {
   const E: NoEmpresa[] = [], A: NoAgencia[] = [], L: Ligacao[] = [], vistos = new Set<string>();
   const empresa = (nome: string): NoEmpresa => {
     let e = achar(E, nome);
-    if (!e) { e = { k: chave(nome), nome, setor: '', grupo: '', ranking: null, investimento: null, ligacoes: [], pessoas: [], site: '', instagram: '', linkedin: '', fontes: [], ultima: '', nota: '' }; E.push(e); }
+    if (!e) { e = { k: chave(nome), nome, setor: '', grupo: '', ranking: null, investimento: null, ligacoes: [], pessoas: [], site: '', instagram: '', linkedin: '', fontes: [], ultima: '', nota: '', radar: null }; E.push(e); }
     return e;
   };
   const agencia = (nome: string): NoAgencia => {
@@ -102,6 +126,10 @@ export function montarGrafo(o: {
     const e = empresa(d.nome);
     Object.assign(e, { setor: d.setor || e.setor, grupo: d.grupo || e.grupo, site: d.site || e.site, instagram: d.instagram || e.instagram, linkedin: d.linkedin || e.linkedin, nota: d.nota || e.nota });
     if (d.investimento) e.investimento = d.investimento;
+    if (d.radar && Array.isArray(d.radar.criterios)) {
+      e.radar = d.radar;
+      for (const x of d.radar.sinais || []) if ((x.data || '') > e.ultima) e.ultima = x.data || '';
+    }
     e.fontes.push(...(d.fontes || []));
     for (const g of d.agencias || []) ligar({ empresa: d.nome, agencia: g.agencia, disciplina: g.disciplina || '', data: g.desde || '', tipo: 'atende', fonte: g.fonte });
   }

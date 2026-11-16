@@ -962,4 +962,31 @@ describe('Big Data do mercado', () => {
     expect(d.textContent).toContain('Joana Reis');
     desmontar();
   });
+  it('Fora do radar ordena pela nota de encaixe e leva a ação para o alvo', async () => {
+    try { localStorage.removeItem('bd.filtros'); } catch { /* sem armazenamento */ }
+    const db = bancoFalso({
+      movimentos: {}, mapa_agencias: {}, mapa_pessoas: {}, alvos: {},
+      mapa_empresas: {
+        'em-a': { nome: 'Marca A', setor: 'Varejo', radar: { criterios: ['imagem', 'varejo'], porque: 'Catálogo grande.', sinais: [{ texto: 'Abriu 50 lojas', fonte: 'https://exemplo.com/a', data: '2026-10-01' }] } },
+        'em-b': { nome: 'Marca B', setor: 'Indústria', radar: { criterios: ['imagem', 'varejo', 'lancamentos', 'porta'], porque: 'Muitos lançamentos.', servicos: ['Retoque'], acao: 'Mandar portfólio de still', sinais: [] } },
+        'em-c': { nome: 'Marca C' },
+      },
+    });
+    const { raiz, desmontar } = await montar('bigdata', db);
+    await espera(40);
+    raiz.querySelector<HTMLButtonElement>('[data-v="radar"]')!.click();
+    await espera();
+    const linhas = [...raiz.querySelectorAll('#bdL .bd-c > b')].map((b) => b.textContent);
+    expect(linhas).toEqual(['Marca B', 'Marca A']);
+    expect(raiz.querySelector('#bdL .bd-rank')!.textContent).toBe('75');
+    raiz.querySelector<HTMLButtonElement>('[data-e="marca b"]')!.click();
+    await espera();
+    expect(raiz.querySelector('#bdD .bd-radar')!.textContent).toContain('hipótese');
+    raiz.querySelector<HTMLButtonElement>('#bdAlvo')!.click();
+    await espera();
+    const alvo = Object.values(db.dados.alvos)[0] as { proximoPasso: string; origem: string };
+    expect(alvo.proximoPasso).toBe('Mandar portfólio de still');
+    expect(alvo.origem).toBe('Big Data · Fora do radar');
+    desmontar();
+  });
 });

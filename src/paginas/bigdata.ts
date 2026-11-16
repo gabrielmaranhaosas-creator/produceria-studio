@@ -3,19 +3,30 @@
 import { esc, int, dt } from '../lib/formato';
 import { chave, slug, nomeLegivel, mesmaEmpresa } from '../lib/nomes';
 import { banco, lerBase, type Colecao } from '../lib/db';
-import { montarGrafo, nivelDe, NIVEIS, type Nivel, type Grafo, type NoEmpresa, type NoAgencia, type PessoaMapa, type EmpresaMapa, type AgenciaMapa, type MercadoBase, type MovimentoBase } from '../lib/grafo';
+import { montarGrafo, nivelDe, notaEncaixe, NIVEIS, CRITERIOS, type Nivel, type Grafo, type NoEmpresa, type NoAgencia, type PessoaMapa, type EmpresaMapa, type AgenciaMapa, type MercadoBase, type MovimentoBase } from '../lib/grafo';
 import type { Alvo } from '../lib/tipos';
 import { seletor, elDe, mensagem, comId, type Dialogo } from './dom';
 import { kpis, numero, vazio } from '../componentes';
 
-type Visao = 'empresas' | 'agencias' | 'pessoas';
-const VISOES: [Visao, string][] = [['empresas', 'Anunciantes'], ['agencias', 'Agências'], ['pessoas', 'Pessoas']];
+type Visao = 'empresas' | 'radar' | 'agencias' | 'pessoas';
+const VISOES: [Visao, string][] = [['empresas', 'Anunciantes'], ['radar', 'Fora do radar'], ['agencias', 'Agências'], ['pessoas', 'Pessoas']];
 const link = (url: string, texto: string) => url ? `<a class="cn-f" href="${esc(url)}" target="_blank" rel="noopener">${texto} ↗<span class="sr"> (abre em nova aba)</span></a>` : '';
 const redes = (o: { site?: string; instagram?: string; linkedin?: string }) => [link(o.site || '', 'Site'), link(o.instagram || '', 'Instagram'), link(o.linkedin || '', 'LinkedIn')].filter(Boolean).join(' ');
 const veiculo = (url: string) => { try { return new URL(url).hostname.replace(/^www\./, ''); } catch { return 'fonte'; } };
 const ORDEM: Record<Nivel, number> = { contrata: 0, aprova: 1, lidera: 2 };
 const rotuloNivel = (n: Nivel) => (NIVEIS.find((x) => x[0] === n) || NIVEIS[1])[1];
 const portas = (l: PessoaMapa[]) => l.filter((p) => nivelDe(p) === 'contrata').length;
+/** Bloco "por que o craft encaixa": critérios comprovados, serviços, sinais com fonte e a ação proposta. */
+export function blocoRadar(e: NoEmpresa): string {
+  const r = e.radar; if (!r) return '';
+  const tem = new Set(r.criterios);
+  return `<section class="bd-radar" aria-label="Encaixe do craft"><h3 class="bd-h">Fora do radar · encaixe do craft <span class="bd-nota num">${notaEncaixe(r)}</span><span class="note">/100</span></h3>
+  <p>${esc(r.porque)} <span class="tag">hipótese</span></p>
+  <ul class="bd-crit">${CRITERIOS.map(([k, peso, t, s]) => `<li class="${tem.has(k) ? 'sim' : 'nao'}"><span aria-hidden="true">${tem.has(k) ? '●' : '○'}</span> <b>${esc(t)}</b> <span class="note">${esc(s)} · ${tem.has(k) ? '+' + peso : 'não comprovado'}</span></li>`).join('')}</ul>
+  ${r.servicos?.length ? `<p><span class="lab">O que oferecer</span> ${r.servicos.map((x) => `<span class="chip sm">${esc(x)}</span>`).join(' ')}</p>` : ''}
+  ${r.sinais?.length ? `<h3 class="bd-h">Sinais</h3><ul class="bd-lig">${[...r.sinais].sort((a, b) => (b.data || '').localeCompare(a.data || '')).map((x) => `<li>${x.data ? `<span class="note">${esc(dt(x.data))}</span> ` : ''}${esc(x.texto)} ${link(x.fonte, veiculo(x.fonte))}</li>`).join('')}</ul>` : ''}
+  ${r.acao ? `<p class="bd-acao"><span class="lab">Ação proposta</span> ${esc(r.acao)}</p>` : ''}</section>`;
+}
 const curto = (s: string, n = 18) => (s.length > n ? s.slice(0, n - 1) + '…' : s);
 
 /** Mapa de conexões: a organização no centro, quem trabalha com ela em volta e as pessoas de cada lado, por nível. */
@@ -68,6 +79,15 @@ export function montar(root: HTMLElement): () => void {
   <span class="bd-n" title="${int(e.pessoas.length)} pessoa(s) mapeada(s)"><b class="num">${int(portas(e.pessoas))}</b><span class="note">porta(s) de entrada</span></span>
   <span class="bd-n"><b class="num">${int(ags.length)}</b><span class="note">agência(s)</span></span></button></li>`;
   }
+  function linhaRadar(e: NoEmpresa): string {
+    const nota = notaEncaixe(e.radar), tem = new Set(e.radar?.criterios || []);
+    return `<li><button type="button" class="bd-linha" data-e="${esc(e.k)}">
+  <span class="bd-rank num" title="Encaixe do craft, de 0 a 100">${nota}</span>
+  <span class="bd-c"><b>${esc(nomeLegivel(e.nome))}</b><span class="note">${esc(e.setor || 'anunciante')}${e.radar?.servicos?.length ? ' · ' + esc(e.radar.servicos.slice(0, 4).join(', ')) : ''}</span>
+   <span class="bd-crits" aria-label="Critérios comprovados">${CRITERIOS.filter(([k]) => tem.has(k)).map(([, , t]) => `<span class="chip sm">${esc(t)}</span>`).join('')}</span></span>
+  <span class="bd-n" title="${int(e.pessoas.length)} pessoa(s) mapeada(s)"><b class="num">${int(e.pessoas.length)}</b><span class="note">pessoa(s)</span></span>
+  <span class="bd-n"><b class="num">${int(new Set(e.ligacoes.map((l) => l.agencia)).size)}</b><span class="note">agência(s)</span></span></button></li>`;
+  }
   function linhaAgencia(a: NoAgencia): string {
     const cl = [...new Set(a.ligacoes.map((l) => l.empresa))];
     return `<li><button type="button" class="bd-linha" data-a="${esc(a.k)}">
@@ -85,7 +105,7 @@ export function montar(root: HTMLElement): () => void {
 
   function render() {
     try { localStorage.setItem('bd.filtros', JSON.stringify(F)); } catch { /* sem armazenamento */ }
-    $('#bdV').innerHTML = VISOES.map(([v, t]) => `<button type="button" data-v="${v}" aria-pressed="${F.v === v}">${t} <span class="note">${int(v === 'empresas' ? G.empresas.length : v === 'agencias' ? G.agencias.length : G.pessoas.length)}</span></button>`).join('');
+    $('#bdV').innerHTML = VISOES.map(([v, t]) => `<button type="button" data-v="${v}" aria-pressed="${F.v === v}">${t} <span class="note">${int(v === 'empresas' ? G.empresas.length : v === 'radar' ? G.empresas.filter((e) => e.radar).length : v === 'agencias' ? G.agencias.length : G.pessoas.length)}</span></button>`).join('');
     const qi = $<HTMLInputElement>('#bdQ'); if (document.activeElement !== qi) qi.value = F.q;
     $<HTMLSelectElement>('#bdO').value = F.o;
     const comFonte = G.ligacoes.filter((l) => l.fonte).length;
@@ -96,11 +116,18 @@ export function montar(root: HTMLElement): () => void {
       { rotulo: 'Ligações', valor: numero(int(G.ligacoes.length)), nota: `${int(comFonte)} com link da fonte` },
     ]);
     const q = chave(F.q);
+    const porNome = (x: { nome: string }, y: { nome: string }) => chave(x.nome).localeCompare(chave(y.nome));
     const ordem = <T extends { nome: string; ultima?: string }>(L: T[]) => F.o === 'nome' ? [...L].sort((x, y) => chave(x.nome).localeCompare(chave(y.nome))) : F.o === 'recente' ? [...L].sort((x, y) => (y.ultima || '').localeCompare(x.ultima || '')) : L;
     let html = '', n = 0;
     if (F.v === 'empresas') {
       const L = ordem(G.empresas.filter((e) => !q || chave([e.nome, e.setor, e.grupo, ...e.ligacoes.map((l) => l.agencia), ...e.pessoas.map((p) => p.nome)].join(' ')).includes(q)));
       n = L.length; html = L.length ? `<ul class="bd-l">${L.slice(0, lim).map(linhaEmpresa).join('')}</ul>` : '';
+    } else if (F.v === 'radar') {
+      const base = G.empresas.filter((e) => e.radar && (!q || chave([e.nome, e.setor, e.radar.porque, ...(e.radar.servicos || []), ...e.ligacoes.map((l) => l.agencia), ...e.pessoas.map((p) => p.nome)].join(' ')).includes(q)));
+      const L = F.o === 'relevancia' ? [...base].sort((x, y) => notaEncaixe(y.radar) - notaEncaixe(x.radar) || porNome(x, y)) : ordem(base);
+      n = L.length;
+      html = `<p class="note bd-dica">Grandes anunciantes fora da disputa das grandes contas, onde o craft da Produceria faz diferença. A nota soma só o que a fonte comprova; o porquê é hipótese até a primeira conversa.</p>`
+        + (L.length ? `<ul class="bd-l">${L.slice(0, lim).map(linhaRadar).join('')}</ul>` : vazio({ titulo: F.q ? 'Nada com essa busca' : 'Nenhuma empresa na varredura ainda', texto: 'A rotina da Central faz a varredura toda quarta-feira e grava aqui as empresas com fonte.' }));
     } else if (F.v === 'agencias') {
       const L = ordem(G.agencias.filter((a) => !q || chave([a.nome, a.grupo, ...a.ligacoes.map((l) => l.empresa), ...a.pessoas.map((p) => p.nome)].join(' ')).includes(q)));
       n = L.length; html = L.length ? `<ul class="bd-l">${L.slice(0, lim).map(linhaAgencia).join('')}</ul>` : '';
@@ -130,6 +157,7 @@ export function montar(root: HTMLElement): () => void {
   <p class="note">${esc([e?.setor, e?.grupo, a?.grupo, a?.perfil, a?.uf].filter(Boolean).join(' · '))}${e?.ranking ? ` · ${e.ranking}º maior anunciante de 2025` : ''}${a?.cenp ? ` · ${a.cenp}º no Cenp-Meios 2025` : ''}</p></div><button type="button" class="x" id="bdX" aria-label="Fechar">×</button></div>
  <div class="bd-corpo">
   ${no.nota ? `<p class="note">${esc(no.nota)}</p>` : ''}
+  ${e ? blocoRadar(e) : ''}
   ${inv ? `<p><span class="lab">Investimento em mídia</span> ${int(inv.valor)} em ${inv.ano} <span class="note">(${esc(inv.escala || 'como publicado')})</span> ${link(inv.fonte, veiculo(inv.fonte))}</p>` : ''}
   ${redes(no) ? `<p>${redes(no)}</p>` : ''}
   <h3 class="bd-h">${tipo === 'e' ? 'Agências e o que cada uma faz' : 'Clientes e o que atende'}</h3>
@@ -146,8 +174,8 @@ export function montar(root: HTMLElement): () => void {
     if (b) b.onclick = async () => {
       const id = 'al-' + slug(no.nome), ult = lig[0];
       const doc = { id, nome: nomeLegivel(no.nome), perfil: tipo === 'a' ? ((no as NoAgencia).perfil === 'rede' ? 'rede' : 'independente') : 'inhouse', contato: no.pessoas.map((p) => `${p.nome} (${p.cargo})`).join('; '),
-        gatilho: ult ? `${nomeLegivel(ult.empresa)} com ${nomeLegivel(ult.agencia)}${ult.data ? ' em ' + dt(ult.data) : ''}` : 'Big Data do mercado', fonte: ult?.fonte || '', status: 'Mapeado',
-        proximoPasso: 'Pesquisar quem decide produção e fazer o primeiro contato', prazo: new Date(Date.now() + 7 * 864e5).toISOString().slice(0, 10), notas: '', origem: 'Big Data do mercado', criadoEm: new Date().toISOString() } as Alvo;
+        gatilho: e?.radar?.sinais?.length ? `Fora do radar: ${[...e.radar.sinais].sort((x, y) => (y.data || '').localeCompare(x.data || ''))[0].texto}` : ult ? `${nomeLegivel(ult.empresa)} com ${nomeLegivel(ult.agencia)}${ult.data ? ' em ' + dt(ult.data) : ''}` : 'Big Data do mercado', fonte: e?.radar?.sinais?.[0]?.fonte || ult?.fonte || '', status: 'Mapeado',
+        proximoPasso: e?.radar?.acao || 'Pesquisar quem decide produção e fazer o primeiro contato', prazo: new Date(Date.now() + 7 * 864e5).toISOString().slice(0, 10), notas: '', origem: e?.radar ? 'Big Data · Fora do radar' : 'Big Data do mercado', criadoEm: new Date().toISOString() } as Alvo;
       b.disabled = true; b.textContent = 'Criando…';
       if (!colAlvos) { alvos = [...alvos, doc]; d.close(); render(); return; }
       try { await colAlvos.doc(id).set(doc); $('#bdLive').textContent = `${doc.nome} entrou como alvo na Captação.`; d.close(); } catch (err) { b.disabled = false; b.textContent = 'Tentar de novo'; $('#bdLive').textContent = 'Não foi possível criar o alvo: ' + mensagem(err); }
