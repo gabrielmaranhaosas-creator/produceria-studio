@@ -6,7 +6,7 @@ import { banco, lerBase, type Colecao } from '../lib/db';
 import { montarGrafo, nivelDe, notaEncaixe, NIVEIS, CRITERIOS, TIPOS_PILULA, type TipoPilula, type Pilula, type Cenario, type Nivel, type Grafo, type NoEmpresa, type NoAgencia, type PessoaMapa, type EmpresaMapa, type AgenciaMapa, type MercadoBase, type MovimentoBase } from '../lib/grafo';
 import type { Alvo } from '../lib/tipos';
 import { seletor, elDe, mensagem, comId, type Dialogo } from './dom';
-import { kpis, numero, vazio } from '../componentes';
+import { kpis, numero, vazio, barras, contar, painel, type Barra } from '../componentes';
 
 type Visao = 'empresas' | 'radar' | 'agencias' | 'pessoas';
 const VISOES: [Visao, string][] = [['empresas', 'Anunciantes'], ['radar', 'Fora do radar'], ['agencias', 'Agências'], ['pessoas', 'Pessoas']];
@@ -74,6 +74,7 @@ export function montar(root: HTMLElement): () => void {
   <div class="f"><label for="bdQ">Buscar</label><input id="bdQ" type="search" placeholder="Anunciante, agência, pessoa ou setor" autocomplete="off"></div>
   <div class="f"><label for="bdO">Ordenar</label><select id="bdO"><option value="relevancia">Relevância</option><option value="recente">Movimento mais recente</option><option value="nome">Nome</option></select></div>
  </section>
+ <div id="bdPn"></div>
  <p class="sr" id="bdLive" aria-live="polite"></p>
  <div id="bdL"></div></div><dialog id="bdD" class="bd-det" aria-labelledby="bdDT"></dialog>`;
   const $ = seletor(root);
@@ -133,14 +134,22 @@ export function montar(root: HTMLElement): () => void {
     const q = chave(F.q);
     const porNome = (x: { nome: string }, y: { nome: string }) => chave(x.nome).localeCompare(chave(y.nome));
     const ordem = <T extends { nome: string; ultima?: string }>(L: T[]) => F.o === 'nome' ? [...L].sort((x, y) => chave(x.nome).localeCompare(chave(y.nome))) : F.o === 'recente' ? [...L].sort((x, y) => (y.ultima || '').localeCompare(x.ultima || '')) : L;
-    let html = '', n = 0;
+    let html = '', n = 0, pn: string[] = [];
+    const busca = (b: Barra[]) => b.map((x) => ({ ...x, ativo: chave(x.rotulo) === q }));
+    const nAg = (e: NoEmpresa) => new Set(e.ligacoes.map((l) => l.agencia)).size;
     if (F.v === 'empresas') {
       const L = ordem(G.empresas.filter((e) => !q || chave([e.nome, e.setor, e.grupo, ...e.ligacoes.map((l) => l.agencia), ...e.pessoas.map((p) => p.nome)].join(' ')).includes(q)));
+      pn = [barras('Por setor', busca(contar(L, (e) => e.setor || 'Sem setor')), { attr: 'q', nota: 'clique para filtrar' }),
+        barras('Mais agências ligadas', L.map((e) => ({ rotulo: nomeLegivel(e.nome), valor: nAg(e), dado: e.k })).sort((a, b) => b.valor - a.valor), { attr: 'e', nota: 'clique para abrir' }),
+        barras('Mais portas de entrada', L.map((e) => ({ rotulo: nomeLegivel(e.nome), valor: portas(e.pessoas), dado: e.k })).sort((a, b) => b.valor - a.valor), { attr: 'e', nota: 'pessoas que contratam produção' })];
       n = L.length; html = L.length ? `<ul class="bd-l">${L.slice(0, lim).map(linhaEmpresa).join('')}</ul>` : '';
     } else if (F.v === 'radar') {
       const base = G.empresas.filter((e) => e.radar && (!q || chave([e.nome, e.setor, e.radar.porque, ...(e.radar.servicos || []), ...e.ligacoes.map((l) => l.agencia), ...e.pessoas.map((p) => p.nome)].join(' ')).includes(q)));
       const L = F.o === 'relevancia' ? [...base].sort((x, y) => notaEncaixe(y.radar) - notaEncaixe(x.radar) || porNome(x, y)) : ordem(base);
       const P = L.flatMap((e) => (e.radar?.pilulas || []).map((x) => ({ x, e })));
+      pn = [barras('Maior encaixe do craft', [...L].sort((x, y) => notaEncaixe(y.radar) - notaEncaixe(x.radar)).map((e) => ({ rotulo: nomeLegivel(e.nome), valor: notaEncaixe(e.radar), dado: e.k })), { attr: 'e', nota: 'nota de 0 a 100; clique para abrir' }),
+        barras('Por setor', busca(contar(L, (e) => e.setor || 'Sem setor')), { attr: 'q', nota: 'clique para filtrar' }),
+        barras('Pílulas por tipo', contar(P, (y) => (TIPOS_PILULA.find((t) => t[0] === y.x.tipo) || [y.x.tipo, y.x.tipo])[1]))];
       const PF = P.filter((y) => !F.p || y.x.tipo === F.p);
       const modo = `<div class="pills bd-modo" role="group" aria-label="Mostrar"><button type="button" data-r="lista" aria-pressed="${F.r === 'lista'}">Empresas por encaixe <span class="note">${int(L.length)}</span></button><button type="button" data-r="pilulas" aria-pressed="${F.r === 'pilulas'}">Pílulas de ação <span class="note">${int(P.length)}</span></button></div>`;
       const topo = (q ? '' : faixaCenario(cen)) + modo;
@@ -156,15 +165,22 @@ export function montar(root: HTMLElement): () => void {
       }
     } else if (F.v === 'agencias') {
       const L = ordem(G.agencias.filter((a) => !q || chave([a.nome, a.grupo, ...a.ligacoes.map((l) => l.empresa), ...a.pessoas.map((p) => p.nome)].join(' ')).includes(q)));
+      pn = [barras('Mais clientes ligados', L.map((a) => ({ rotulo: nomeLegivel(a.nome), valor: new Set(a.ligacoes.map((l) => l.empresa)).size, dado: a.k })).sort((x, y) => y.valor - x.valor), { attr: 'a', nota: 'clique para abrir' }),
+        barras('Por grupo', busca(contar(L, (a) => a.grupo || 'Independente')), { attr: 'q', nota: 'clique para filtrar' }),
+        barras('Por estado', contar(L, (a) => a.uf || 'Sem UF'))];
       n = L.length; html = L.length ? `<ul class="bd-l">${L.slice(0, lim).map(linhaAgencia).join('')}</ul>` : '';
     } else {
       const L = [...G.pessoas].filter((p) => (!F.n || nivelDe(p) === F.n) && (!q || chave([p.nome, p.cargo, p.organizacao, p.area, p.campanha].join(' ')).includes(q)))
         .sort((x, y) => F.o === 'recente' ? (y.data || '').localeCompare(x.data || '') : F.o === 'nome' ? chave(x.nome).localeCompare(chave(y.nome)) : ORDEM[nivelDe(x)] - ORDEM[nivelDe(y)] || chave(x.organizacao).localeCompare(chave(y.organizacao)));
       n = L.length;
+      pn = [barras('Por nível', contar(L, (p) => nivelDe(p)).map((b) => ({ ...b, rotulo: rotuloNivel(b.dado as Nivel), ativo: b.dado === F.n })), { attr: 'n', nota: 'clique para filtrar' }),
+        barras('Organizações com mais pessoas', contar(L, (p) => p.organizacao).map((b) => ({ ...b, rotulo: nomeLegivel(b.rotulo) })), { attr: 'org', nota: 'clique para abrir' }),
+        barras('Por área', contar(L, (p) => p.area || 'Sem área'))];
       const pills = `<div class="pills bd-niveis" role="group" aria-label="Nível">${[['', 'Todos os níveis'], ...NIVEIS.map(([v, t]) => [v, t])].map(([v, t]) => `<button type="button" data-n="${v}" aria-pressed="${F.n === v}">${t} <span class="note">${int(v ? G.pessoas.filter((p) => nivelDe(p) === v).length : G.pessoas.length)}</span></button>`).join('')}</div>
       <p class="note bd-dica">${esc(F.n ? (NIVEIS.find((x) => x[0] === F.n) || NIVEIS[0])[2] : 'Comece por quem contrata produção: são as pessoas que pedem orçamento e mandam o job. A alta liderança abre portas, mas raramente escolhe o fornecedor.')}</p>`;
       html = pills + (L.length ? `<ul class="bd-l">${L.slice(0, lim).map(linhaPessoa).join('')}</ul>` : vazio({ titulo: 'Ninguém neste nível ainda', texto: 'A rotina diária procura essas pessoas nas fichas técnicas das campanhas e nas notícias.' }));
     }
+    $('#bdPn').innerHTML = n ? painel(pn, 'Resumo') : '';
     $('#bdL').innerHTML = html ? html + (n > lim ? `<p class="mais"><button type="button" class="ghost" id="bdM">Mostrar mais ${int(Math.min(60, n - lim))} (${int(n - lim)} restantes)</button></p>` : '')
       : vazio({ titulo: F.q ? 'Nada com essa busca' : F.v === 'pessoas' ? 'Nenhuma pessoa mapeada ainda' : 'Base vazia', texto: F.q ? 'Tente parte do nome ou limpe a busca.' : 'A rotina diária da Central grava aqui, todo dia, quem decide em cada anunciante e agência, sempre com a fonte.' });
     $('#bdLive').textContent = `${int(n)} resultados.`;
@@ -218,7 +234,8 @@ export function montar(root: HTMLElement): () => void {
     const el = elDe(ev);
     const rr = el.closest<HTMLElement>('[data-r]'); if (rr) { F.r = rr.dataset.r === 'pilulas' ? 'pilulas' : 'lista'; lim = 60; render(); root.querySelector<HTMLElement>(`[data-r="${F.r}"]`)?.focus(); return; }
     const pp = el.closest<HTMLElement>('[data-p]'); if (pp) { F.p = (pp.dataset.p || '') as TipoPilula | ''; lim = 60; render(); root.querySelector<HTMLElement>(`[data-p="${F.p}"]`)?.focus(); return; }
-    const nv = el.closest<HTMLElement>('[data-n]'); if (nv) { F.n = (nv.dataset.n || '') as Nivel | ''; lim = 60; render(); root.querySelector<HTMLElement>(`[data-n="${F.n}"]`)?.focus(); return; }
+    const bq = el.closest<HTMLElement>('.pn [data-q]'); if (bq) { F.q = chave(F.q) === chave(bq.dataset.q || '') ? '' : bq.dataset.q || ''; lim = 60; render(); return; }
+    const nv = el.closest<HTMLElement>('[data-n]'); if (nv) { F.n = (nv.closest('.pn') && F.n === nv.dataset.n ? '' : nv.dataset.n || '') as Nivel | ''; lim = 60; render(); root.querySelector<HTMLElement>(`[data-n="${F.n}"]`)?.focus(); return; }
     const v = el.closest<HTMLElement>('[data-v]'); if (v) { F.v = v.dataset.v as Visao; lim = 60; render(); root.querySelector<HTMLElement>(`[data-v="${F.v}"]`)?.focus(); return; }
     if (el.id === 'bdM') { lim += 60; render(); return; }
     const org = el.closest<HTMLElement>('[data-org]'); if (org) { const dd = $<Dialogo>('#bdD'); if (dd.open) dd.close(); abrirOrg(org.dataset.org || '', org); return; }

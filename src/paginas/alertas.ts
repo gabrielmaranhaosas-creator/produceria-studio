@@ -6,7 +6,7 @@ import { hoje as hojeISO } from '../lib/datas';
 import { banco, type Colecao } from '../lib/db';
 import type { Alvo } from '../lib/tipos';
 import { seletor, elDe, mensagem, comId } from './dom';
-import { kpis, numero, vazio } from '../componentes';
+import { kpis, numero, vazio, barras, porMes, contar, painel } from '../componentes';
 
 export type Prioridade = 'alta' | 'media' | 'baixa';
 export type Status = 'novo' | 'andamento' | 'feito' | 'descartado';
@@ -42,15 +42,16 @@ export function montar(root: HTMLElement): () => void {
   <div class="f"><label for="acQ">Buscar</label><input id="acQ" type="search" placeholder="Empresa, agência ou pessoa" autocomplete="off"></div>
   <div class="f"><label for="acS">Situação</label><select id="acS">${SITUACAO.map(([v, t]) => `<option value="${v}">${t}</option>`).join('')}</select></div>
  </section>
+ <div id="acPn"></div>
  <p class="sr" id="acLive" aria-live="polite"></p>
  <div id="acO" class="ac-lista"></div></div>`;
   const $ = seletor(root);
   const hoje = hojeISO();
   let A: Alerta[] = [], alvos: Alvo[] = [], col: Colecao<Alerta> | null = null, colAlvos: Colecao<Alvo> | null = null, carregando = true;
   const offs: (() => void)[] = [];
-  const F = { s: 'abertos', t: '', q: '' };
-  try { const sv = JSON.parse(localStorage.getItem('ac.filtros') || 'null'); if (sv) Object.assign(F, sv); } catch { /* sem armazenamento */ }
-  const guardar = () => { try { localStorage.setItem('ac.filtros', JSON.stringify(F)); } catch { /* sem armazenamento */ } };
+  const F = { s: '', t: '', q: '' };
+  try { const sv = JSON.parse(localStorage.getItem('ac.filtros.v2') || 'null'); if (sv) Object.assign(F, sv); } catch { /* sem armazenamento */ }
+  const guardar = () => { try { localStorage.setItem('ac.filtros.v2', JSON.stringify(F)); } catch { /* sem armazenamento */ } };
   const ehAlvo = (nome: string) => alvos.some((a) => a.id === 'al-' + slug(nome) || mesmaEmpresa(a.nome, nome));
 
   function card(a: Alerta): string {
@@ -86,6 +87,13 @@ export function montar(root: HTMLElement): () => void {
       { rotulo: 'Feitos em 30 dias', valor: numero(int(A.filter((a) => a.status === 'feito' && (a.em || '') >= new Date(Date.now() - 30 * 864e5).toISOString()).length)), nota: 'ações concluídas' },
     ]);
     const L = filtrar(A, F);
+    const base = filtrar(A, { ...F, t: '' }), sit = (a: Alerta) => ({ novo: 'Novo', andamento: 'Em andamento', feito: 'Feito', descartado: 'Descartado' })[a.status || 'novo'];
+    $('#acPn').innerHTML = A.length ? painel([
+      barras('Por tipo', contar(base, (a) => a.tipo).map((b) => ({ ...b, rotulo: TIPOS[b.rotulo] || b.rotulo, ativo: b.dado === F.t })), { attr: 't', nota: 'clique para ver só o tipo' }),
+      porMes('Alertas por mês', L.map((a) => a.data), 6),
+      barras('Empresas mais citadas', contar(L, (a) => [...new Set([...(a.empresas || []), ...(a.agencias || [])].map(nomeLegivel))]).map((b) => ({ ...b, ativo: chave(b.rotulo) === chave(F.q) })), { attr: 'q', nota: 'clique para buscar' }),
+      barras('Situação', contar(L, sit)),
+    ], 'Resumo dos alertas') : '';
     let html = '', dia = '';
     for (const a of L) {
       if (a.data !== dia) { if (dia) html += '</div></section>'; dia = a.data; html += `<section class="cn-dia" aria-label="${esc(dt(dia))}"><h2 class="cn-dh">${dia === hoje ? 'Hoje' : esc(dt(dia))}</h2><div class="cn-lista">`; }
@@ -116,7 +124,8 @@ export function montar(root: HTMLElement): () => void {
 
   root.addEventListener('click', (e) => {
     const el = elDe(e);
-    const t = el.closest<HTMLElement>('[data-t]'); if (t) { F.t = t.dataset.t || ''; render(); root.querySelector<HTMLElement>(`[data-t="${F.t}"]`)?.focus(); return; }
+    const q = el.closest<HTMLElement>('.pn [data-q]'); if (q) { F.q = chave(F.q) === chave(q.dataset.q || '') ? '' : q.dataset.q || ''; render(); return; }
+    const t = el.closest<HTMLElement>('[data-t]'); if (t) { F.t = t.closest('.pn') && F.t === t.dataset.t ? '' : t.dataset.t || ''; render(); root.querySelector<HTMLElement>(`[data-t="${F.t}"]`)?.focus(); return; }
     const b = el.closest<HTMLButtonElement>('[data-x]'); if (!b) return;
     const id = b.closest<HTMLElement>('.ac-it')?.dataset.id; if (!id) return;
     const a = A.find((x) => x.id === id); if (!a) return;

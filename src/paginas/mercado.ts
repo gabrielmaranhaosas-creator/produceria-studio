@@ -4,7 +4,7 @@ import { esc, int, brk, dt } from '../lib/formato';
 import { banco, lerBase, type Banco } from '../lib/db';
 import { chave } from '../lib/nomes';
 import { seletor, comId, abaNoEndereco, type Dialogo } from './dom';
-import { kpis, vazio, abrirDialogo, devolverFoco } from '../componentes';
+import { kpis, vazio, abrirDialogo, devolverFoco, barras, porMes, contar, painel } from '../componentes';
 
 export interface Conta { data: string; anunciante: string; escopo: string; fonte: string; tipo: string; anterior: string }
 export interface Perda { data: string; anunciante: string; para: string; fonte: string }
@@ -82,13 +82,13 @@ const reais = (n: number) => n.toLocaleString('pt-BR', { style: 'currency', curr
 
 export function montar(root: HTMLElement): () => void {
   root.innerHTML = `<div class="wrap vc mk"><div id="mkK"><p class="note">Carregando a base de mercado…</p></div>
-  <div id="mkF"></div><p class="sr" id="mkLive" aria-live="polite" aria-atomic="true"></p><div id="mkO"></div><div id="mkR"></div></div>
+  <div id="mkF"></div><p class="sr" id="mkLive" aria-live="polite" aria-atomic="true"></p><div id="mkPn"></div><div id="mkO"></div><div id="mkR"></div></div>
   <dialog id="mkD" aria-labelledby="mkDT"></dialog>`;
   const $ = seletor(root);
   const D = $<Dialogo>('#mkD');
   let base: Mercado | null = null, m: Mercado | null = null, novos: Movimento[] = [], db: Banco | null = null, alvos: { nome: string }[] = [];
   let visao: Visao = 'movimentos';
-  const f: Filtros = { busca: '', periodo: '180', soCriacao: true };
+  const f: Filtros = { busca: '', periodo: 'todos', soCriacao: false };
   const offs: (() => void)[] = [];
   const abas = abaNoEndereco<Visao>(['movimentos', 'agencias', 'anunciantes', 'abordar'], 'movimentos', (a) => { visao = a; if (m) { filtros(); lista(); } });
   visao = abas.inicial;
@@ -127,8 +127,15 @@ export function montar(root: HTMLElement): () => void {
     const o = $('#mkO');
     if (!m) return;
     const tipo = new Map(m.agencias.map((a) => [a.nome, a]));
+    const pn = $('#mkPn');
+    pn.innerHTML = '';
     if (visao === 'movimentos') {
       const L = filtrarMovimentos(m, f);
+      pn.innerHTML = painel([
+        porMes('Movimentações por mês', L.map((x) => x.data).filter((d) => d.length > 4)),
+        barras('Agências que mais ganharam conta', contar(L, (x) => x.agencia), { attr: 'ag', nota: 'clique para ver a agência' }),
+        barras('Tipo de agência', contar(L, (x) => tipo.get(x.agencia)?.tipo || 'Sem tipo'), { nota: 'na lista atual' }),
+      ], 'Resumo das movimentações');
       o.innerHTML = `<div class="acts"><span class="note">${int(L.length)} movimentação(ões), da mais nova para a mais antiga. Quem acabou de ganhar conta é o melhor momento de abordar.</span><button type="button" class="ghost sm" id="mkCSV">Baixar (.csv)</button></div>
       ${L.length ? `<ul class="vc-l">${L.map((x) => `<li class="mk-mv"><span class="note num mk-data">${quando(x.data)}</span>
         <span class="vc-c"><span><b>${esc(x.anunciante)}</b> → ${tipo.has(x.agencia) ? `<button type="button" class="lnk" data-ag="${esc(x.agencia)}">${esc(x.agencia)}</button>` : esc(x.agencia)}${x.anterior ? `<span class="note"> · antes: ${esc(x.anterior)}</span>` : ''}</span><span class="note">${esc(x.escopo || '')}</span></span>
@@ -136,12 +143,18 @@ export function montar(root: HTMLElement): () => void {
         : vazio({ titulo: 'Nenhuma movimentação com esses filtros', texto: 'Aumente o período ou desmarque "Só criação e full service".' })}`;
     } else if (visao === 'agencias') {
       const L = filtrarAgencias(m, f);
+      pn.innerHTML = painel([
+        barras('Mais contas conquistadas', L.map((a) => ({ rotulo: a.nome, valor: a.contas.length, dado: a.nome })).sort((a, b) => b.valor - a.valor), { attr: 'ag', nota: 'clique para ver a agência' }),
+        barras('Por tipo', contar(L, (a) => a.tipo || 'Sem tipo')),
+        barras('Por estado', contar(L, (a) => a.uf || 'Sem UF')),
+      ], 'Resumo das agências');
       o.innerHTML = `<p class="note">${int(L.length)} agência(s), em ordem de prioridade: conquista recente, posição no ranking Cenp-Meios 2025 e sede em SP.</p>
       ${L.length ? `<ul class="vc-l">${L.map((a) => `<li><button type="button" class="vc-linha" data-ag="${esc(a.nome)}"><span class="vc-prio num" title="Prioridade (0 a 100)">${a.prioridade}</span>
         <span class="vc-c"><b>${esc(a.nome)}${a.publica ? '<span class="note"> · também tem conta pública</span>' : ''}</b><span class="note">${a.cenp ? `${a.cenp}º no Cenp-Meios 2025` : 'fora do top 30 do Cenp'}${a.uf ? ' · ' + esc(a.uf) : ''} · ${esc(a.contas.slice(0, 3).map((c) => c.anunciante).join(', ') || 'sem conta nova registrada')}</span></span>
         <span class="vc-num"><b class="num">${a.contas.length} conta(s)</b><span class="note">${a.ultima ? 'última ' + quando(a.ultima) : '—'}</span></span></button></li>`).join('')}</ul>`
         : vazio({ titulo: 'Nenhuma agência com esses filtros', texto: 'Tire a busca ou desmarque "Só criação e full service".' })}`;
     } else if (visao === 'anunciantes') {
+      pn.innerHTML = painel([barras('Investimento em mídia em 2025 (como publicado)', m.anunciantes.map((a) => ({ rotulo: a.nome, valor: a.valor2025, nota: `${a.variacao > 0 ? '+' : ''}${a.variacao}% sobre 2024` })), { max: 20 })], 'Ranking dos anunciantes');
       o.innerHTML = `<p class="note mk-aviso">Os 20 que mais investiram em mídia em 2025, pelo Ibope Advertising Intelligence, publicado pelo Meio &amp; Mensagem em 25/05/2026. Os valores estão como a fonte publicou; a fonte não informa a escala (pela ordem de grandeza, devem ser milhares de reais) e é valor de tabela de mídia, não o que foi pago. Na fonte, o valor de 2024 da Claro repete o da Adobe e não bate com a variação: por isso aparece em branco. A coluna de agências mostra só o que apareceu nas movimentações mapeadas.</p>
       <div class="tw"><table class="vc-t"><thead><tr><th scope="col" class="num"><span class="th">#</span></th><th scope="col"><span class="th">Anunciante</span></th><th scope="col" class="num"><span class="th">2025 (como publicado)</span></th><th scope="col" class="num"><span class="th">2024</span></th><th scope="col" class="num"><span class="th">Var.</span></th><th scope="col"><span class="th">Agências nas movimentações</span></th></tr></thead><tbody>
       ${m.anunciantes.map((a) => `<tr><td class="num">${a.pos}</td><th scope="row">${esc(a.nome)}</th><td class="num">${int(a.valor2025)}</td><td class="num">${a.valor2024 != null ? int(a.valor2024) : '—'}<span class="sub">${a.pos2024}º em 2024</span></td><td class="num">${a.variacao > 0 ? '+' : ''}${a.variacao}%</td>

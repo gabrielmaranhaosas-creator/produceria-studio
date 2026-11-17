@@ -6,7 +6,7 @@ import {calibrar,prioridade} from '../lib/prioridade';
 import {banco,lerBase,type Banco,type Colecao,type Consulta} from '../lib/db';
 import type {Alvo,ContratoPublico,Licitacao,Movimento,Noticia,Perfil} from '../lib/tipos';
 import {seletor,elDe,mensagem,comId} from './dom';
-import {kpis,numero} from '../componentes';
+import {kpis,numero,barras,porMes,contar,painel} from '../componentes';
 
 type TipoItem='conta'|'negocio'|'venceu'|'aberta'|'renova';
 interface Lead { nome: string; perfil: Perfil|string; gatilho: string; fonte: string }
@@ -20,7 +20,7 @@ interface Fontes {
   noticias: (Noticia&{coletadoEm?:string})[]; movimentos: Movimento[]; contratos: ContratoPublico[];
   b2g: Licitacao[]; alvos: Alvo[]; central: EstadoCentral[];
 }
-interface Filtros { t: TipoItem|''; q: string; p: string; e: string }
+interface Filtros { t: TipoItem|''; q: string; p: string; e: string; o?: string }
 interface Sugerido { nome: string; perfil: Perfil|string; n: number; v: number; ult: string; it: Item|null; pts?: number; motivo?: string }
 
 export function montar(root: HTMLElement): () => void {
@@ -29,9 +29,11 @@ root.innerHTML=`<div class="wrap">
  <section class="bar cnbar" aria-label="Filtros da central">
   <div class="f f-wide" role="group" aria-labelledby="cnLT"><span class="lab" id="cnLT">Mostrar</span><div class="pills" id="cnT"></div></div>
   <div class="f"><label for="cnQ">Buscar</label><input id="cnQ" type="search" placeholder="Empresa, anunciante, órgão ou assunto" autocomplete="off"></div>
-  <div class="f"><label for="cnP">Período</label><select id="cnP"><option value="7">Últimos 7 dias</option><option value="30">Últimos 30 dias</option><option value="90">Últimos 90 dias</option><option value="365">Último ano</option><option value="0">Tudo</option></select></div>
+  <div class="f"><label for="cnP">Período</label><select id="cnP"><option value="7">Últimos 7 dias</option><option value="30">Últimos 30 dias</option><option value="90">Últimos 90 dias</option><option value="365">Último ano</option><option value="0">Tudo o que temos</option></select></div>
   <div class="f"><label for="cnE">Situação</label><select id="cnE"><option value="">Novas e salvas</option><option value="salvo">Só salvas</option><option value="arquivado">Arquivadas</option></select></div>
+  <div class="f"><label for="cnO">Organizar</label><select id="cnO"><option value="classe">Por classe, em ranking</option><option value="data">Por data, mais recentes</option></select></div>
  </section>
+ <div id="cnPn"></div>
  <div class="chips" id="cnC"></div>
  <p class="sr" id="cnLive" aria-live="polite" aria-atomic="true"></p>
  <div class="cngrid"><div id="cnF" class="cnfeed" aria-label="Notícias e movimentações"></div><aside id="cnL" class="cnside" aria-label="Leads"></aside></div>
@@ -43,10 +45,10 @@ const diaMs=864e5;const desde=(n: number)=>new Date(Date.now()-n*diaMs).toISOStr
 const TIPOS: [TipoItem|'',string][]=[['','Tudo'],['conta','Contas'],['negocio','Negócios'],['venceu','Licitações vencidas'],['aberta','Licitações abertas'],['renova','Renovações à vista']];
 const TL: Record<TipoItem,string>={conta:'Conta',negocio:'Negócio',venceu:'Licitação vencida',aberta:'Licitação aberta',renova:'Renovação à vista'};
 const CAT: Record<string,TipoItem>={conta:'conta',licitacao:'conta',negocio:'negocio',inhouse:'negocio',mercado:'negocio',pessoas:'negocio'};
-const S: Fontes={noticias:[],movimentos:[],contratos:[],b2g:[],alvos:[],central:[]};let renov: ContratoComFim[]=[],estatico: Movimento[]=[],F: Filtros={t:'',q:'',p:'30',e:''},lim=40,db: Banco|null=null,timer: ReturnType<typeof setTimeout>|undefined,mode: 'carregando'|'local'|'db'='carregando';
+const S: Fontes={noticias:[],movimentos:[],contratos:[],b2g:[],alvos:[],central:[]};let renov: ContratoComFim[]=[],estatico: Movimento[]=[],F: Filtros={t:'',q:'',p:'0',e:'',o:'classe'},lim=100,db: Banco|null=null,timer: ReturnType<typeof setTimeout>|undefined,mode: 'carregando'|'local'|'db'='carregando';
 const col: {alvos?: Colecao<Alvo>; central?: Colecao<EstadoCentral>; [nome: string]: Colecao<unknown>|undefined}={},offs: (()=>void)[]=[],aberto: Record<string,boolean>={};
-try{const sv=JSON.parse(localStorage.getItem('cn.estado')||'null');if(sv)F={...F,...sv}}catch(e){}
-const persist=()=>{try{localStorage.setItem('cn.estado',JSON.stringify(F))}catch(e){}};
+try{const sv=JSON.parse(localStorage.getItem('cn.v2')||'null');if(sv)F={...F,...sv}}catch(e){}
+const persist=()=>{try{localStorage.setItem('cn.v2',JSON.stringify(F))}catch(e){}};
 const perfilDe=(m: Movimento): Perfil=>/licita/i.test(m.tipo||'')?'publica':/house/i.test(m.tipo||'')?'inhouse':/wpp|omnicom|publicis|ipg|havas|dentsu|ogilvy|vml|bbdo|ddb|leo|mccann|africa|wunderman/i.test(m.agencia||'')?'rede':'independente';
 function itens(): Item[]{const out: Item[]=[];const vistos=new Set<string>();
  for(const n of S.noticias){const k='nt:'+n.id;out.push({k,tipo:CAT[n.categoria||'']||'negocio',cat:n.categoria||'',data:String(n.data||n.coletadoEm||'').slice(0,10),titulo:n.titulo||'',resumo:n.resumo||'',empresas:(n.empresas||[]).filter(Boolean),fonte:n.veiculo||'Notícia',url:n.url||'',lead:n.lead&&n.lead.nome?{nome:n.lead.nome,perfil:n.lead.perfil||'independente',gatilho:n.lead.porque||n.titulo,fonte:n.url||''}:null})}
@@ -64,7 +66,9 @@ function itens(): Item[]{const out: Item[]=[];const vistos=new Set<string>();
 const est=(k: string)=>S.central.find(x=>x.id===cid(k));
 const cid=(k: string)=>k.replace(/[^A-Za-z0-9_\-.~:@+]/g,'_').slice(0,190);
 const alvoDe=(nome: string)=>chave(nome)?S.alvos.find(a=>a.id==='al-'+slug(nome)||mesmaEmpresa(a.nome,nome)):null;
-function filt(all: Item[]): Item[]{const q=chave(F.q),lim0=+F.p?desde(+F.p):'';return all.filter(i=>{const e=est(i.k)?.estado||'';if(F.e?e!==F.e:e==='arquivado')return false;if(F.t&&i.tipo!==F.t)return false;if(!F.t&&(i.tipo==='renova'||(i.tipo==='aberta'&&(i.score||0)<80)))return false;if(i.tipo==='renova'&&+F.p&&i.data>addDias(hoje,+F.p))return false;if(lim0&&i.data&&i.data<lim0)return false;if(q&&!chave(i.titulo+' '+i.resumo+' '+i.empresas.join(' ')+' '+i.cat).includes(q))return false;return true}).sort((a,b)=>F.t==='renova'?(a.data||'').localeCompare(b.data||''):(b.data||'').localeCompare(a.data||'')||(b.valor||0)-(a.valor||0))}
+function filt(all: Item[]): Item[]{const q=chave(F.q),lim0=+F.p?desde(+F.p):'';return all.filter(i=>{const e=est(i.k)?.estado||'';if(F.e?e!==F.e:e==='arquivado')return false;if(F.t&&i.tipo!==F.t)return false;if(i.tipo==='renova'&&+F.p&&i.data>addDias(hoje,+F.p))return false;if(lim0&&i.data&&i.data<lim0)return false;if(q&&!chave(i.titulo+' '+i.resumo+' '+i.empresas.join(' ')+' '+i.cat).includes(q))return false;return true}).sort(F.o==='data'?((a,b)=>F.t==='renova'?(a.data||'').localeCompare(b.data||''):(b.data||'').localeCompare(a.data||'')||(b.valor||0)-(a.valor||0)):rank)}
+/** Ranking dentro de cada classe: licitação aberta pela nota, contratos pelo valor, notícias e contas pela data. */
+function rank(a: Item,b: Item){return (b.score||0)-(a.score||0)||(b.valor||0)-(a.valor||0)||(b.data||'').localeCompare(a.data||'')}
 function sugeridos(all: Item[]): (Sugerido&{pts:number;motivo:string})[]{const m=new Map<string,Sugerido>(),d90=desde(90);for(const i of all){if(!i.lead||i.data<d90)continue;const k=chave(i.lead.nome);if(!k||alvoDe(i.lead.nome))continue;if(i.tipo==='renova')continue;const o=m.get(k)||{nome:i.lead.nome,perfil:i.lead.perfil,n:0,v:0,ult:'',it:null};o.n++;o.v+=i.valor||0;if(i.data>o.ult){o.ult=i.data;o.it=i}m.set(k,o)}
  const cal=calibrar(S.alvos);return [...m.values()].map(o=>{const p=prioridade({perfil:o.perfil,sinais:o.n,valor:o.v,ultimo:o.ult>hoje?hoje:o.ult},cal);return {...o,pts:p.nota,motivo:p.motivo}}).sort((a,b)=>b.pts-a.pts).slice(0,8)}
 const dia=(d: string)=>{if(!d)return 'Sem data';if(d>hoje){const x=new Date(d+'T12:00');return `Vence em ${x.getDate()} de ${MES[x.getMonth()]}`}if(d===hoje)return 'Hoje';if(d===desde(1))return 'Ontem';const x=new Date(d+'T12:00');return `${x.getDate()} de ${MES[x.getMonth()]}${d.slice(0,4)!==hoje.slice(0,4)?' de '+d.slice(0,4):''}`};
@@ -78,6 +82,8 @@ function card(i: Item): string{const a=i.lead?alvoDe(i.lead.nome):null,e=est(i.k
  <button type="button" class="ghost sm" data-x="salvo" aria-pressed="${e==='salvo'}">${e==='salvo'?'Salva':'Salvar'}</button>
  <button type="button" class="ghost sm" data-x="arquivado">${e==='arquivado'?'Desarquivar':'Arquivar'}</button>
  ${i.url?`<a class="cn-f" href="${esc(i.url)}" target="_blank" rel="noopener">${esc(i.fonte)} ↗<span class="sr"> (abre em nova aba)</span></a>`:`<span class="note">${esc(i.fonte)}</span>`}</div></article>`}
+/** Itens de uma classe com os mesmos filtros de busca, período e situação (para as barras do painel). */
+function filt0(all: Item[],t: TipoItem){const t0=F.t;F.t=t;const l=filt(all);F.t=t0;return l}
 function render(){persist();
  $('#cnT').innerHTML=TIPOS.map(([v,t])=>`<button type="button" data-t="${v}" aria-pressed="${F.t===v}">${t}</button>`).join('');
  const cnQ=$<HTMLInputElement>('#cnQ');cnQ.value!==F.q&&document.activeElement!==cnQ&&(cnQ.value=F.q);$<HTMLSelectElement>('#cnP').value=F.p;$<HTMLSelectElement>('#cnE').value=F.e;
@@ -90,10 +96,18 @@ function render(){persist();
   {rotulo:'Licitações abertas fortes',valor:numero(int(fortes.length)),nota:`nota 60+ e prazo aberto · ${int(renov.filter(c=>c.fim<=addDias(hoje,90)).length)} contratos vencem em 90 dias`}]);
  const ch: [keyof Filtros,string][]=[];if(F.t)ch.push(['t',TL[F.t]]);if(F.q)ch.push(['q','Busca: '+F.q]);if(F.e)ch.push(['e',F.e==='salvo'?'Só salvas':'Arquivadas']);
  $('#cnC').innerHTML=`<span class="lab">${int(L.length)} ite${L.length===1?'m':'ns'}</span>`+ch.map(([k,t])=>`<button type="button" class="chip" data-r="${k}" aria-label="Remover filtro: ${esc(t)}">${esc(t)} <span aria-hidden="true">×</span></button>`).join('')+(ch.length?'<button type="button" class="ghost sm" data-r="*">Limpar</button>':'');
+ $('#cnPn').innerHTML=painel([
+  barras('Por classe',TIPOS.slice(1).map(([v,t])=>({rotulo:t,valor:filt0(all,v as TipoItem).length,dado:v,ativo:F.t===v})),{attr:'t',nota:'clique para ver só a classe'}),
+  porMes('Sinais por mês',L.map(i=>i.data).filter(d=>d<=hoje)),
+  barras('Empresas com mais sinais',contar(L,i=>i.empresas.slice(0,1).map(nomeLegivel)),{attr:'q',nota:'na lista atual; clique para buscar'})],'Painel da central');
+ $<HTMLSelectElement>('#cnO').value=F.o||'classe';
  let html='',ult=null;const V=L.slice(0,lim);
+ if(F.o!=='data'&&!F.t&&all.length){const g=TIPOS.slice(1).map(([v,t])=>[v,t,L.filter(i=>i.tipo===v)] as const).filter(x=>x[2].length);
+  $('#cnF').innerHTML=g.length?g.map(([v,t,l])=>`<section class="grupo"><div class="grupo-h"><h2>${t} <span class="note">${int(l.length)}</span></h2>${l.length>6?`<button type="button" class="lnk" data-t="${v}">ver as ${int(l.length)} em ranking →</button>`:''}</div><div class="cn-lista">${l.slice(0,6).map(card).join('')}</div></section>`).join(''):`<div class="empty"><h2 class="d d-sub">Nada por aqui</h2><p class="note">Nenhum item com esses filtros. Limpe a busca.</p></div>`;
+ }else{
  for(const i of V){if(i.data!==ult){if(ult!==null)html+='</div></section>';ult=i.data;html+=`<section class="cn-dia" aria-label="${esc(dia(i.data))}"><h2 class="cn-dh">${esc(dia(i.data))}</h2><div class="cn-lista">`}html+=card(i)}
  if(V.length)html+='</div></section>';
- $('#cnF').innerHTML=mode==='carregando'&&!all.length?'<p class="note">Carregando a central…</p>':V.length?html+(L.length>lim?`<p class="mais"><button type="button" class="ghost" id="cnM">Mostrar mais ${int(Math.min(40,L.length-lim))} (${int(L.length-lim)} restantes)</button></p>`:''):`<div class="empty"><h2 class="d d-sub">Nada por aqui</h2><p class="note">${F.e==='arquivado'?'Nenhum item arquivado.':'Nenhuma notícia com esses filtros. Tente um período maior ou limpe a busca.'}</p>${S.noticias.length?'':'<p class="note">As notícias de mercado chegam pela rotina diária da central; contas e contratos já aparecem das bases do Studio.</p>'}</div>`;
+ $('#cnF').innerHTML=mode==='carregando'&&!all.length?'<p class="note">Carregando a central…</p>':V.length?html+(L.length>lim?`<p class="mais"><button type="button" class="ghost" id="cnM">Mostrar mais ${int(Math.min(40,L.length-lim))} (${int(L.length-lim)} restantes)</button></p>`:''):`<div class="empty"><h2 class="d d-sub">Nada por aqui</h2><p class="note">${F.e==='arquivado'?'Nenhum item arquivado.':'Nenhuma notícia com esses filtros. Tente um período maior ou limpe a busca.'}</p>${S.noticias.length?'':'<p class="note">As notícias de mercado chegam pela rotina diária da central; contas e contratos já aparecem das bases do Studio.</p>'}</div>`;}
  const cont: Record<string,number>={};for(const a of ativos)cont[a.status!]=(cont[a.status!]||0)+1;
  $('#cnL').innerHTML=`<section class="p"><div class="ph"><h2 class="d d-sub">Leads sugeridos</h2></div><p class="note">Empresas com sinais recentes (conta nova, contrato vencido, notícia) que ainda não estão na Captação.</p>
  ${sug.length?`<ol class="cn-leads">${sug.map(o=>`<li><div><b>${esc(nomeLegivel(o.nome))} <span class="prio" title="${esc(o.motivo)}" aria-label="Prioridade ${o.pts} de 100: ${esc(o.motivo)}">${o.pts}</span></b><span class="note">${esc(o.perfil)} · ${o.n} sina${o.n>1?'is':'l'}${o.v?' · '+brk(o.v):''} · último ${dt(o.ult)}</span></div><button type="button" class="sm" data-lead="${esc(o.it!.k)}" aria-label="Transformar ${esc(nomeLegivel(o.nome))} em alvo">Virar alvo</button></li>`).join('')}</ol>`:'<p class="note vazio">Nenhum lead novo: todos os sinais recentes já estão na Captação.</p>'}</section>
@@ -111,17 +125,18 @@ async function marcar(k: string,estado: string){const id=cid(k),cur=est(k)?.esta
  const loc=()=>{S.central=S.central.filter(x=>x.id!==id).concat(novo?[{id,estado:novo}]:[]);render()};
  if(!col.central)return loc();try{if(novo)await col.central.doc(id).set({estado:novo,em:new Date().toISOString(),chave:k});else await col.central.doc(id).delete()}catch(e){loc()}}
 const achar=(k: string)=>itens().find(i=>i.k===k);
-root.addEventListener('click',e=>{const el=elDe(e);const t=el.closest<HTMLElement>('[data-t]');if(t){F.t=t.dataset.t as TipoItem|'';lim=40;render();root.querySelector<HTMLElement>(`[data-t="${F.t}"]`)!.focus();return}
- const r=el.closest<HTMLElement>('[data-r]');if(r){const k=r.dataset.r;if(k==='*')F={...F,t:'',q:'',e:''};else F[k as keyof Filtros]='';$<HTMLInputElement>('#cnQ').value=F.q;lim=40;render();(root.querySelector<HTMLElement>('#cnC [data-r]')||$<HTMLElement>('#cnQ')).focus();return}
- const q=el.closest<HTMLElement>('[data-q]');if(q){F.q=q.dataset.q||'';$<HTMLInputElement>('#cnQ').value=F.q;lim=40;render();$('#cnQ').focus();return}
+root.addEventListener('click',e=>{const el=elDe(e);const t=el.closest<HTMLElement>('[data-t]');if(t){const v=t.dataset.t as TipoItem|'';F.t=t.closest('.pn')&&F.t===v?'':v;lim=100;render();root.querySelector<HTMLElement>(`[data-t="${F.t}"]`)!.focus();return}
+ const r=el.closest<HTMLElement>('[data-r]');if(r){const k=r.dataset.r;if(k==='*')F={...F,t:'',q:'',e:''};else F[k as keyof Filtros]='';$<HTMLInputElement>('#cnQ').value=F.q;lim=100;render();(root.querySelector<HTMLElement>('#cnC [data-r]')||$<HTMLElement>('#cnQ')).focus();return}
+ const q=el.closest<HTMLElement>('[data-q]');if(q){const v=q.dataset.q||'';F.q=q.closest('.pn')&&F.q===v?'':v;$<HTMLInputElement>('#cnQ').value=F.q;lim=100;render();$('#cnQ').focus();return}
  if(el.id==='cnM'){const n=lim;lim+=40;render();const it=root.querySelectorAll('.cn-it')[n];it&&it.querySelector<HTMLElement>('button,a')?.focus();return}
  const ld=el.closest<HTMLButtonElement>('[data-lead]');if(ld){const i=achar(ld.dataset.lead!);i&&virarAlvo(i,ld);return}
  const x=el.closest<HTMLButtonElement>('[data-x]');if(!x)return;const art=x.closest<HTMLElement>('.cn-it'),k=art&&art.dataset.k;if(!k)return;
  if(x.dataset.x==='mais'){aberto[k]=!aberto[k];render();root.querySelector<HTMLElement>(`.cn-it[data-k="${CSS.escape(k)}"] [data-x="mais"]`)?.focus();return}
  if(x.dataset.x==='lead'){const i=achar(k);i&&virarAlvo(i,x);return}
  marcar(k,x.dataset.x!)});
-$<HTMLInputElement>('#cnQ').oninput=e=>{F.q=(e.target as HTMLInputElement).value;lim=40;clearTimeout(timer);timer=setTimeout(render,200)};
-$<HTMLSelectElement>('#cnP').onchange=e=>{F.p=(e.target as HTMLSelectElement).value;lim=40;render()};$<HTMLSelectElement>('#cnE').onchange=e=>{F.e=(e.target as HTMLSelectElement).value;lim=40;render()};
+$<HTMLInputElement>('#cnQ').oninput=e=>{F.q=(e.target as HTMLInputElement).value;lim=100;clearTimeout(timer);timer=setTimeout(render,200)};
+$<HTMLSelectElement>('#cnO').onchange=e=>{F.o=(e.target as HTMLSelectElement).value;lim=100;render()};
+$<HTMLSelectElement>('#cnP').onchange=e=>{F.p=(e.target as HTMLSelectElement).value;lim=100;render()};$<HTMLSelectElement>('#cnE').onchange=e=>{F.e=(e.target as HTMLSelectElement).value;lim=100;render()};
 render();
 lerBase<{movimentos?: Movimento[]}>('mercado').then((m)=>{if(m&&m.movimentos){estatico=m.movimentos;render()}}).catch(()=>{});
 (async()=>{try{const v=await lerBase<{contratos?: ContratoPublico[]}>('vencedores');const lim=addDias(hoje,180);renov=(v.contratos||[]).filter((c): c is ContratoComFim=>!!c.fim&&c.fim>=hoje&&c.fim<=lim&&(c.valor||0)>=100000);render()}catch(e){}})();

@@ -81,7 +81,16 @@ export async function lerArquivo<T>(...caminhos: string[]): Promise<T> {
 /** Base grande: primeiro o arquivo `<nome>.json` publicado junto do Studio (o caminho que sempre funcionou); se ele
  * não existir, a cópia no banco em blocos, na coleção `base_<nome>` (documento `cabeca` com os campos pequenos em `dados`
  * e a contagem de cada lista em `partes`; documentos `<lista>-NN` com os pedaços em `itens`). */
-export async function lerBase<T>(nome: string): Promise<T> {
+/** Bases já lidas nesta visita: trocar de tela não relê o banco. Uma leitura que falhou sai do cache para tentar de novo. */
+const bases = new Map<string, Promise<unknown>>();
+/** Esvazia o cache das bases (testes e recarga manual). */
+export const esquecerBases = () => bases.clear();
+export function lerBase<T>(nome: string): Promise<T> {
+  let p = bases.get(nome);
+  if (!p) { p = lerBaseAgora<T>(nome); bases.set(nome, p); p.catch(() => bases.delete(nome)); }
+  return p as Promise<T>;
+}
+async function lerBaseAgora<T>(nome: string): Promise<T> {
   try { return await lerArquivo<T>(`${nome}.json`); } catch (e) { if (!(await banco())) throw e; }
   const db = await banco();
   if (db) {

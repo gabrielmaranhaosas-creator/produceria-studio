@@ -4,7 +4,7 @@ import { esc, int, brl, brk, dt } from '../lib/formato';
 import { banco, lerBase, type Banco } from '../lib/db';
 import { chave } from '../lib/nomes';
 import { seletor, comId, abaNoEndereco, type Dialogo } from './dom';
-import { kpis, vazio, abrirDialogo, devolverFoco } from '../componentes';
+import { kpis, vazio, abrirDialogo, devolverFoco, barras, contar, painel, type Barra } from '../componentes';
 
 // ---------------------------------------------------------------- dados
 export interface Contrato {
@@ -121,14 +121,14 @@ const novoId = (p: string) => p + '-' + Date.now().toString(36) + Math.random().
 
 export function montar(root: HTMLElement): () => void {
   root.innerHTML = `<div class="wrap vc"><div id="vcK"><p class="note">Carregando o mapa de vencedores…</p></div>
-  <div id="vcF"></div><p class="sr" id="vcLive" aria-live="polite" aria-atomic="true"></p><div id="vcO"></div></div>
+  <div id="vcF"></div><p class="sr" id="vcLive" aria-live="polite" aria-atomic="true"></p><div id="vcPn"></div><div id="vcO"></div></div>
   <dialog id="vcD" aria-labelledby="vcDT"></dialog>`;
   const $ = seletor(root);
   const D = $<Dialogo>('#vcD');
   let base: Mapa | null = null, m: Mapa | null = null, novos: Contrato[] = [], db: Banco | null = null;
   let alvos: { nome: string }[] = [], funil: { titulo?: string }[] = [];
   let visao: Visao = 'empresas', limite = 60;
-  const f: Filtros = { segmento: 'Agência com conta pública', frente: '', uf: '', busca: '', soVigentes: true };
+  const f: Filtros = { segmento: 'Agência com conta pública', frente: '', uf: '', busca: '', soVigentes: false };
   let porRaiz = new Map<string, Contrato[]>(), porOrgao = new Map<string, Contrato[]>();
   const offs: (() => void)[] = [];
   const abas = abaNoEndereco<Visao>(['empresas', 'orgaos', 'precos', 'contratos'], 'empresas', (a) => { visao = a; limite = 60; if (m) { filtros(); lista(); } });
@@ -184,9 +184,24 @@ export function montar(root: HTMLElement): () => void {
   const baixarBtn = '<div class="acts"><button type="button" class="ghost sm" id="vcCSV">Baixar esta lista (.csv)</button><span class="note">Baixa o que está filtrado na tela, para abrir no Excel.</span></div>';
   const comoAbordar = (titulo: string, porque: string, passos: string[], b?: { t: string; url: string }) => `<section class="lc-box vc-como" aria-label="${esc(titulo)}"><span class="lab">${esc(titulo)}</span><p>${esc(porque)}</p>${passos.length ? `<ol>${passos.map((p) => `<li>${esc(p)}</li>`).join('')}</ol>` : ''}${b ? `<a class="cn-f" href="${esc(b.url)}" target="_blank" rel="noopener">${esc(b.t)} ↗<span class="sr"> (abre em nova aba)</span></a>` : ''}</section>`;
 
+  /** Painel do topo: valor por frente e por UF (clicáveis, viram filtro) e o ranking da lista atual. */
+  function resumo(C: Contrato[], ranking: string) {
+    const v = (c: Contrato) => c.valor || 0;
+    const ativo = (x: Barra[], sel: string) => x.map((b) => ({ ...b, ativo: b.dado === sel }));
+    $('#vcPn').innerHTML = painel([
+      barras('Valor por frente', ativo(contar(C, (c) => c.frente, v).map((b) => ({ ...b, rotulo: fr(b.rotulo) })), f.frente), { attr: 'fr', fmt: brk, nota: 'clique para filtrar' }),
+      barras('Valor por estado', ativo(contar(C, (c) => c.uf, v), f.uf), { attr: 'uf', fmt: brk, nota: 'clique para filtrar' }),
+      ranking,
+    ], 'Resumo dos contratos');
+  }
+
   function lista() {
     const o = $('#vcO');
     if (!m) return;
+    if (visao === 'precos') $('#vcPn').innerHTML = '';
+    else if (visao === 'contratos') { const C = filtrarContratos(m, f); resumo(C, barras('Órgãos que mais contrataram', contar(C, (c) => c.orgao, (c) => c.valor || 0), { fmt: brk })); }
+    else if (visao === 'orgaos') { const L = orgaosVencendo(m, f); resumo(filtrarContratos(m, { ...f, soVigentes: true }).filter((c) => c.fim && c.fim <= new Date(Date.now() + 243 * 864e5).toISOString().slice(0, 10)), barras('Mais valor vencendo', L.map((g) => ({ rotulo: g.nome, valor: g.valorVencendo, dado: g.cnpj })).sort((a, b) => b.valor - a.valor), { attr: 'org', fmt: brk, nota: 'clique para ver o órgão' })); }
+    else { const L = filtrarEmpresas(m, f), raizes = new Set(L.map((e) => e.raiz || e.cnpj.slice(0, 8))); resumo(filtrarContratos(m, f).filter((c) => raizes.has((c.cnpj || '').slice(0, 8))), barras('Maiores vencedores', L.map((e) => ({ rotulo: e.nome, valor: e.valorVigente || e.valorTotal, dado: e.cnpj })).sort((a, b) => b.valor - a.valor), { attr: 'emp', fmt: brk, nota: 'clique para ver a empresa' })); }
     if (visao === 'empresas') {
       const seg = contagemSegmentos(), L = filtrarEmpresas(m, f), s = SEGMENTOS[f.segmento];
       o.innerHTML = `${baixarBtn}<div class="acts" role="group" aria-label="Segmento">${Object.keys(SEGMENTOS).filter((k) => seg[k]).map((k) => `<button type="button" class="chip" data-seg="${esc(k)}" aria-pressed="${f.segmento === k}">${esc(k)} · ${int(seg[k])}</button>`).join('')}</div>
@@ -329,6 +344,7 @@ export function montar(root: HTMLElement): () => void {
     if (d.visao) { abas.ir(d.visao as Visao); root.querySelector<HTMLElement>(`[data-visao="${visao}"]`)?.focus(); return; }
     if (d.seg) { f.segmento = d.seg; limite = 60; lista(); root.querySelector<HTMLElement>(`[data-seg="${CSS.escape(d.seg)}"]`)?.focus(); return; }
     if (d.mais) { limite += Number(d.mais); lista(); return; }
+    if (d.fr !== undefined || d.uf !== undefined) { if (d.fr !== undefined) f.frente = f.frente === d.fr ? '' : d.fr; else f.uf = f.uf === d.uf ? '' : d.uf!; limite = 60; filtros(); lista(); avisar(`Filtro: ${fr(f.frente) || 'todas as frentes'}, ${f.uf || 'todo o Brasil'}.`); return; }
     if (d.emp) { const e = m.empresas.find((x) => x.cnpj === d.emp); if (e) abrirEmpresa(e, b); return; }
     if (d.org) { const g = m.orgaos.find((x) => x.cnpj === d.org); if (g) abrirOrgao(g, b); return; }
     if (b.id === 'vcCSV') baixar();

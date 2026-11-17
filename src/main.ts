@@ -19,6 +19,7 @@ import tabela from './estilos/tabela.css?inline';
 import gestao from './estilos/gestao.css?inline';
 import oficina from './estilos/oficina.css?inline';
 import sid from './estilos/sid.css?inline';
+import painel from './estilos/painel.css?inline';
 import * as pCentral from './paginas/central';
 import * as pAlertas from './paginas/alertas';
 import * as pSid from './paginas/sid';
@@ -85,7 +86,7 @@ function estilos() {
   if (document.getElementById('studio-src-css')) return;
   const el = document.createElement('style');
   el.id = 'studio-src-css';
-  el.textContent = base + central + agenda + licitacoes + captacao + vencedores + mercado + funil + estrategia + tabela + gestao + oficina + sid + casca;
+  el.textContent = base + central + agenda + licitacoes + captacao + vencedores + mercado + funil + estrategia + tabela + gestao + oficina + sid + painel + casca;
   document.head.appendChild(el);
 }
 

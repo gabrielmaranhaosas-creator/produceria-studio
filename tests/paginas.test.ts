@@ -59,11 +59,13 @@ describe('Base em blocos no banco (lerBase)', () => {
       'contratos-01': { itens: [{ id: 1 }, { id: 2 }] },
     }, base_quebrada: { cabeca: { dados: {}, partes: { contratos: 5 } }, 'contratos-01': { itens: [{ id: 1 }] } } });
     (window as any).claude = { use: async (n: string) => (n === 'db' ? db.banco : null) };
-    const { lerBase } = await import('../src/lib/db');
+    const { lerBase, esquecerBases } = await import('../src/lib/db');
     const sem = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response('', { status: 404 }));
     expect(await lerBase('teste')).toEqual({ meta: { n: 3 }, contratos: [{ id: 1 }, { id: 2 }, { id: 3 }] });
     await expect(lerBase('quebrada')).rejects.toThrow();
     sem.mockRestore();
+    expect(await lerBase('teste')).toEqual({ meta: { n: 3 }, contratos: [{ id: 1 }, { id: 2 }, { id: 3 }] }); // a segunda visita vem da memória
+    esquecerBases();
     const f = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({ origem: 'arquivo' })));
     expect(await lerBase('teste')).toEqual({ origem: 'arquivo' });
     expect(f).toHaveBeenCalledWith('teste.json');
@@ -78,10 +80,11 @@ describe('Base em blocos no banco (lerBase)', () => {
       doc: (id: string) => ({ get: async () => ({ exists: id in blocos, data: () => blocos[id] }) }),
     }) };
     (window as any).claude = { use: async (n: string) => (n === 'db' ? banco : null) };
-    const { lerBase } = await import('../src/lib/db');
+    const { lerBase, esquecerBases } = await import('../src/lib/db');
     const sem = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response('', { status: 404 }));
     expect(await lerBase('vencedores')).toEqual({ meta: 1, contratos: [1, 2, 3, 4, 5, 6, 7, 8, 9], orgaos: ['o'] });
     delete blocos['contratos-04'];
+    esquecerBases();
     await expect(lerBase('vencedores')).rejects.toThrow(/contratos com 5 de 9/);
     sem.mockRestore();
   });
@@ -183,12 +186,11 @@ describe('Licitações', () => {
   it('Disputar manda para a carteira e Descartar grava o motivo', async () => {
     const db = bancoFalso(base);
     const { raiz } = await montar('licitacoes', db);
-    expect(raiz.querySelectorAll('.lc-it').length).toBe(1);
+    expect(raiz.querySelectorAll('.lc-it').length).toBe(3); // o radar abre com a lista inteira, em ranking por nota
     expect(raiz.textContent).toContain('perfil 2026-11-10e');
     raiz.querySelector<HTMLButtonElement>('[data-disp="pncp-1"]')!.click();
     await espera();
     expect(db.dados.b2g['pncp-1']).toMatchObject({ carteira: true, etapa: 'Triagem', triagem: 'Disputar' });
-    raiz.querySelector<HTMLButtonElement>('[data-tg="nota60"]')!.click();
     const sel = raiz.querySelector<HTMLSelectElement>('[data-desc="pncp-3"]')!;
     sel.value = 'Fora do escopo';
     sel.dispatchEvent(new Event('change', { bubbles: true }));
@@ -307,17 +309,18 @@ describe('Vencedores', () => {
     vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify(mapa), { status: 200 })));
   });
 
-  it('lista quem abordar por segmento e filtra só vigentes', async () => {
+  it('lista quem abordar por segmento, com painel, e filtra só vigentes', async () => {
     const { raiz } = await montar('vencedores', bancoFalso({}));
     expect(raiz.querySelectorAll('#vcK .k').length).toBe(4);
     expect(raiz.querySelectorAll('.vc-linha').length).toBe(1);
     expect(raiz.querySelector('.vc-linha')?.textContent).toContain('Agência Pública Ltda');
-    // a gráfica sem contrato vigente só aparece ao desmarcar "Só vigentes"
-    expect(raiz.querySelector('[data-seg="Gráfica e comunicação visual"]')).toBeNull();
-    const vig = raiz.querySelector<HTMLInputElement>('#vcVig')!;
-    vig.checked = false; vig.dispatchEvent(new Event('change', { bubbles: true }));
+    expect(raiz.querySelector('#vcPn .pn')).not.toBeNull();
+    // abre com a lista inteira: a gráfica sem contrato vigente aparece; "Só vigentes" a esconde
     raiz.querySelector<HTMLButtonElement>('[data-seg="Gráfica e comunicação visual"]')!.click();
     expect(raiz.querySelector('.vc-linha')?.textContent).toContain('Gráfica Velha');
+    const vig = raiz.querySelector<HTMLInputElement>('#vcVig')!;
+    vig.checked = true; vig.dispatchEvent(new Event('change', { bubbles: true }));
+    expect(raiz.querySelector('[data-seg="Gráfica e comunicação visual"]')).toBeNull();
   });
 
   it('empresa vira alvo na Captação e órgão vai ao funil', async () => {
@@ -342,7 +345,7 @@ describe('Vencedores', () => {
   it('contratos filtram por busca e preços mostram a tabela', async () => {
     const { raiz } = await montar('vencedores', bancoFalso({}));
     raiz.querySelector<HTMLButtonElement>('[data-visao="contratos"]')!.click();
-    expect(raiz.querySelectorAll('.vc-ct tbody tr').length).toBe(2);
+    expect(raiz.querySelectorAll('.vc-ct tbody tr').length).toBe(3);
     const q = raiz.querySelector<HTMLInputElement>('#vcQ')!;
     q.value = 'nada'; q.dispatchEvent(new Event('input', { bubbles: true }));
     expect(raiz.querySelector('.empty h2')?.textContent).toBe('Nenhum contrato com esses filtros');
@@ -374,22 +377,24 @@ describe('Contas e agências', () => {
   it('movimentações filtram por período e tipo de agência, e somam as da Captação semanal', async () => {
     const db = bancoFalso({ movimentos: { m1: { data: dias(5), anunciante: 'Marca Z', agencia: 'Agência Recém', fonte: 'https://f3' }, m2: { data: dias(5), anunciante: 'Sem fonte', agencia: 'Ag' } } });
     const { raiz } = await montar('mercado', db);
-    expect(raiz.querySelectorAll('.mk-mv').length).toBe(2);
-    expect(raiz.querySelector('.mk-mv')?.textContent).toContain('Marca Z');
-    const p = raiz.querySelector<HTMLSelectElement>('#mkP')!;
-    p.value = 'todos'; p.dispatchEvent(new Event('change', { bubbles: true }));
-    expect(raiz.querySelectorAll('.mk-mv').length).toBe(2);
-    const c = raiz.querySelector<HTMLInputElement>('#mkC')!;
-    c.checked = false; c.dispatchEvent(new Event('change', { bubbles: true }));
+    // abre com tudo desde 2025 e todos os tipos de agência
     expect(raiz.querySelectorAll('.mk-mv').length).toBe(3);
+    expect(raiz.querySelector('.mk-mv')?.textContent).toContain('Marca Z');
+    expect(raiz.querySelector('#mkPn .pn')).not.toBeNull();
+    const c = raiz.querySelector<HTMLInputElement>('#mkC')!;
+    c.checked = true; c.dispatchEvent(new Event('change', { bubbles: true }));
+    expect(raiz.querySelectorAll('.mk-mv').length).toBe(2);
+    const p = raiz.querySelector<HTMLSelectElement>('#mkP')!;
+    p.value = '90'; p.dispatchEvent(new Event('change', { bubbles: true }));
+    expect(raiz.querySelectorAll('.mk-mv').length).toBe(2);
   });
 
   it('agência abre com a situação certa e vira alvo na Captação', async () => {
     const db = bancoFalso({});
     const { raiz } = await montar('mercado', db);
     raiz.querySelector<HTMLButtonElement>('[data-visao="agencias"]')!.click();
-    expect(raiz.querySelectorAll('.vc-linha').length).toBe(1);
-    raiz.querySelector<HTMLButtonElement>('[data-ag="Agência Nova"]')!.click();
+    expect(raiz.querySelectorAll('.vc-linha').length).toBe(2);
+    raiz.querySelector<HTMLButtonElement>('.vc-linha[data-ag="Agência Nova"]')!.click();
     const d = document.querySelector('#mkD')!;
     expect(d.textContent).toContain('acabou de ganhar uma conta');
     d.querySelector<HTMLButtonElement>('#mkAlvo')!.click();
@@ -942,10 +947,14 @@ describe('Alertas comerciais', () => {
     },
     alvos: {},
   };
-  it('mostra os abertos com pessoas e ação proposta, e avança a situação', async () => {
+  it('abre com todos os alertas, filtra os abertos, mostra pessoas e ação proposta, e avança a situação', async () => {
     const db = bancoFalso(inicial);
     const { raiz, desmontar } = await montar('alertas', db);
     await espera(30);
+    expect(raiz.querySelectorAll('.ac-it').length).toBe(2);
+    expect(raiz.querySelector('#acPn .pn')).not.toBeNull();
+    const s = raiz.querySelector<HTMLSelectElement>('#acS')!;
+    s.value = 'abertos'; s.dispatchEvent(new Event('change', { bubbles: true }));
     expect(raiz.querySelectorAll('.ac-it').length).toBe(1);
     expect(raiz.textContent).toContain('Ana Lima');
     expect(raiz.textContent).toContain('Ação comercial proposta');

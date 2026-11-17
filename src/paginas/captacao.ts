@@ -8,7 +8,7 @@ import { perguntar, ErroIA } from '../lib/ia';
 import { buscar, calcular, itemDe, rotulo, SERVICOS, type ItemProposta } from '../lib/servicos';
 import type { Alvo, Caso, Oportunidade } from '../lib/tipos';
 import { seletor, comId, abaNoEndereco, type Dialogo } from './dom';
-import { vazio, abrirDialogo, devolverFoco, confirmarNoBotao } from '../componentes';
+import { vazio, abrirDialogo, devolverFoco, confirmarNoBotao, barras, contar, painel } from '../componentes';
 
 // ---------------------------------------------------------------- perfis e atração (da tela antiga)
 export const PERFIS = [
@@ -156,6 +156,11 @@ export function montar(root: HTMLElement): () => void {
       <div class="acts"><button type="button" class="chip" data-pf="" aria-pressed="${!perfil}">Todos</button>${PERFIS.map((p) => { const n = vivos.filter((a) => a.perfil === p.id).length; return n ? `<button type="button" class="chip" data-pf="${p.id}" aria-pressed="${perfil === p.id}">${p.curto} · ${int(n)}</button>` : ''; }).join('')}
       ${desc.length ? `<button type="button" class="chip cp-desc-chip" data-pf="__descartados" aria-pressed="${perfil === '__descartados'}">Descartados · ${int(desc.length)}</button>` : ''}
       <button type="button" class="sm" id="cpN" aria-expanded="${novo}">${novo ? 'Fechar' : 'Novo alvo'}</button></div></section>
+      ${vivos.length ? painel([
+        barras('Funil por etapa', (ETAPAS as readonly string[]).map((et) => ({ rotulo: et, valor: L.filter((a) => (a.status || 'Mapeado') === et).length })), { max: 12 }),
+        barras('Por perfil', contar(vivos, (a) => a.perfil).map((b) => ({ ...b, rotulo: perfilDe(b.rotulo)?.curto || b.rotulo, ativo: b.dado === perfil })), { attr: 'pf', nota: 'clique para filtrar o quadro' }),
+        barras('De onde vieram', contar(L, (a) => a.origem || 'Cadastro manual')),
+      ], 'Resumo da captação') : ''}
       ${form}
       ${carregando ? '<p class="note">Carregando alvos…</p>' : perfil === '__descartados' ? descartados(desc) : L.length ? quadro(L) : vazio({ titulo: perfil ? 'Nenhum alvo neste perfil' : 'Nenhum alvo ainda', texto: 'Em Achar novos, use os sinais, cole um texto ou adicione à mão.', acao: '<button type="button" class="ghost sm" data-aba="achar">Achar novos</button>' })}`;
   }
@@ -171,7 +176,7 @@ export function montar(root: HTMLElement): () => void {
     const etapas = ETAPAS as readonly string[];
     return `<p class="note">Use os botões de etapa no cartão. Clique no nome para abrir o alvo.</p><div class="lc-kanban cp-quadro">${etapas.map((et, i) => {
       const itens = L.filter((a) => (a.status || 'Mapeado') === et);
-      const mostra = expandidas.has(et) ? itens : itens.slice(0, 6);
+      const mostra = expandidas.has(et) ? itens.slice(0, 6) : itens;
       return `<section class="lc-col${et === 'Conversa' ? ' quente' : ''}" aria-label="${et}: ${itens.length}"><div class="lc-colh"><span class="lab">${et}</span><span class="note num">${int(itens.length)}</span></div>
       ${itens.length ? '' : '<span class="note">Nada aqui ainda</span>'}
       ${mostra.map((a) => {
@@ -181,7 +186,7 @@ export function montar(root: HTMLElement): () => void {
         ${a.proximoPasso || a.prazo ? `<span class="note${v ? ' cp-venc' : ''}">${v ? 'Vencido · ' : '→ '}${esc(a.proximoPasso || 'Próximo passo')}${a.prazo ? ' · ' + dt(a.prazo) : ''}</span>` : '<span class="note">Sem próximo passo</span>'}
         <div class="lc-mv">${i > 0 ? `<button type="button" class="ghost sm" data-mv="${esc(a.id)}" data-para="${etapas[i - 1]}" aria-label="Voltar ${esc(a.nome)} para ${etapas[i - 1]}">← ${etapas[i - 1]}</button>` : '<span></span>'}${i < etapas.length - 1 ? `<button type="button" class="ghost sm" data-mv="${esc(a.id)}" data-para="${etapas[i + 1]}" aria-label="Avançar ${esc(a.nome)} para ${etapas[i + 1]}">${etapas[i + 1]} →</button>` : ''}</div></div>`;
       }).join('')}
-      ${itens.length > 6 ? `<button type="button" class="lnk" data-exp="${et}">${expandidas.has(et) ? 'Mostrar menos' : `Mostrar mais ${itens.length - 6}`}</button>` : ''}</section>`;
+      ${itens.length > 6 ? `<button type="button" class="lnk" data-exp="${et}">${expandidas.has(et) ? `Mostrar todos (${itens.length})` : 'Recolher'}</button>` : ''}</section>`;
     }).join('')}</div>`;
   }
 
@@ -414,7 +419,7 @@ Escreva só três seções em markdown, sem valores (os valores entram numa tabe
     if (!b || !root.contains(b) || D.contains(b)) return;
     const d = b.dataset;
     if (d.aba) { abas.ir(d.aba as Aba); $<HTMLElement>('#cp-tab-' + aba).focus(); return; }
-    if (d.pf !== undefined) { perfil = d.pf; render(); return; }
+    if (d.pf !== undefined) { perfil = b.closest('.pn') && perfil === d.pf ? '' : d.pf; render(); return; }
     if (d.reabre) { const a = A.find((x) => x.id === d.reabre); if (a && await atualizar(a.id, { status: 'Mapeado', triagem: '', motivoDescarte: '', triadoEm: agora() }, `${a.nome} voltou para Mapeado.`)) { if (!col) render(); } return; }
     if (d.verpf) { perfil = d.verpf; aba = 'alvos'; render(); return; }
     if (b.id === 'cpN') { novo = !novo; render(); if (novo) $<HTMLInputElement>('#n_nome').focus(); return; }

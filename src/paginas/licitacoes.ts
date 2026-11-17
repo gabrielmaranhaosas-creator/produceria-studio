@@ -113,7 +113,7 @@ export function montar(root: HTMLElement): () => void {
   let aba: Aba = 'radar';
   const abas = abaNoEndereco<Aba>(['radar', 'carteira', 'habilitacao', 'pca', 'vias'], 'radar', (a) => { aba = a; render(); });
   aba = abas.inicial;
-  const F: FiltroRadar = { frente: '', aderencia: '', nota60: true, abertas: true, estudio: false, descartadas: false, q: '', ordem: 'nota' };
+  const F: FiltroRadar = { frente: '', aderencia: '', nota60: false, abertas: false, estudio: false, descartadas: false, q: '', ordem: 'nota' };
   const avisar = (t: string) => { $('#lcLive').textContent = t; };
   const D = $<Dialogo>('#lcD');
   D.addEventListener('close', () => render()); // o radar pode ter mudado enquanto o diálogo estava aberto
