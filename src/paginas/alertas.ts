@@ -10,7 +10,7 @@ import { kpis, numero, vazio } from '../componentes';
 
 export type Prioridade = 'alta' | 'media' | 'baixa';
 export type Status = 'novo' | 'andamento' | 'feito' | 'descartado';
-export interface PessoaAlerta { nome: string; cargo?: string; organizacao?: string; linkedin?: string; fonte?: string }
+export interface PessoaAlerta { nome: string; cargo?: string; organizacao?: string; linkedin?: string; fonte?: string; nivel?: string }
 export interface Alerta {
   id: string; data: string; tipo: string; prioridade?: Prioridade; titulo: string; fato?: string;
   empresas?: string[]; agencias?: string[]; pessoas?: PessoaAlerta[];

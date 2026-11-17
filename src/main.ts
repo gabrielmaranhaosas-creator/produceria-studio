@@ -18,8 +18,10 @@ import estrategia from './estilos/estrategia.css?inline';
 import tabela from './estilos/tabela.css?inline';
 import gestao from './estilos/gestao.css?inline';
 import oficina from './estilos/oficina.css?inline';
+import sid from './estilos/sid.css?inline';
 import * as pCentral from './paginas/central';
 import * as pAlertas from './paginas/alertas';
+import * as pSid from './paginas/sid';
 import * as pBigdata from './paginas/bigdata';
 import * as pAgenda from './paginas/agenda';
 import * as pCasos from './paginas/casos';
@@ -52,6 +54,7 @@ import type { Montar } from './paginas/dom';
 const paginas: Record<string, Montar> = {
   central: pCentral.montar,
   alertas: pAlertas.montar,
+  sid: pSid.montar,
   bigdata: pBigdata.montar,
   agenda: pAgenda.montar,
   casos: pCasos.montar,
@@ -82,7 +85,7 @@ function estilos() {
   if (document.getElementById('studio-src-css')) return;
   const el = document.createElement('style');
   el.id = 'studio-src-css';
-  el.textContent = base + central + agenda + licitacoes + captacao + vencedores + mercado + funil + estrategia + tabela + gestao + oficina + casca;
+  el.textContent = base + central + agenda + licitacoes + captacao + vencedores + mercado + funil + estrategia + tabela + gestao + oficina + sid + casca;
   document.head.appendChild(el);
 }
 

@@ -21,6 +21,7 @@ export const PAGINA: Record<string, string> = {
   painel: 'inicio', central: 'central', alertas: 'alertas', bigdata: 'bigdata', agenda: 'agenda', casos: 'casos', captacao: 'captacao', mercado: 'mercado', b2g: 'licitacoes', vencedores: 'vencedores',
   contas: 'contas', estrategia: 'estrategia', funil: 'funil', rotinas: 'rotinas', tabela: 'tabela', ajustes: 'ajustes', ferramentas: 'bancada', grafica: 'grafica',
   plugins: 'plugins', agentes: 'agentes', biblioteca: 'biblioteca', lixeira: 'lixeira', atelie: 'atelie', desdobra: 'desdobra', entrega: 'entrega', retoque: 'retoque',
+  sid: 'sid',
 };
 const APELIDOS: Record<string, string> = { oficina: 'atelie', checar: 'entrega', diversificacao: 'funil', mapa: 'funil', frentes: 'estrategia', swot: 'estrategia', ia: 'estrategia', agencias: 'mercado', personas: 'agentes', receitas: 'funil' };
 /** Cabeçalho das telas do Comercial que não trazem o próprio. */
@@ -136,7 +137,7 @@ export function iniciarCasca(raiz: HTMLElement, paginas: Record<string, Montar>,
     try { desmontar = m ? m(alvo) : null; }
     catch (e) { console.error(e); alvo.innerHTML = '<div class="wrap"><div class="empty"><h2 class="d d-sub">Esta página não carregou</h2><p class="note">Recarregue o Studio. Se continuar, avise quem cuida do sistema.</p></div></div>'; }
     window.scrollTo(0, 0);
-    document.title = `${cab?.t || atual.itens.find((i) => i.rotas.includes(rota))?.l || 'Início'} · PRODUCERia Studio`;
+    document.title = `${cab?.t || (rota === 'sid' ? 'Alerta B2B do Sid' : '') || atual.itens.find((i) => i.rotas.includes(rota))?.l || 'Início'} · PRODUCERia Studio`;
   }
 
   // ---------------------------------------------------------------- avisos
@@ -245,6 +246,8 @@ export function iniciarCasca(raiz: HTMLElement, paginas: Record<string, Montar>,
     db = await banco();
     $('#csDados').textContent = db ? 'Dados compartilhados com a equipe' : 'Dados só nesta sessão';
     meuNome = await nomeProprio();
+    // O Sid abre o Studio direto no alerta dele (só quando chega sem endereço de tela).
+    if (!location.hash && /^sid\b/i.test(meuNome)) location.hash = '#sid';
     if (!db) return;
     db.collection<Doc>('notificacoes').onSnapshot((s) => {
       avisos = s.docs.map((d) => ({ ...d.data(), id: d.id }));

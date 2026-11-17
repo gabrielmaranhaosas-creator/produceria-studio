@@ -1017,3 +1017,40 @@ describe('Big Data do mercado', () => {
     desmontar();
   });
 });
+
+describe('Alerta do Sid', () => {
+  const inicial = {
+    alertas: {
+      's-1': { data: hoje, tipo: 'conta', prioridade: 'alta', titulo: 'Agência Z ganha conta de varejo', fato: 'A Loja Y escolheu a Agência Z. A troca vale a partir de dezembro.', empresas: ['Loja Y'], pessoas: [{ nome: 'Ana Lima', cargo: 'CMO', organizacao: 'Loja Y', linkedin: 'https://www.linkedin.com/in/ana' }], acao: { oferta: 'Adaptação das peças da nova campanha. Com prazo curto.', primeiroPasso: 'Escrever para a Ana hoje' }, fontes: [{ veiculo: 'M&M', url: 'https://exemplo.com/a' }] },
+      's-2': { data: hoje, tipo: 'licitacao', prioridade: 'alta', titulo: 'Governo abre concorrência', fato: 'Edital.' },
+      's-3': { data: hoje, tipo: 'conta', prioridade: 'media', titulo: 'Petrobras troca agência', fato: 'Estatal.', empresas: ['Petrobras'] },
+    },
+  };
+  it('deixa o setor público de fora', async () => {
+    const { ehPublico } = await import('../src/paginas/sid');
+    expect(ehPublico(inicial.alertas['s-1'] as never)).toBe(false);
+    expect(ehPublico(inicial.alertas['s-2'] as never)).toBe(true);
+    expect(ehPublico(inicial.alertas['s-3'] as never)).toBe(true);
+  });
+  it('monta o texto curto para e-mail e WhatsApp', async () => {
+    const { textoAlerta, linkWhats } = await import('../src/paginas/sid');
+    const t = textoAlerta(inicial.alertas['s-1'] as never);
+    expect(t).toContain('A Loja Y escolheu a Agência Z.');
+    expect(t).not.toContain('dezembro');
+    expect(t).toContain('Fazer: Escrever para a Ana hoje');
+    expect(t).toContain('Falar com: Ana Lima (CMO, Loja Y)');
+    expect(linkWhats(inicial.alertas['s-1'] as never)).toMatch(/^https:\/\/wa\.me\/\?text=/);
+  });
+  it('mostra só o B2B e marca como feito', async () => {
+    const db = bancoFalso(inicial);
+    const { raiz, desmontar } = await montar('sid', db);
+    await espera(30);
+    expect(raiz.querySelectorAll('.sid-it').length).toBe(1);
+    expect(raiz.textContent).toContain('Faça hoje');
+    expect(raiz.querySelector('a[href^="mailto:"]')).not.toBeNull();
+    raiz.querySelector<HTMLButtonElement>('[data-x="feito"]')!.click();
+    await espera();
+    expect(db.dados.alertas['s-1'].status).toBe('feito');
+    desmontar();
+  });
+});
