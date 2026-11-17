@@ -165,7 +165,7 @@ describe('Mapa de contas', () => {
 describe('Licitações', () => {
   const base = {
     b2g: {
-      'pncp-1': { objeto: 'Produção audiovisual institucional', orgao: 'Prefeitura A', uf: 'SP', score: 90, craft: 1, frenteCerebro: 'Produção audiovisual e filmes', aderencia: 'direta', entidades: ['cria'], prazo: '2099-01-10', valor: 100000, fonte: 'Cérebro' },
+      'pncp-1': { objeto: 'Produção audiovisual institucional', orgao: 'Prefeitura A', uf: 'SP', modalidade: 'Dispensa', score: 90, craft: 1, frenteCerebro: 'Produção audiovisual e filmes', aderencia: 'direta', entidades: ['cria'], prazo: '2099-01-10', valor: 100000, fonte: 'Cérebro' },
       'pncp-2': { objeto: 'Placas de identificação em ACM', orgao: 'Câmara B', uf: 'MG', score: 55, craft: 0.6, frenteCerebro: 'Comunicação visual e sinalização', aderencia: 'direta', entidades: ['cria'], prazo: '2099-02-01', fonte: 'Cérebro' },
       'pncp-3': { objeto: 'Show de aniversário', orgao: 'Município C', uf: 'GO', score: 0, frenteCerebro: 'x', prazo: '2099-01-05', fonte: 'Cérebro' },
     },
@@ -178,7 +178,9 @@ describe('Licitações', () => {
     const L = Object.entries(base.b2g).map(([id, d]) => ({ id, ...d })) as any[];
     const f = { frente: '', aderencia: '' as const, nota60: true, abertas: true, estudio: false, descartadas: false, q: '', ordem: 'nota' as const };
     expect(filtrarRadar(L, f).map((o) => o.id)).toEqual(['pncp-1']);
-    expect(filtrarRadar(L, { ...f, nota60: false }).map((o) => o.id)).toEqual(['pncp-1', 'pncp-2', 'pncp-3']);
+    expect(filtrarRadar(L, { ...f, nota60: false }).map((o) => o.id)).toEqual(['pncp-1', 'pncp-2']); // o show (nota 0) está fora do escopo do hub
+    expect(filtrarRadar(L, { ...f, nota60: false, foraEscopo: true }).map((o) => o.id)).toEqual(['pncp-3']);
+    expect(filtrarRadar(L, { ...f, nota60: false, direta: true }).map((o) => o.id)).toEqual(['pncp-1']);
     expect(filtrarRadar(L, { ...f, nota60: false, frente: 'Comunicação visual e sinalização' }).map((o) => o.id)).toEqual(['pncp-2']);
     expect(filtrarRadar(L, { ...f, nota60: false, q: 'câmara' }).map((o) => o.id)).toEqual(['pncp-2']);
   });
@@ -186,17 +188,18 @@ describe('Licitações', () => {
   it('Disputar manda para a carteira e Descartar grava o motivo', async () => {
     const db = bancoFalso(base);
     const { raiz } = await montar('licitacoes', db);
-    expect(raiz.querySelectorAll('.lc-it').length).toBe(3); // o radar abre com a lista inteira, em ranking por nota
+    expect(raiz.querySelectorAll('.lc-it').length).toBe(2); // o radar abre com tudo o que está no escopo do hub, em ranking por nota
+    expect(raiz.querySelector('[data-tg="foraEscopo"]')?.textContent).toContain('(1)');
     expect(raiz.textContent).toContain('perfil 2026-11-10e');
     raiz.querySelector<HTMLButtonElement>('[data-disp="pncp-1"]')!.click();
     await espera();
     expect(db.dados.b2g['pncp-1']).toMatchObject({ carteira: true, etapa: 'Triagem', triagem: 'Disputar' });
-    const sel = raiz.querySelector<HTMLSelectElement>('[data-desc="pncp-3"]')!;
+    const sel = raiz.querySelector<HTMLSelectElement>('[data-desc="pncp-2"]')!;
     sel.value = 'Fora do escopo';
     sel.dispatchEvent(new Event('change', { bubbles: true }));
     await espera();
-    expect(db.dados.b2g['pncp-3']).toMatchObject({ triagem: 'Descartar', motivoDescarte: 'Fora do escopo' });
-    expect(raiz.querySelector('[data-desc="pncp-3"]')).toBeNull(); // sai do radar
+    expect(db.dados.b2g['pncp-2']).toMatchObject({ triagem: 'Descartar', motivoDescarte: 'Fora do escopo' });
+    expect(raiz.querySelector('[data-desc="pncp-2"]')).toBeNull(); // sai do radar
   });
 
   it('a carteira avança de etapa e a habilitação alterna o status', async () => {

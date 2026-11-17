@@ -66,6 +66,14 @@ function itens(): Item[]{const out: Item[]=[];const vistos=new Set<string>();
 const est=(k: string)=>S.central.find(x=>x.id===cid(k));
 const cid=(k: string)=>k.replace(/[^A-Za-z0-9_\-.~:@+]/g,'_').slice(0,190);
 const alvoDe=(nome: string)=>chave(nome)?S.alvos.find(a=>a.id==='al-'+slug(nome)||mesmaEmpresa(a.nome,nome)):null;
+/** Separa quem atende (agência, fornecedor do contrato) de quem compra (anunciante, órgão). Notícia: é agência se já apareceu como agência numa troca de conta ou é de rede. */
+const REDE=/wpp|omnicom|publicis|ipg|havas|dentsu|ogilvy|vml|bbdo|ddb|leo burnett|mccann|africa|wunderman|ag[êe]ncia|comunica[çc][ãa]o|propaganda|publicidade/i;
+function papeis(i: {tipo: string; empresas: string[]},ags: Set<string>): {ag: string[]; cl: string[]}{
+ const [a,b]=i.empresas;
+ if(i.tipo==='conta'||i.tipo==='venceu'||i.tipo==='renova')return{ag:a?[a]:[],cl:b?[b]:[]};
+ if(i.tipo==='aberta')return{ag:[],cl:a?[a]:[]};
+ const ag=i.empresas.filter(n=>ags.has(chave(n))||REDE.test(n));return{ag,cl:i.empresas.filter(n=>!ag.includes(n))};
+}
 function filt(all: Item[]): Item[]{const q=chave(F.q),lim0=+F.p?desde(+F.p):'';return all.filter(i=>{const e=est(i.k)?.estado||'';if(F.e?e!==F.e:e==='arquivado')return false;if(F.t&&i.tipo!==F.t)return false;if(i.tipo==='renova'&&+F.p&&i.data>addDias(hoje,+F.p))return false;if(lim0&&i.data&&i.data<lim0)return false;if(q&&!chave(i.titulo+' '+i.resumo+' '+i.empresas.join(' ')+' '+i.cat).includes(q))return false;return true}).sort(F.o==='data'?((a,b)=>F.t==='renova'?(a.data||'').localeCompare(b.data||''):(b.data||'').localeCompare(a.data||'')||(b.valor||0)-(a.valor||0)):rank)}
 /** Ranking dentro de cada classe: licitação aberta pela nota, contratos pelo valor, notícias e contas pela data. */
 function rank(a: Item,b: Item){return (b.score||0)-(a.score||0)||(b.valor||0)-(a.valor||0)||(b.data||'').localeCompare(a.data||'')}
@@ -96,10 +104,12 @@ function render(){persist();
   {rotulo:'Licitações abertas fortes',valor:numero(int(fortes.length)),nota:`nota 60+ e prazo aberto · ${int(renov.filter(c=>c.fim<=addDias(hoje,90)).length)} contratos vencem em 90 dias`}]);
  const ch: [keyof Filtros,string][]=[];if(F.t)ch.push(['t',TL[F.t]]);if(F.q)ch.push(['q','Busca: '+F.q]);if(F.e)ch.push(['e',F.e==='salvo'?'Só salvas':'Arquivadas']);
  $('#cnC').innerHTML=`<span class="lab">${int(L.length)} ite${L.length===1?'m':'ns'}</span>`+ch.map(([k,t])=>`<button type="button" class="chip" data-r="${k}" aria-label="Remover filtro: ${esc(t)}">${esc(t)} <span aria-hidden="true">×</span></button>`).join('')+(ch.length?'<button type="button" class="ghost sm" data-r="*">Limpar</button>':'');
+ const ags=new Set(all.filter(i=>i.tipo==='conta').map(i=>chave(i.empresas[0]||'')));
  $('#cnPn').innerHTML=painel([
   barras('Por classe',TIPOS.slice(1).map(([v,t])=>({rotulo:t,valor:filt0(all,v as TipoItem).length,dado:v,ativo:F.t===v})),{attr:'t',nota:'clique para ver só a classe'}),
   porMes('Sinais por mês',L.map(i=>i.data).filter(d=>d<=hoje)),
-  barras('Empresas com mais sinais',contar(L,i=>i.empresas.slice(0,1).map(nomeLegivel)),{attr:'q',nota:'na lista atual; clique para buscar'})],'Painel da central');
+  barras('Agências e fornecedores',contar(L,i=>papeis(i,ags).ag.map(nomeLegivel)),{attr:'q',nota:'quem atende: agência da conta ou empresa do contrato'}),
+  barras('Anunciantes e órgãos',contar(L,i=>papeis(i,ags).cl.map(nomeLegivel)),{attr:'q',nota:'quem compra: marca, anunciante ou órgão público'})],'Painel da central');
  $<HTMLSelectElement>('#cnO').value=F.o||'classe';
  let html='',ult=null;const V=L.slice(0,lim);
  if(F.o!=='data'&&!F.t&&all.length){const g=TIPOS.slice(1).map(([v,t])=>[v,t,L.filter(i=>i.tipo===v)] as const).filter(x=>x[2].length);

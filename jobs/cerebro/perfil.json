@@ -1,5 +1,5 @@
 {
-  "versao": "2026-11-13a",
+  "versao": "2026-11-17a",
   "manifesto": "A PRODUCERIA disputa onde o craft decide: filme, fotografia, transmissão, som, conteúdo, direção de arte, comunicação visual e mídia exterior. Entra no radar só o que o próprio objeto da licitação pede. Gráfica em massa, agência de publicidade, shows, decoração e eventos ficam fora.",
   "modalidades": {
     "6": "Pregão - Eletrônico",
@@ -279,7 +279,8 @@
         "webinari",
         "docencia",
         "mentoria",
-        "workshop"
+        "workshop",
+        "(contratacao|realizacao|oferta) de (cursos?|treinamentos?)\\b"
       ]
     },
     {
@@ -310,7 +311,8 @@
         "licenciamento (do |de )?direito",
         "direitos? de exibicao",
         "portal (da )?transparencia",
-        "(desenvolvimento|manutencao|atualizacao).{0,40}(de |da )(site|pagina|portal)"
+        "(desenvolvimento|manutencao|atualizacao).{0,40}(de |da )(site|pagina|portal)",
+        "solucao tecnologica"
       ]
     },
     {
@@ -371,7 +373,22 @@
         "(estande|stands?) (institucional|de feira|em feira|no evento)",
         "cerimonial",
         "coordenacao logistica",
-        "(execucao|realizacao) d[ao] (corrida|maratona|caminhada)"
+        "(execucao|realizacao) d[ao] (corrida|maratona|caminhada)",
+        "promotora (exclusiva )?do evento",
+        "planejamento, gerenciamento, organizacao"
+      ]
+    },
+    {
+      "nome": "edital de fomento ou premiação cultural",
+      "tipo": "rigida",
+      "padroes": [
+        "projetos culturais",
+        "agentes culturais",
+        "fomento (a|ao|à) cultura",
+        "premiac(ao|oes) (de|a) (projetos|agentes|iniciativas)",
+        "lei paulo gustavo",
+        "aldir blanc",
+        "\\bpnab\\b"
       ]
     },
     {
@@ -440,7 +457,8 @@
         "gestao administrativa e financeira",
         "apoio a gestao administrativa",
         "iluminacao para .{0,30}(lonas|empenas|fachadas|predios)",
-        "patrocinio (de|ao|do|para) (evento|projeto|festival)"
+        "patrocinio (de|ao|do|para) (evento|projeto|festival)",
+        "simulador"
       ]
     },
     {

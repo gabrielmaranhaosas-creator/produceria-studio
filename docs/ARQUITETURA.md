@@ -105,6 +105,15 @@ continua fora do radar.
 No `--repontuar`, o que não passa vai a nota 0, exceto licitações em que a equipe já mexeu (carteira, etapa
 ou decisão).
 
+Desde o `2026-11-17a`: contratação de cursos e treinamentos, "promotora do evento", "solução tecnológica" e
+simuladores saem; editais de fomento e premiação cultural (Lei Paulo Gustavo, Aldir Blanc, PNAB, projetos e agentes
+culturais) viram exclusão rígida. Vídeo de treinamento e videoaula continuam dentro. Repontuação de 17/11 no banco: 80
+licitações mudaram de lado nas linhas 45 e 60 (65 saíram do escopo).
+
+No Studio, Licitações mostra só o **escopo do hub**: nota 45 ou mais, ou algo que a equipe já mexeu (`noEscopo` em
+`src/paginas/licitacoes.ts`). O resto fica no chip "Fora do escopo do hub", para revisar. O chip "Compra direta" filtra
+dispensa e inexigibilidade (Lei 14.133, arts. 72 a 75).
+
 ## Publicação
 
 `npm run build` gera `dist/index.html`. Publicar = gravar na coleção `kit_plugins` os documentos de `dist/kit-banco/` cujo

@@ -33,8 +33,13 @@ Percurso feito tela a tela no Studio montado com os dados reais (exportação do
 
 - Central: 959 sinais visíveis ao abrir (antes 92), em 5 classes.
 - Contas e agências: 148 movimentações (antes 60).
-- Licitações: 1.308 no radar, em ranking por nota (antes no máximo 238).
+- Licitações: em ranking por nota, só no escopo do hub (ver ajuste abaixo).
 - Página publicada: 822 KB, abaixo do limite de 870 KB da revisão de compartilhamento.
+
+## Ajuste do mesmo dia: precisão em vez de volume
+
+- Licitações voltou a abrir só no **escopo do hub** (nota 45+ ou já trabalhada pela equipe). As fora do escopo ficam num chip próprio, para revisar; novo chip **Compra direta** (dispensa e inexigibilidade).
+- Central e Alertas separam **agências e fornecedores** (quem atende) de **anunciantes e órgãos** (quem compra) em dois gráficos, em vez de uma lista única de empresas. A base não tem campo de produto nem de marca à parte do anunciante.
 
 ## Próximos passos possíveis
 

@@ -167,3 +167,24 @@ class GraficaComComunicacaoVisual(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class Perfil20261117(unittest.TestCase):
+    """Ruído achado no radar em 17/11/2026: curso no plural, promotora de evento, edital de fomento, solução tecnológica."""
+
+    def fora(self, objeto):
+        n = nota(objeto)
+        return n is None or n["score"] == 0
+
+    def test_saem(self):
+        self.assertTrue(self.fora("Contratação de cursos de treinamento - UX e Design Gráfico"))
+        self.assertTrue(self.fora("contratação da promotora exclusiva do evento, para prestação de serviços de planejamento, gerenciamento, organização, produção e cenografia"))
+        self.assertTrue(self.fora("O objeto deste Edital é a seleção de 14 projetos culturais do setor audiovisual, propostos por agentes culturais"))
+        self.assertTrue(self.fora("Contratação de pessoa jurídica especializada para fornecimento de solução tecnológica integrada, dotada de totens e comunicação visual"))
+        self.assertTrue(self.fora("Contratação de empresa para a locação de uma diária do projeto SPACE MOTION, simulador de experiência com produção audiovisual"))
+
+    def test_ficam(self):
+        for o in ("Produção de vídeos de treinamento para servidores, com roteiro, captação e edição",
+                  "Produção audiovisual de videoaulas para os cursos de graduação a distância"):
+            n = nota(o)
+            self.assertTrue(n and n["score"] > 0, o)

@@ -80,10 +80,18 @@ const vencida = (o: Oportunidade) => !!o.prazo && o.prazo.slice(0, 10) < hoje();
 const valorTxt = (v?: number | null) => (v ? brl(v) : 'Sem valor');
 
 /** Filtro do radar, exportado para teste. */
-export interface FiltroRadar { frente: string; aderencia: '' | 'direta' | 'condicionada'; nota60: boolean; abertas: boolean; estudio: boolean; descartadas: boolean; q: string; ordem: 'nota' | 'prazo' | 'recentes' }
+export interface FiltroRadar { frente: string; aderencia: '' | 'direta' | 'condicionada'; nota60: boolean; abertas: boolean; estudio: boolean; descartadas: boolean; q: string; ordem: 'nota' | 'prazo' | 'recentes'; foraEscopo?: boolean; direta?: boolean }
+/** Linha de entrada do cérebro (cerebro.py --min): abaixo dela o objeto não é trabalho do hub ou é residual. */
+export const NOTA_ESCOPO = 45;
+/** No escopo do hub: nota do cérebro na linha de entrada, ou já na mão da equipe (carteira, etapa, decisão). Registro sem nota (Atlas, manual) conta como dentro. */
+export const noEscopo = (o: Oportunidade) => !!(o.carteira || o.etapa || o.decisao) || (o.score ?? 100) >= NOTA_ESCOPO;
+/** Contratação direta (Lei 14.133, arts. 72 a 75): dispensa e inexigibilidade, sem disputa aberta. */
+export const compraDireta = (o: Oportunidade) => /dispensa|inexigib/i.test(o.modalidade || '');
 export function filtrarRadar(L: Oportunidade[], f: FiltroRadar): Oportunidade[] {
   const q = f.q.trim().toLowerCase();
   return L.filter((o) => (f.descartadas ? o.triagem === 'Descartar' : o.triagem !== 'Descartar'))
+    .filter((o) => f.descartadas || (f.foraEscopo ? !noEscopo(o) : noEscopo(o)))
+    .filter((o) => !f.direta || compraDireta(o))
     .filter((o) => !f.frente || frenteDe(o) === f.frente)
     .filter((o) => !f.aderencia || o.aderencia === f.aderencia)
     .filter((o) => !f.abertas || aberta(o))
@@ -113,7 +121,7 @@ export function montar(root: HTMLElement): () => void {
   let aba: Aba = 'radar';
   const abas = abaNoEndereco<Aba>(['radar', 'carteira', 'habilitacao', 'pca', 'vias'], 'radar', (a) => { aba = a; render(); });
   aba = abas.inicial;
-  const F: FiltroRadar = { frente: '', aderencia: '', nota60: false, abertas: false, estudio: false, descartadas: false, q: '', ordem: 'nota' };
+  const F: FiltroRadar = { frente: '', aderencia: '', nota60: false, abertas: false, estudio: false, descartadas: false, q: '', ordem: 'nota', foraEscopo: false, direta: false };
   const avisar = (t: string) => { $('#lcLive').textContent = t; };
   const D = $<Dialogo>('#lcD');
   D.addEventListener('close', () => render()); // o radar pode ter mudado enquanto o diálogo estava aberto
@@ -134,7 +142,7 @@ export function montar(root: HTMLElement): () => void {
   function render() {
     try { localStorage.setItem('lc.aba', aba); } catch { /* sem armazenamento */ }
     const cart = O.filter((o) => o.carteira).length;
-    const abas: [Aba, string][] = [['radar', `Radar (${int(O.filter((o) => o.triagem !== 'Descartar').length)})`], ['carteira', `Carteira (${int(cart)})`], ['habilitacao', 'Habilitação do hub'], ['pca', 'PCA dos órgãos'], ['vias', 'Vias de contratação']];
+    const abas: [Aba, string][] = [['radar', `Radar (${int(O.filter((o) => o.triagem !== 'Descartar' && noEscopo(o)).length)})`], ['carteira', `Carteira (${int(cart)})`], ['habilitacao', 'Habilitação do hub'], ['pca', 'PCA dos órgãos'], ['vias', 'Vias de contratação']];
     $('#lcA').innerHTML = abas.map(([v, t]) => `<button type="button" role="tab" id="lc-tab-${v}" aria-selected="${aba === v}" aria-pressed="${aba === v}" aria-controls="lcO" data-aba="${v}">${t}</button>`).join('');
     const o = $('#lcO');
     o.setAttribute('role', 'tabpanel');
@@ -147,7 +155,7 @@ export function montar(root: HTMLElement): () => void {
 
   // ---------------------------------------------------------------- radar
   function radar(): string {
-    const vivos = O.filter((o) => o.triagem !== 'Descartar');
+    const todos = O.filter((o) => o.triagem !== 'Descartar'), vivos = todos.filter(noEscopo), foraEsc = todos.length - vivos.length, diretas = vivos.filter(compraDireta).length;
     const estudio = vivos.filter((o) => (o.craft ?? 0) >= 0.6);
     const comValor = vivos.filter((o) => o.valor);
     const ticket = comValor.length ? comValor.reduce((s, o) => s + (o.valor || 0), 0) / comValor.length : 0;
@@ -165,7 +173,7 @@ export function montar(root: HTMLElement): () => void {
       : 'Varredura diária no PNCP ainda não registrada.';
     const chip = (id: string, txt: string, on: boolean, dica = '') => `<button type="button" class="chip" data-tg="${id}" aria-pressed="${on}"${dica ? ` title="${esc(dica)}"` : ''}>${txt}</button>`;
     return `<section class="kpis" aria-label="Resumo do radar">${kpis([
-      { rotulo: 'Oportunidades no radar', valor: numero(int(vivos.length)), nota: `${int(descartadas)} descartadas pela equipe` },
+      { rotulo: 'No escopo do hub', valor: numero(int(vivos.length)), nota: `${int(diretas)} por compra direta · ${int(foraEsc)} lidas e deixadas de fora · ${int(descartadas)} descartadas` },
       { rotulo: 'Trabalho de estúdio', valor: numero(int(estudio.length)), nota: 'craft 60 ou mais: filme, foto, transmissão, arte, som, conteúdo' },
       { rotulo: 'Ticket médio estimado', valor: ticket ? numero(brl(ticket)) : '<b class="nd">—</b>', nota: `${int(comValor.length)} com valor divulgado` },
       { rotulo: 'Abertas hoje', valor: numero(int(abertas.length)), nota: 'com prazo de recebimento futuro' },
@@ -182,9 +190,11 @@ export function montar(root: HTMLElement): () => void {
   <section aria-label="Oportunidades">
     <div class="lc-filtros">
       <div class="seg sm" role="group" aria-label="Aderência">${(['', 'direta', 'condicionada'] as const).map((v) => `<button type="button" data-ad="${v}" aria-pressed="${F.aderencia === v}">${v === '' ? 'Todas' : v === 'direta' ? 'Aderência direta' : 'Condicionada'}</button>`).join('')}</div>
-      ${chip('nota60', `Nota 60 ou mais · ${int(fora60)} fora`, F.nota60, 'Esconde o que tem nota abaixo de 60 (as da carteira sempre aparecem)')}
+      ${chip('direta', `Compra direta · ${int(diretas)}`, !!F.direta, 'Dispensa e inexigibilidade (Lei 14.133, arts. 72 a 75): contratação sem disputa aberta, onde pesa estar cadastrado e ser lembrado na pesquisa de preços')}
+      ${chip('nota60', `Nota 60 ou mais · ${int(fora60)} abaixo`, F.nota60, 'Esconde o que tem nota abaixo de 60 (as da carteira sempre aparecem)')}
       ${chip('abertas', 'Só com prazo aberto', F.abertas)}
       ${chip('estudio', 'Só estúdio', F.estudio)}
+      ${chip('foraEscopo', `Fora do escopo do hub (${int(foraEsc)})`, !!F.foraEscopo, 'Mostra só o que o cérebro deixou de fora (nota abaixo de ${NOTA_ESCOPO}), para conferir o critério')}
       ${chip('descartadas', `Descartadas (${int(descartadas)})`, F.descartadas, 'Mostra só o que a equipe descartou, para revisar ou desfazer')}
       <div class="f lc-ord"><label for="lcOrd">Ordenar</label><select id="lcOrd"><option value="nota"${F.ordem === 'nota' ? ' selected' : ''}>Maior nota</option><option value="prazo"${F.ordem === 'prazo' ? ' selected' : ''}>Prazo mais próximo</option><option value="recentes"${F.ordem === 'recentes' ? ' selected' : ''}>Mais recentes</option></select></div>
       <div class="f lc-q"><label for="lcQ">Buscar órgão, objeto ou UF</label><input id="lcQ" type="search" value="${esc(F.q)}" autocomplete="off"></div>
@@ -417,7 +427,7 @@ ${txt.slice(0, 30000)}`, { json: true })) as Record<string, unknown> | null;
     if (d.aba) { abas.ir(d.aba as Aba); $<HTMLElement>('#lc-tab-' + aba).focus(); return; }
     if (d.fr !== undefined) { F.frente = F.frente === d.fr ? '' : d.fr; limite = 60; render(); return; }
     if (d.ad !== undefined) { F.aderencia = d.ad as FiltroRadar['aderencia']; limite = 60; render(); return; }
-    if (d.tg) { const k = d.tg as 'nota60' | 'abertas' | 'estudio' | 'descartadas'; F[k] = !F[k]; limite = 60; render(); return; }
+    if (d.tg) { const k = d.tg as 'nota60' | 'abertas' | 'estudio' | 'descartadas' | 'foraEscopo' | 'direta'; F[k] = !F[k]; limite = 60; render(); return; }
     if (b.id === 'lcMais') { limite += 60; render(); return; }
     if (b.id === 'lcEd' || b.id === 'lcEd2') { lerEdital(b); return; }
     if (d.disp) { gravar(d.disp, { carteira: true, etapa: 'Triagem', decisao: '', triagem: 'Disputar', triadoEm: new Date().toISOString() }, 'Disputar: na carteira, etapa Triagem.'); return; }

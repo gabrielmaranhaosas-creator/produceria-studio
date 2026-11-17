@@ -91,7 +91,8 @@ export function montar(root: HTMLElement): () => void {
     $('#acPn').innerHTML = A.length ? painel([
       barras('Por tipo', contar(base, (a) => a.tipo).map((b) => ({ ...b, rotulo: TIPOS[b.rotulo] || b.rotulo, ativo: b.dado === F.t })), { attr: 't', nota: 'clique para ver só o tipo' }),
       porMes('Alertas por mês', L.map((a) => a.data), 6),
-      barras('Empresas mais citadas', contar(L, (a) => [...new Set([...(a.empresas || []), ...(a.agencias || [])].map(nomeLegivel))]).map((b) => ({ ...b, ativo: chave(b.rotulo) === chave(F.q) })), { attr: 'q', nota: 'clique para buscar' }),
+      barras('Anunciantes mais citados', contar(L, (a) => [...new Set((a.empresas || []).map(nomeLegivel))]).map((b) => ({ ...b, ativo: chave(b.rotulo) === chave(F.q) })), { attr: 'q', nota: 'marcas e empresas que compram; clique para buscar' }),
+      barras('Agências mais citadas', contar(L, (a) => [...new Set((a.agencias || []).map(nomeLegivel))]).map((b) => ({ ...b, ativo: chave(b.rotulo) === chave(F.q) })), { attr: 'q', nota: 'quem atende; clique para buscar' }),
       barras('Situação', contar(L, sit)),
     ], 'Resumo dos alertas') : '';
     let html = '', dia = '';
