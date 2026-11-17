@@ -13,6 +13,8 @@ export interface Consulta<T = Record<string, unknown>> {
 }
 export interface Colecao<T = Record<string, unknown>> extends Consulta<T> {
   doc(id: string): {
+    /** Leitura única de um documento (no claude.ai sempre existe; a cópia de consulta não tem). */
+    get?(): Promise<{ exists: boolean; data(): T | undefined }>;
     set(d: object): Promise<void>;
     update(d: object): Promise<void>;
     delete(): Promise<void>;
@@ -84,6 +86,32 @@ export async function lerBase<T>(nome: string): Promise<T> {
   const db = await banco();
   if (db) {
     type D = { id: string; dados?: Record<string, unknown>; partes?: Record<string, number>; itens?: unknown[] };
+    // Documento por documento: a assinatura da coleção inteira entrega primeiro uma parte só quando a coleção é
+    // grande (foi o que quebrou Vencedores em 12/11), e a contagem não fechava.
+    const col = db.collection<D>(`base_${nome}`);
+    const ler = async (id: string): Promise<D | null> => {
+      const s = await col.doc(id).get!();
+      return s.exists ? (s.data() as D) : null;
+    };
+    if (col.doc('cabeca').get) {
+      const cab = await ler('cabeca');
+      if (cab?.partes) {
+        const obj: Record<string, unknown> = { ...(cab.dados || {}) };
+        for (const [lista, total] of Object.entries(cab.partes)) {
+          const itens: unknown[] = [];
+          for (let n = 1; itens.length < total; n += 6) {
+            const lote = await Promise.all([0, 1, 2, 3, 4, 5].map((k) => ler(`${lista}-${String(n + k).padStart(2, '0')}`)));
+            const achados = lote.filter((d): d is D => !!d);
+            for (const d of achados) itens.push(...(d.itens || []));
+            if (achados.length < lote.length) break;
+          }
+          if (itens.length !== total) throw new Error(`Base ${nome}: ${lista} com ${itens.length} de ${total} itens no banco.`);
+          obj[lista] = itens;
+        }
+        return obj as T;
+      }
+      throw new Error(`Base ${nome} indisponível no arquivo e no banco.`);
+    }
     const docs = await new Promise<D[]>((ok) => {
       let fim = false, off: () => void = () => {};
       const sair = (v: D[]) => { if (fim) return; fim = true; ok(v); setTimeout(() => { try { off(); } catch { /* já cancelado */ } }); };

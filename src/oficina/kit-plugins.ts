@@ -4,6 +4,7 @@
  * O .ccx é o próprio plugin compactado (manifest.json na raiz), o formato que o Creative Cloud instala com duplo clique.
  */
 import { zipar, type EntradaZip } from './zip';
+import { banco } from '../lib/db';
 import bManifest from './bridge/manifest.json?raw';
 import bIndex from './bridge/index.html?raw';
 import bMain from './bridge/main.js?raw';
@@ -54,19 +55,46 @@ export const NOME_PACOTE = `Produceria-Plugins-v${VERSAO_KIT}.zip`;
 /** O .ccx: os arquivos do plugin na raiz (sem o LEIA-ME, que não faz parte do plugin). */
 export const ccx = (p: Plugin): Uint8Array => zipar(p.arquivos.filter(([n]) => !/^LEIA-?ME\.md$/i.test(n)).map(([caminho, dados]) => ({ caminho, dados })));
 
+/**
+ * No Studio publicado no claude.ai, o texto dos arquivos dos plugins não vai na página (scripts/kit-fora.mjs): no
+ * lugar vai `MARCA + caminho + ':' + hash`, e o texto fica no banco, coleção `kit_plugins` (id = caminho com / → ~).
+ * Aqui a marca vira o texto do banco, conferindo o hash para nunca empacotar uma versão diferente da página.
+ * Nos testes e na cópia de consulta o texto já vem na página e nada muda.
+ */
+const MARCA = '\u0000kit:';
+export async function completar(arquivos: [string, string][]): Promise<[string, string][]> {
+  if (!arquivos.some(([, t]) => t.startsWith(MARCA))) return arquivos;
+  const db = await banco();
+  if (!db) throw new Error('Os arquivos dos plugins ficam no banco do Studio, que não respondeu. Tente de novo em instantes.');
+  const col = db.collection<{ hash?: string; texto?: string }>('kit_plugins');
+  return Promise.all(arquivos.map(async ([n, t]): Promise<[string, string]> => {
+    if (!t.startsWith(MARCA)) return [n, t];
+    const [caminho, h] = t.slice(MARCA.length).split(':');
+    const s = await col.doc(caminho.replace(/\//g, '~')).get!();
+    const d = s.exists ? s.data() : undefined;
+    if (!d || d.hash !== h || typeof d.texto !== 'string') throw new Error(`O arquivo ${caminho} no banco não é o desta versão do Studio. Peça ao Claude para regravar a coleção kit_plugins (npm run kit).`);
+    return [n, d.texto];
+  }));
+}
+
+const completo = async (p: Plugin): Promise<Plugin> => ({ ...p, arquivos: await completar(p.arquivos) });
+
 /** Pacote de um plugin: o .ccx para instalar e a pasta para o UXP Developer Tool. */
-export function pacotePlugin(p: Plugin): Uint8Array {
+export async function pacotePlugin(plugin: Plugin): Promise<Uint8Array> {
+  const p = await completo(plugin);
   return zipar([{ caminho: `${p.pasta}.ccx`, dados: ccx(p) }, ...p.arquivos.map(([n, d]) => ({ caminho: `${p.pasta}/${n}`, dados: d }))]);
 }
 
 /** Pacote completo: instaladores, código-fonte, After Effects, tutorial e roteiro de teste. */
-export function pacoteCompleto(): Uint8Array {
+export async function pacoteCompleto(): Promise<Uint8Array> {
+  const todos = await Promise.all(PLUGINS.map(completo));
+  const ae = await completar(AFTER_EFFECTS);
   const e: EntradaZip[] = [
     { caminho: 'LEIA-ME-PRIMEIRO.txt', dados: leiaMePrimeiro() },
     { caminho: 'TUTORIAL.md', dados: tutorialMarkdown() },
-    ...PLUGINS.map((p) => ({ caminho: `1-instaladores-ccx/${p.pasta}.ccx`, dados: ccx(p) })),
-    ...PLUGINS.flatMap((p) => p.arquivos.map(([n, d]) => ({ caminho: `2-codigo-fonte-para-UXP-Developer-Tool/${p.pasta}/${n}`, dados: d }))),
-    ...AFTER_EFFECTS.map(([n, d]) => ({ caminho: `3-after-effects/${n}`, dados: d })),
+    ...todos.map((p) => ({ caminho: `1-instaladores-ccx/${p.pasta}.ccx`, dados: ccx(p) })),
+    ...todos.flatMap((p) => p.arquivos.map(([n, d]) => ({ caminho: `2-codigo-fonte-para-UXP-Developer-Tool/${p.pasta}/${n}`, dados: d }))),
+    ...ae.map(([n, d]) => ({ caminho: `3-after-effects/${n}`, dados: d })),
   ];
   return zipar(e);
 }

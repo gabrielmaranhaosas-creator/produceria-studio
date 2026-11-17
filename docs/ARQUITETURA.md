@@ -91,7 +91,8 @@ produção gráfica, comunicação visual e mídia exterior são o núcleo da PR
 ficam (núcleo). O ruído sai por regras rígidas no início do objeto (curso, software, compra de equipamento, obra,
 eventos, fora do ramo) e brandas que cedem a filmagem, foto ou transmissão citadas antes (shows, Natal, locação de
 palco e som, veiculação em jornal/rádio/site, assessoria de imprensa). Rádio, TV e jornal que vendem veiculação também
-saem. `jobs/vencedores/limpar.py` aplica isso ao `vencedores.json` publicado; a rotina mensal
+saem. `jobs/vencedores/limpar.py` aplica isso ao `vencedores.json` (desde 17/11 a base do Studio está em `base_vencedores`
+no banco: uma nova limpeza precisa regravar esses blocos); a rotina mensal
 usa o mesmo `classes.py` publicado em `vencedores/`. Limpeza de 10/11/2026: 15.318 → 7.978 contratos no arquivo.
 
 Desde o `2026-11-10e`, comunicação visual e sinalização (letreiros, totens, fachadas em ACM, placas de
@@ -106,13 +107,21 @@ ou decisão).
 
 ## Publicação
 
-`npm run build` gera `dist/index.html`. Publicar = Artifact `publish` com esse arquivo na URL do Studio,
-mantendo os arquivos de dados já publicados (`vencedores.json`, `mercado.json`). As fontes ABC Whyte e PTYPE vão
-embutidas na página.
+`npm run build` gera `dist/index.html`. Publicar = gravar na coleção `kit_plugins` os documentos de `dist/kit-banco/` cujo
+`hash` mudou e depois Artifact `publish` com esse arquivo na URL do Studio. Nenhum arquivo vai junto da página. As fontes
+ABC Whyte e PTYPE vão embutidas.
+
+Limite de tamanho (17/11/2026): a revisão de compartilhamento recusa página grande ("grande ou complexa demais"): 826 e
+885 KB passaram, 1.055 e 1.218 KB não. Por isso o Studio do claude.ai sai de um build próprio (`vite build --mode
+enxuto`): sem o texto dos arquivos dos plugins (ficam no banco, ver `scripts/kit-fora.mjs`), com a tabela de serviços em
+colunas (`scripts/tabela-compacta.mjs`) e minificado pelo esbuild. `scripts/montar.mjs` para o build acima de 870 KB.
+A cópia de consulta e o legado usam o build completo.
 
 Compartilhamento (12/11/2026): a revisão do claude.ai passou a recusar a versão do Studio ("use JPEG, PNG..."). Em
 testes isolados, uma cópia só da página e sem capabilities passou; o Studio só com a página, mas com as capabilities,
 continuou recusado. A tentativa de tirar fontes e arquivos não resolveu, quebrou a tela Vencedores e foi desfeita
-(versão 74). Continua valendo: os scripts das rotinas ficam no artefato só de scripts
+(versão 74). Causa achada em 17/11: eram dois problemas juntos, os `.json` publicados (erro de tipo de mídia) e o tamanho
+da página; e Vencedores quebrou porque `lerBase` lia a coleção numa assinatura só, cuja primeira entrega vem incompleta em
+coleção grande. Hoje lê documento a documento. Continua valendo: os scripts das rotinas ficam no artefato só de scripts
 (https://claude.ai/artifact/1k7uacyGKxSJ4D6ujmQDBp) e os contratos e o mercado têm cópia no banco (`base_vencedores`,
 `base_mercado`), que as telas só usam se o arquivo faltar.

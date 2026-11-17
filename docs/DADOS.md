@@ -22,9 +22,12 @@ Tipos completos em `src/lib/tipos.ts`.
 | `notificacoes` | tarefas agendadas | Avisos que aparecem no Studio |
 | `projetos`, `pecas` | (desativado) | Produção, fora do escopo atual. Dados guardados, sem tela |
 
-Arquivos publicados junto da página: `vencedores.json` (contratos públicos) e `mercado.json` (movimentos de conta
-curados). Cópia de reserva no banco em blocos (`base_vencedores`, `base_mercado`), usada por `lerBase` só se o arquivo
-faltar. Os scripts das rotinas (`jobs/*`) ficam no artefato só de scripts https://claude.ai/artifact/1k7uacyGKxSJ4D6ujmQDBp.
+Desde 17/11/2026 nenhum arquivo vai junto da página (a revisão de compartilhamento do claude.ai recusa `.json`).
+Contratos públicos e mercado ficam no banco em blocos (`base_vencedores`, `base_mercado`: documento `cabeca` com os
+campos pequenos e a contagem de cada lista, e documentos `<lista>-NN` com até ~260 itens), lidos por `lerBase` documento a
+documento. A cópia de consulta continua servindo `vencedores.json` e `mercado.json` de `consulta/export/`. Os arquivos dos
+plugins da casa e do Bridge ficam na coleção `kit_plugins` (um documento por arquivo, `{caminho, hash, texto}`, gerados
+por `npm run build` em `dist/kit-banco/`). Os scripts das rotinas (`jobs/*`) ficam no artefato só de scripts https://claude.ai/artifact/1k7uacyGKxSJ4D6ujmQDBp.
 
 ## Backup
 

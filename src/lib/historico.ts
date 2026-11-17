@@ -82,6 +82,7 @@ function colecao<T>(db: Banco, col: string): Colecao<T> {
     doc(id: string) {
       const d = c.doc(id);
       return {
+        ...(d.get ? { get: () => d.get!() } : {}),
         async set(dados: object) {
           const antes = conhecido(col, id);
           await d.set(dados);

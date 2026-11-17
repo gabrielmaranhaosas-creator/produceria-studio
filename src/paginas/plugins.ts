@@ -56,9 +56,9 @@ export function montar(root: HTMLElement): () => void {
   aba = nav.inicial;
   root.querySelectorAll<HTMLButtonElement>('[data-aba]').forEach((b) => { b.onclick = () => nav.ir(b.dataset.aba as Aba); });
 
-  async function baixar(b: HTMLButtonElement, nome: string, gerar: () => Uint8Array | string) {
+  async function baixar(b: HTMLButtonElement, nome: string, gerar: () => Uint8Array | string | Promise<Uint8Array | string>) {
     b.disabled = true;
-    try { const m = await baixarArquivo(nome, gerar()); if (m) avisar(m); } catch { avisar('Não consegui montar o arquivo.'); }
+    try { const m = await baixarArquivo(nome, await gerar()); if (m) avisar(m); } catch (e) { avisar(e instanceof Error && /banco/.test(e.message) ? e.message : 'Não consegui montar o arquivo.'); }
     b.disabled = false;
   }
 

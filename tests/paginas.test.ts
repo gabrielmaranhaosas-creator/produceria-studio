@@ -69,6 +69,22 @@ describe('Base em blocos no banco (lerBase)', () => {
     expect(f).toHaveBeenCalledWith('teste.json');
     f.mockRestore();
   });
+  it('no claude.ai lê bloco a bloco, sem depender da assinatura da coleção (que chega incompleta em bases grandes)', async () => {
+    vi.resetModules();
+    const blocos: Record<string, Record<string, unknown>> = { cabeca: { dados: { meta: 1 }, partes: { contratos: 9, orgaos: 1 } }, 'orgaos-01': { itens: ['o'] } };
+    for (let n = 1; n <= 9; n++) blocos['contratos-' + String(n).padStart(2, '0')] = { itens: [n] };
+    const banco = { collection: () => ({
+      onSnapshot(ok: (s: unknown) => void) { queueMicrotask(() => ok({ docs: [{ id: 'cabeca', data: () => blocos.cabeca }] })); return () => {}; },
+      doc: (id: string) => ({ get: async () => ({ exists: id in blocos, data: () => blocos[id] }) }),
+    }) };
+    (window as any).claude = { use: async (n: string) => (n === 'db' ? banco : null) };
+    const { lerBase } = await import('../src/lib/db');
+    const sem = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response('', { status: 404 }));
+    expect(await lerBase('vencedores')).toEqual({ meta: 1, contratos: [1, 2, 3, 4, 5, 6, 7, 8, 9], orgaos: ['o'] });
+    delete blocos['contratos-04'];
+    await expect(lerBase('vencedores')).rejects.toThrow(/contratos com 5 de 9/);
+    sem.mockRestore();
+  });
 });
 
 describe('Agenda', () => {

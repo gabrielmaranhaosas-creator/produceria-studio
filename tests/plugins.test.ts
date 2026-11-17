@@ -235,11 +235,21 @@ describe('pacotes, tutorial e roteiro', () => {
     expect(n).toEqual(expect.arrayContaining(['manifest.json', 'index.html', 'index.js', 'guias.js']));
     expect(n.some((x) => /leia/i.test(x))).toBe(false);
   });
-  it('pacote completo com instaladores, código-fonte, After Effects e tutorial', () => {
-    const n = nomesZip(pacoteCompleto());
+  it('pacote completo com instaladores, código-fonte, After Effects e tutorial', async () => {
+    const n = nomesZip(await pacoteCompleto());
     expect(n.filter((x) => x.startsWith('1-instaladores-ccx/'))).toHaveLength(9);
     expect(n).toEqual(expect.arrayContaining(['LEIA-ME-PRIMEIRO.txt', 'TUTORIAL.md', '2-codigo-fonte-para-UXP-Developer-Tool/produceria-prova/manifest.json', '3-after-effects/produceria_variacoes_template.jsx']));
-    expect(nomesZip(pacotePlugin(PLUGINS[0]))).toContain('produceria-desdobra.ccx');
+    expect(nomesZip(await pacotePlugin(PLUGINS[0]))).toContain('produceria-desdobra.ccx');
+  });
+  it('no Studio enxuto, o download troca a marca pelo texto do banco e recusa versão diferente', async () => {
+    const { completar } = await import('../src/oficina/kit-plugins');
+    const docs: Record<string, { hash: string; texto: string }> = { 'plugins~photoshop~x~index.js': { hash: 'abc', texto: 'código' } };
+    (globalThis as any).window = { claude: { use: async (n: string) => (n === "db" ? { collection: () => ({ doc: (id: string) => ({ get: async () => ({ exists: id in docs, data: () => docs[id] }) }) }) } : null) } };
+    const marca = '\u0000kit:plugins/photoshop/x/index.js:';
+    expect(await completar([['manifest.json', '{}'], ['index.js', marca + 'abc']])).toEqual([['manifest.json', '{}'], ['index.js', 'código']]);
+    await expect(completar([['index.js', marca + 'outro']])).rejects.toThrow(/kit_plugins/);
+    const arquivos: [string, string][] = [['a.js', 'x']];
+    expect(await completar(arquivos)).toBe(arquivos);
   });
   it('tutorial cobre os três caminhos e o relatório marca cada passo', () => {
     expect(TUTORIAL.map((s) => s.id)).toEqual(['antes', 'baixar', 'caminho-a', 'caminho-c', 'caminho-b', 'usar', 'ae', 'remover', 'relatar']);

@@ -5,7 +5,9 @@ import { readFileSync, writeFileSync, mkdirSync, mkdtempSync, rmSync } from 'nod
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { execFileSync } from 'node:child_process';
+import { transformSync } from 'esbuild';
 import { cortarFuncao, fimDaExpressao } from './cortar.mjs';
+import { documentosDoBanco } from './kit-fora.mjs';
 
 const legado = readFileSync('legacy/studio.html', 'utf8');
 const modulos = readFileSync('dist/modulos/studio-modulos.js', 'utf8');
@@ -155,10 +157,24 @@ writeFileSync('dist/legado.html', html);
   if (fontes.length !== 4) throw new Error(`Esperava 4 fontes no legado, achei ${fontes.length}.`);
   const reset = `<style>${enxuto(readFileSync('src/estilos/reset.css', 'utf8'))}</style>`;
   const studio = `<style>${fontes.join('')}${enxuto(readFileSync('src/estilos/studio.css', 'utf8'))}</style>`;
-  const novo = `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">${reset}<title>PRODUCERia Studio</title><meta name="claude:viewport-fit-sides" content="cover">${studio}</head>`
-    + `<body><a class="sr pular" href="#conteudo">Pular para o conteúdo</a><div id="root" data-casca="propria"></div><script type="module" data-studio="modulos">${modulos}</script></body></html>`;
-  if (/<script(?![^>]*data-studio)/i.test(novo.replace(modulos, ''))) throw new Error('O Studio novo não deve ter outro script além dos módulos.');
-  writeFileSync('dist/index.html', novo);
+  const pagina = (mods) => {
+    const p = `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">${reset}<title>PRODUCERia Studio</title><meta name="claude:viewport-fit-sides" content="cover">${studio}</head>`
+      + `<body><a class="sr pular" href="#conteudo">Pular para o conteúdo</a><div id="root" data-casca="propria"></div><script type="module" data-studio="modulos">${mods}</script></body></html>`;
+    if (/<script(?![^>]*data-studio)/i.test(p.replace(mods, ''))) throw new Error('O Studio novo não deve ter outro script além dos módulos.');
+    return p;
+  };
+  // Studio publicado no claude.ai: build enxuto (sem os arquivos dos plugins, que ficam no banco) e minificado de
+  // verdade (o modo biblioteca do Vite não tira espaços). A revisão de compartilhamento do claude.ai recusa página
+  // grande demais: em 17/11, 826 KB e 885 KB passaram; 1.055 KB e 1.218 KB foram recusados.
+  const enxutos = transformSync(readFileSync('dist/enxuto/studio-modulos.js', 'utf8'), { minify: true, format: 'esm', target: 'es2022' }).code;
+  if (/<\/script/i.test(enxutos)) throw new Error('O pacote enxuto contém "</script".');
+  const studioClaude = pagina(enxutos);
+  const LIMITE = 870 * 1024;
+  if (Buffer.byteLength(studioClaude) > LIMITE) throw new Error(`dist/index.html com ${(Buffer.byteLength(studioClaude) / 1024).toFixed(0)} KB passa de 870 KB: o compartilhamento do claude.ai recusa. Enxugue antes de publicar.`);
+  writeFileSync('dist/index.html', studioClaude);
+  const kit = documentosDoBanco();
+  // A cópia de consulta (fora do claude.ai, sem limite) leva o pacote completo, com os arquivos dos plugins.
+  const novo = pagina(modulos);
   // Modo consulta (fora do claude.ai): o mesmo Studio com um banco só leitura e uma faixa no topo. Servido por
   // consulta/server.mjs, atrás de senha. O script entra antes dos módulos e define window.claude.
   const runtime = readFileSync('scripts/consulta-runtime.js', 'utf8');
@@ -167,5 +183,5 @@ writeFileSync('dist/legado.html', html);
   const consulta = novo.replace('</head>', () => `${faixa}<title>PRODUCERia Studio · consulta</title></head>`).replace('<title>PRODUCERia Studio</title>', '')
     .replace('<script type="module" data-studio="modulos">', () => `<script data-studio="consulta">${runtime}</script><script type="module" data-studio="modulos">`);
   writeFileSync('dist/consulta.html', consulta);
-  console.log(`dist/index.html: ${(novo.length / 1024).toFixed(0)} KB sem o legado (módulos ${(modulos.length / 1024).toFixed(0)} KB) · dist/legado.html: ${(html.length / 1024).toFixed(0)} KB de reserva`);
+  console.log(`dist/index.html: ${(Buffer.byteLength(studioClaude) / 1024).toFixed(0)} KB (limite 870) · ${kit.length} arquivos dos plugins em dist/kit-banco para a coleção kit_plugins · dist/consulta.html: ${(consulta.length / 1024).toFixed(0)} KB · dist/legado.html: ${(html.length / 1024).toFixed(0)} KB de reserva`);
 }
