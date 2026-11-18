@@ -43,6 +43,7 @@ ${estilo}</style>
    <button type="button" class="btn" id="tema">Tema claro</button>
   </div>
   <svg id="tela" role="group" aria-label="Pontos do multiverso" preserveAspectRatio="xMidYMid meet"></svg>
+  <div class="vazio" id="vazio" hidden></div>
   <div class="zoom" role="group" aria-label="Zoom"><button type="button" id="zmais" aria-label="Aproximar">+</button><button type="button" id="zmenos" aria-label="Afastar">−</button><button type="button" id="zinicio" aria-label="Ver tudo">⌂</button></div>
   <p class="dica">Clique num ponto para acender o caminho · arraste para andar · Ctrl + rolar, pinça ou os botões aproximam</p>
  </main>

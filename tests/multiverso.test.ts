@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 import { describe, expect, it } from 'vitest';
-import { montarUniverso, reacao, multiverso, ordenarReacao, dadosDoArquivo, ORIGEM, type OrgGrafo, type OrgInv, type PessoaInv } from '../src/lib/investigacao';
+import { montarUniverso, reacao, multiverso, ordenarReacao, dadosDoArquivo, ilhas, atalhos, ORIGEM, type OrgGrafo, type OrgInv, type PessoaInv } from '../src/lib/investigacao';
 import { htmlDoMapa, fontesDaPagina } from '../src/lib/mapa-arquivo';
 
 const org = (nome: string, ligacoes: OrgGrafo['ligacoes'] = [], extra: Partial<OrgGrafo> = {}): OrgGrafo => ({ k: nome.toLowerCase(), nome, ligacoes, ...extra });
@@ -61,5 +61,37 @@ describe('Multiverso da investigação', () => {
   it('leva só as fontes da casa que a página tem', () => {
     document.head.innerHTML = '<style>@font-face{font-family:PTYPE;src:url(a)} @font-face{font-family:Outra;src:url(b)} body{}</style>';
     expect(fontesDaPagina()).toBe('@font-face{font-family:PTYPE;src:url(a)}');
+  });
+});
+
+describe('Pontes para o que está longe', () => {
+  const M = multiverso(U, ORIGEM);
+  it('agrupa os fora de alcance em ilhas, com missões para ligá-las', () => {
+    const I = ilhas(U, M);
+    expect(I).toHaveLength(1);
+    expect(I[0].ids.sort()).toEqual(['o:cliente solto', 'o:solta']);
+    expect(I[0].missoes.some((m) => m.tipo === 'equipe' && m.alvo === 'o:solta')).toBe(true);
+    expect(I[0].missoes.some((m) => m.tipo === 'agencia' && m.alvo === 'o:cliente solto')).toBe(false); // já tem agência
+  });
+  it('campanha, grupo e ligação registrada viram fios; a ponte registrada liga a ilha à PRODUCERIA', () => {
+    const base = { agencias: [org('Agência A', [{ empresa: 'Cliente 1', agencia: 'Agência A' }]), org('Solta', [{ empresa: 'Cliente Solto', agencia: 'Solta' }]), org('Irmã', [])],
+      empresas: [org('Cliente 1'), org('Cliente Solto'), org('Marca Nova')], orgsInv: [...orgsInv, { id: 'ag-irma', nome: 'Irmã', grupo: 'Holding X' }, { id: 'ag-solta2', nome: 'Solta', grupo: 'Holding X' }], hoje: '2026-11-18' };
+    const pessoas: PessoaInv[] = [...equipe, { id: 'pe-c', nome: 'Cora Dias', cargo: 'Produtora', organizacao: 'Agência A', campanha: 'Marca Nova · Verão 2026' }];
+    const V = montarUniverso({ ...base, pessoas });
+    expect(V.adj.get('p:pe-c')!.some((a) => a.b === 'o:marca nova' && /campanha/.test(a.rotulo))).toBe(true);
+    expect(V.adj.get('o:agencia a')!.some((a) => a.b === 'o:marca nova')).toBe(true);
+    expect(V.adj.get('o:solta')!.some((a) => a.b === 'o:irma' && /mesmo grupo: Holding X/.test(a.rotulo))).toBe(true);
+    expect(multiverso(V, ORIGEM).foraIds).toContain('o:solta');
+    const W = montarUniverso({ ...base, pessoas, ligacoes: [{ id: 'lg-1', de: ORIGEM, para: 'o:solta', tipo: 'ponte', quem: 'pe-renato', fonte: 'conversa com a equipe' }] });
+    expect(W.adj.get(ORIGEM)!.find((a) => a.b === 'o:solta')?.rotulo).toBe('ponte: Renato (registrada)');
+    expect(multiverso(W, ORIGEM).foraIds).not.toContain('o:solta');
+    expect(multiverso(W, ORIGEM).foraIds).not.toContain('o:irma'); // a irmã do grupo vem junto
+  });
+  it('aponta atalhos para os abertos que estão longe', () => {
+    const R = reacao(U, ORIGEM);
+    const A = atalhos(U, R);
+    expect(A.every((a) => a.ger >= 3)).toBe(true);
+    expect(A.map((a) => a.id)).toContain('p:pe-x');
+    expect(A.find((a) => a.id === 'p:pe-x')!.missoes[0].tipo).toBe('trajetoria');
   });
 });

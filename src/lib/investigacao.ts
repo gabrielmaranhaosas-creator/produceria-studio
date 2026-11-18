@@ -10,7 +10,13 @@ import { nivelDe, type Nivel } from './grafo';
 export interface PessoaInv {
   id: string; nome: string; cargo?: string; organizacao?: string; nivel?: Nivel; area?: string;
   conexao?: string; trajetoria?: string; linkedin?: string; fonte?: string; data?: string; atualizadoEm?: string;
+  /** "Marca · campanha" em que a pessoa trabalhou (a ligação com a marca é comprovada pela fonte da pessoa). */
+  campanha?: string;
 }
+/** Ligação registrada à mão no Studio (coleção mapa_ligacoes), sempre com fonte. Ponte: de = ORIGEM, quem = id da equipe. */
+export type TipoLigacao = 'trabalha' | 'passou' | 'atende' | 'campanha' | 'grupo' | 'ponte';
+export interface LigacaoInv { id: string; de: string; para: string; tipo: TipoLigacao; deNome?: string; paraNome?: string; quem?: string; fonte?: string; nota?: string; criadoEm?: string }
+export const TIPOS_LIGACAO: [TipoLigacao, string][] = [['trabalha', 'trabalha em'], ['passou', 'passou por'], ['atende', 'atende a conta'], ['campanha', 'fez campanha para'], ['grupo', 'mesmo grupo'], ['ponte', 'ponte com a equipe']];
 export interface OrgInv {
   id: string; nome: string; perfil?: string; grupo?: string; nota?: string; fontes?: string[]; sucessora?: string;
   linkedin?: string; site?: string; setor?: string;
@@ -126,7 +132,7 @@ const antes = (hoje: string, dias: number) => new Date(Date.parse(hoje) - dias *
 const dm = (d?: string) => (d && /^\d{4}-\d{2}-\d{2}/.test(d) ? `${d.slice(8, 10)}/${d.slice(5, 7)}/${d.slice(0, 4)}` : d && /^\d{4}-\d{2}$/.test(d) ? `${d.slice(5, 7)}/${d.slice(0, 4)}` : d || '');
 
 export function montarUniverso(d: {
-  empresas: OrgGrafo[]; agencias: OrgGrafo[]; pessoas: PessoaInv[]; orgsInv: OrgInv[]; alvos?: { nome: string }[]; hoje?: string;
+  empresas: OrgGrafo[]; agencias: OrgGrafo[]; pessoas: PessoaInv[]; orgsInv: OrgInv[]; alvos?: { nome: string }[]; hoje?: string; ligacoes?: LigacaoInv[];
 }): Universo {
   const hoje = d.hoje || new Date().toISOString().slice(0, 10), d120 = antes(hoje, 120);
   const nos = new Map<string, NoU>(), adj = new Map<string, Aresta[]>();
@@ -169,6 +175,24 @@ export function montarUniverso(d: {
     for (const o of orgs) if (o.id !== dono && norm(base(o.nome)).length >= 5 && reNome(o.nome).test(t)) ligar('p:' + p.id, o.id, 'atende a conta');
   }
   for (const p of outros) if (p.trajetoria) { const t = norm(p.trajetoria); for (const o of orgs) if (norm(base(o.nome)).length >= 3 && reNome(o.nome).test(t)) ligar('p:' + p.id, o.id, 'passou por'); }
+  // a campanha que a pessoa fez liga a pessoa (e a casa dela) à marca
+  for (const p of outros) if (p.campanha) {
+    const marca = achaOrg(String(p.campanha).split('·')[0]), dono = achaOrg(p.organizacao);
+    if (marca && marca.tipo !== 'pessoa') { ligar('p:' + p.id, marca.id, 'campanha: ' + curto2(String(p.campanha), 60), p.data, p.fonte); if (dono && dono.tipo === 'agencia' && marca.tipo === 'empresa') ligar(dono.id, marca.id, 'fez campanha', p.data, p.fonte); }
+  }
+  // o mesmo grupo (holding) liga as casas entre si, pela casa-mãe quando ela está no mapa
+  const grupos = new Map<string, { nome: string; ids: string[] }>();
+  for (const o of [...d.agencias, ...d.empresas, ...d.orgsInv] as { nome: string; grupo?: string }[]) {
+    const g = base(o.grupo), n = achaOrg(o.nome); if (!n || !chave(g) || chave(g) === chave(base(o.nome)) || mesmaEmpresa(g, base(o.nome))) continue;
+    const x = grupos.get(chave(g)) || { nome: g, ids: [] }; if (!x.ids.includes(n.id)) x.ids.push(n.id); grupos.set(chave(g), x);
+  }
+  for (const { nome, ids } of grupos.values()) { const mae = achaOrg(nome), rot = 'mesmo grupo: ' + (mae?.nome || nome); if (mae) for (const id of ids) ligar(id, mae.id, rot); else for (let i = 1; i < ids.length; i++) ligar(ids[0], ids[i], rot); }
+  // ligações registradas no Studio, sempre com fonte
+  const ROT_LIG = Object.fromEntries(TIPOS_LIGACAO) as Record<TipoLigacao, string>;
+  for (const l of d.ligacoes || []) {
+    if (l.tipo === 'ponte') { const m = equipe.find((x) => x.id === l.quem); ligar(ORIGEM, l.para, 'ponte: ' + (m?.nome.split(' ')[0] || 'PRODUCERIA') + ' (registrada)', l.criadoEm?.slice(0, 10), l.fonte); }
+    else ligar(l.de, l.para, ROT_LIG[l.tipo] || 'ligação registrada', l.criadoEm?.slice(0, 10), l.fonte);
+  }
   const primeiro = (ids: string[]) => ids.map((i) => equipe.find((m) => m.id === i)?.nome.split(' ')[0]).filter(Boolean).join(', ');
   for (const o of orgs) {
     const x = inv(o.nome), ids = new Set(citados(x?.nota, equipe));
@@ -352,6 +376,64 @@ export function multiverso(U: Universo, semente: string, R?: Reacao): Multiverso
   const total = U.nos.size - 1, alcance = visto.size - 1;
   const foraIds = [...U.nos.values()].filter((n) => !visto.has(n.id) && n.id !== ORIGEM).sort((x, y) => y.nota - x.nota || x.nome.localeCompare(y.nome, 'pt-BR')).map((n) => n.id);
   return { semente, camadas, pai, alcance, fora: foraIds.length, total, foraIds };
+}
+
+/* ───────────────────────── Pontes ─────────────────────────
+ * Como ligar o que está longe. Os fora de alcance formam ilhas (pontos ligados entre si, sem fio até a semente); para
+ * cada ilha, as pistas que já existem no mapa e as missões que trazem a informação que falta. Nada vira ligação sem fonte:
+ * a missão aponta o que pesquisar, e a ligação achada é registrada com o link.
+ */
+export type TipoMissao = 'juntar' | 'trajetoria' | 'equipe' | 'agencia' | 'setor';
+export interface Missao { tipo: TipoMissao; alvo: string; texto: string; link?: string; com?: string }
+export interface Ilha { ids: string[]; chefe: string; valor: number; agencias: number; empresas: number; pessoas: number; missoes: Missao[] }
+export interface Atalho { id: string; ger: number; forca: number; missoes: Missao[] }
+const ORDEM_MISSAO: Record<TipoMissao, number> = { juntar: 0, trajetoria: 1, equipe: 2, agencia: 3, setor: 4 };
+const linkedinDe = (n: NoU) => n.fontes.find((u) => /linkedin\.com\/in\//i.test(u));
+const setorDe = (n: NoU) => (n.tipo === 'empresa' ? n.sub.split(' · ')[0] : '');
+const SEM_SETOR = /^(Anunciante|Organização)$/;
+
+/** As missões que ligam um ponto: por onde a pessoa passou, quem da equipe conhece a casa, qual é a agência da marca. */
+function missoesDe(U: Universo, n: NoU, perto: string): Missao[] {
+  const viz = U.adj.get(n.id) || [], out: Missao[] = [];
+  if (n.tipo === 'pessoa') {
+    if (!viz.some((a) => a.rotulo === 'passou por')) out.push({ tipo: 'trajetoria', alvo: n.id, texto: `Ler por onde ${n.nome} passou: uma casa antiga que já está ${perto} liga tudo`, link: linkedinDe(n) });
+  } else if (!n.extinta) {
+    out.push({ tipo: 'equipe', alvo: n.id, texto: `Perguntar à equipe quem conhece alguém em ${n.nome}: vira ponte direta com a PRODUCERIA` });
+    if (n.tipo === 'empresa' && !viz.some((a) => U.nos.get(a.b)?.tipo === 'agencia')) out.push({ tipo: 'agencia', alvo: n.id, texto: `Descobrir a agência de ${n.nome} (notícia, Cenp ou ficha técnica de campanha)` });
+  }
+  return out;
+}
+
+/** As ilhas dos fora de alcance, da mais valiosa para a menos, com pistas e missões. */
+export function ilhas(U: Universo, M: Multiverso): Ilha[] {
+  const fora = new Set(M.foraIds), feito = new Set<string>(), out: Ilha[] = [];
+  const alcancadas = [...U.nos.values()].filter((n) => !fora.has(n.id) && (n.tipo === 'empresa' || n.tipo === 'agencia'));
+  for (const id0 of M.foraIds) {
+    if (feito.has(id0)) continue;
+    const ids: string[] = [], fila = [id0]; feito.add(id0);
+    while (fila.length) { const x = fila.pop()!; ids.push(x); for (const a of U.adj.get(x) || []) if (fora.has(a.b) && !feito.has(a.b)) { feito.add(a.b); fila.push(a.b); } }
+    const nos = ids.map((i) => U.nos.get(i)!).sort((a, b) => b.nota - a.nota), conta = (t: TipoNo) => nos.filter((n) => n.tipo === t).length;
+    const ms: Missao[] = [];
+    for (const n of nos.filter((y) => y.tipo !== 'pessoa')) {
+      // o mesmo nome escrito de outro jeito: juntar no Big Data já liga a ilha
+      const k = chave(base(n.nome)), igual = k.length >= 4 && alcancadas.find((y) => { const ky = chave(base(y.nome)); return ky.length >= 4 && (ky.includes(k) || k.includes(ky)); });
+      if (igual) ms.push({ tipo: 'juntar', alvo: n.id, com: igual.id, texto: `${n.nome} parece ser ${igual.nome}, que já está no mapa: juntar os dois no Big Data liga a ilha` });
+      const st = setorDe(n), par = st && !SEM_SETOR.test(st) && alcancadas.filter((y) => setorDe(y) === st).sort((a, b) => b.nota - a.nota)[0];
+      if (par) ms.push({ tipo: 'setor', alvo: n.id, com: par.id, texto: `Mesmo setor de ${par.nome} (${st}), que já está no mapa: um contato ou caso de lá serve de argumento` });
+    }
+    const perto = M.semente === ORIGEM ? 'no mapa' : 'na reação';
+    for (const n of nos.filter((y) => y.tipo !== 'pessoa').slice(0, 2)) ms.push(...missoesDe(U, n, perto));
+    for (const n of nos.filter((y) => y.tipo === 'pessoa').slice(0, 3)) ms.push(...missoesDe(U, n, perto));
+    ms.sort((a, b) => ORDEM_MISSAO[a.tipo] - ORDEM_MISSAO[b.tipo] || Number(!!b.link) - Number(!!a.link));
+    out.push({ ids: nos.map((n) => n.id), chefe: nos[0].id, valor: Math.min(100, nos[0].nota + Math.min(20, (nos.length - 1) * 4)), agencias: conta('agencia'), empresas: conta('empresa'), pessoas: conta('pessoa'), missoes: ms.slice(0, 6) });
+  }
+  return out.sort((a, b) => b.valor - a.valor || b.ids.length - a.ids.length);
+}
+
+/** Os abertos que estão longe (3ª ramificação em diante): uma ponte direta os traz para perto. */
+export function atalhos(U: Universo, R: Reacao, max = 30): Atalho[] {
+  return R.geracoes.slice(3).flat().filter((r) => !U.nos.get(r.id)?.extinta).sort((a, b) => b.forca - a.forca).slice(0, max)
+    .map((r) => ({ id: r.id, ger: r.ger, forca: r.forca, missoes: missoesDe(U, U.nos.get(r.id)!, 'perto da semente').map((m) => (m.tipo === 'equipe' ? { ...m, texto: m.texto + `, e o ponto sai da ${r.ger}ª para a 1ª ramificação` } : m)) }));
 }
 
 /**

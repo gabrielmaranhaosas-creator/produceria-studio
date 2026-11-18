@@ -132,3 +132,22 @@ svg.entra .fio{stroke-dasharray:1200;stroke-dashoffset:1200;animation:fio .7s ea
   .app{grid-template-rows:auto auto auto}
 }
 @media print{.ferr,.zoom,.dica{display:none}.app{height:auto}}
+/* vazio do mapa */
+.vazio{position:absolute;left:50%;top:62%;transform:translateX(-50%);z-index:2;text-align:center;max-width:min(420px,90%)}
+.vazio p{margin:0 0 10px;color:var(--mut)}
+.vazio button{border:1px solid var(--ink);background:var(--bg);padding:8px 14px}
+/* identidade em destaque: tipo, cargo, organização */
+.ident{display:flex;flex-wrap:wrap;align-items:baseline;gap:2px 8px;margin:3px 0 2px;font-size:12.5px;line-height:1.35}
+.ident .tp{font-size:10px;letter-spacing:.1em;text-transform:uppercase;border:1px solid var(--lin2);padding:1px 6px;border-radius:3px;color:var(--ink)}
+.ident .tp-agencia{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.ident .tp-empresa{border-color:var(--ink)}
+.ident .tp-pessoa{border-style:dashed}
+.ident .cg{color:var(--ink);font-weight:600}
+.ident .og{color:var(--ink)}
+.ident .og::before{content:'em ';color:var(--mut)}
+.ident .st{color:var(--ink)}
+.ident .gr{color:var(--mut)}
+.ident .gr::before{content:'· '}
+.dossie .sub .ident{font-size:14px}
+.dossie .sub .nv{color:var(--mut)}
+.sug .ident{margin:2px 0 0}

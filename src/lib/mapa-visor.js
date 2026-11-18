@@ -102,7 +102,7 @@
         (n.novo ? '<circle class="pulso" cx="' + q.x.toFixed(1) + '" cy="' + q.y.toFixed(1) + '" r="' + (q.r + 4).toFixed(1) + '"></circle>' : '') + '<circle class="c" cx="' + q.x.toFixed(1) + '" cy="' + q.y.toFixed(1) + '" r="' + q.r.toFixed(1) + '"></circle>' + lab + '</g>';
     });
     svg.innerHTML = '<g id="mundo"><g>' + h + '</g><g>' + fios + '</g><g>' + ext + '</g><g>' + nos + '</g></g>';
-    mundo = $('#mundo'); mover(false); acender();
+    mundo = $('#mundo'); mover(false); acender(); vazio();
   }
 
   /* ── zoom e arrasto ── */
@@ -248,7 +248,7 @@
     if (!n) { el.innerHTML = '<span class="lab">Dossiê</span><p>Clique num ponto do mapa (ou num nome do radar) para ver quem é, por que entrou na reação e o caminho até ' + esc(D.sementeNome) + '.</p>'; return; }
     var c = caminho(sel), lig = D.extras.filter(function (e) { return e[0] === sel || e[1] === sel; }).length, forca = forcaDe(n);
     el.innerHTML = '<span class="lab">Dossiê · ' + esc(TIPO[n.t]) + ' · ' + esc(GER(n.g)) + (n.f == null && n.id !== raiz && n.g > 0 ? ' · alcançável' : '') + '</span><h2>' + esc(n.n) + (n.x ? ' <span class="tag">extinta</span>' : '') + (n.novo ? ' <span class="tag">novo</span>' : '') + (n.alvo ? ' <span class="tag">no radar</span>' : '') + '</h2>' +
-      (n.s || n.o ? '<p class="sub">' + esc(n.s) + (n.t === 'pessoa' && n.o ? ' · ' + esc(n.o) : '') + (n.nv ? ' · ' + esc(NIVEL[n.nv] || '') : '') + '</p>' : '') +
+      '<p class="sub">' + ident(n, false) + (n.nv ? ' <span class="nv">' + esc(NIVEL[n.nv] || '') + '</span>' : '') + '</p>' +
       (n.id !== raiz && !n.x ? '<div class="forca" title="Força como possibilidade de negócio, de 0 a 100"><span><i style="width:' + Math.min(100, forca) + '%"></i></span><b>' + forca + '</b></div>' : '') +
       (n.g < 0 ? '<p class="sub">Sem ligação com ' + esc(D.sementeNome) + ' no Big Data. No Studio, a Investigação abre a partir dele; aqui, pesquise quem trabalha nele e por onde passou.</p>' : '') +
       (n.fa.length ? '<ul class="fatos">' + n.fa.map(function (f) { return '<li>' + esc(f) + '</li>'; }).join('') + '</ul>' : '') +
@@ -256,12 +256,34 @@
       (lig ? '<p class="sub">Mais ' + lig + ' ligação(ões) com outros pontos do mapa, tracejadas no desenho.</p>' : '') +
       (n.fo.length ? '<p class="fontes"><span class="lab">Fontes</span>' + n.fo.map(function (u) { return '<a href="' + esc(u) + '" target="_blank" rel="noopener">' + esc(host(u)) + ' ↗</a>'; }).join('') + '</p>' : '');
   }
+  // o que identifica um ponto, em destaque: tipo, cargo e organização (pessoa) ou setor (organização)
+  function ident(n, comGer) {
+    var s = '<span class="ident"><span class="tp tp-' + esc(n.t) + '">' + esc(TIPO[n.t]) + '</span>';
+    if (n.t === 'pessoa') { if (n.s) s += '<b class="cg">' + esc(curto(n.s, 48)) + '</b>'; if (n.o) s += '<span class="og">' + esc(n.o) + '</span>'; }
+    else if (n.t !== 'origem') { var st = String(n.s || '').split(' · ').filter(function (x) { return x && !/^(Agência|Anunciante|Organização)$/.test(x); }).join(' · '); if (st) s += '<span class="st">' + esc(curto(st, 40)) + '</span>'; }
+    return s + (comGer && n.id !== raiz ? '<span class="gr">' + esc(GER(n.g)) + '</span>' : '') + '</span>';
+  }
   var limite = 20;
   function radar() {
     var L = abertos.filter(function (n) { return !n.x; }).sort(function (a, b) { return b.f - a.f || a.n.localeCompare(b.n, 'pt-BR'); });
     $('#radar').innerHTML = L.slice(0, limite).map(function (n) {
-      return '<li><button type="button" data-ir="' + esc(n.id) + '" aria-pressed="' + (n.id === sel) + '"><b class="n">' + n.f + '</b><span><b>' + esc(n.n) + '</b>' + (n.novo ? '<span class="tag">novo</span>' : '') + '<small>' + esc(TIPO[n.t] + (n.t === 'pessoa' ? ' · ' + curto(n.s, 40) + (n.o ? ' · ' + n.o : '') : '') + ' · ' + GER(n.g)) + '</small><small>' + esc(n.fa[0] || '') + '</small></span></button></li>';
+      return '<li><button type="button" data-ir="' + esc(n.id) + '" aria-pressed="' + (n.id === sel) + '"><b class="n">' + n.f + '</b><span><b>' + esc(n.n) + '</b>' + (n.novo ? '<span class="tag">novo</span>' : '') + ident(n, true) + '<small>' + esc(n.fa[0] || '') + '</small></span></button></li>';
     }).join('') + (L.length > limite ? '<li><button type="button" id="rmais"><b class="n">+</b><span>Mostrar mais ' + Math.min(20, L.length - limite) + ' (' + (L.length - limite) + ' restantes)</span></button></li>' : '');
+  }
+  // na reação aberta, se as ramificações à mostra não têm nenhum ponto aberto (5ª, 6ª, 7ª...), mostra o multiverso inteiro
+  function semAbertos() {
+    if (modo !== 'abertos') return;
+    var vis1 = D.camadas.slice(1).filter(function (c) { return !escondidas[c.ger]; });
+    if (vis1.length && !vis1.some(function (c) { return c.abertos; })) { modo = 'todos'; marcarModo(); $('#vivo').textContent = 'Essas ramificações não têm pontos abertos na reação: mostrando o multiverso inteiro'; }
+  }
+  // mapa sem nenhum ponto à mostra: diz por quê e oferece a saída
+  function vazio() {
+    var el = $('#vazio'); if (!el) return;
+    if (vis.length > 1) { el.hidden = true; return; }
+    var todas = D.camadas.slice(1).every(function (c) { return escondidas[c.ger]; });
+    el.innerHTML = todas ? '<p>Todas as ramificações estão escondidas.</p><button type="button" id="vertodas">Mostrar todas</button>'
+      : '<p>Nenhum ponto aberto na reação nas ramificações escolhidas.</p><button type="button" data-modo="todos">Ver o multiverso inteiro</button>';
+    el.hidden = false;
   }
   function marcarModo() { document.querySelectorAll('[data-modo]').forEach(function (b) { b.setAttribute('aria-pressed', String(b.getAttribute('data-modo') === modo)); }); }
 
@@ -271,7 +293,8 @@
     var ir = t.closest('[data-ir]'); if (ir) { escolher(ir.getAttribute('data-ir'), false); return; }
     if (t.closest('#rmais')) { limite += 20; radar(); return; }
     if (t.closest('#fora')) { foraOn = !foraOn; lembrar(); voltas(); if (sel && por[sel].g < 0 && !foraOn) sel = ''; desenhar(); dossie(); $('#vivo').textContent = foraOn ? D.fora + ' pontos fora de alcance no mapa' : 'Fora de alcance escondidos'; return; }
-    var g = t.closest('[data-g]'); if (g) { var k = g.getAttribute('data-g'); escondidas[k] = !escondidas[k]; voltas(); desenhar(); return; }
+    var g = t.closest('[data-g]'); if (g) { var k = g.getAttribute('data-g'); escondidas[k] = !escondidas[k]; semAbertos(); voltas(); desenhar(); return; }
+    if (t.closest('#vertodas')) { escondidas = {}; voltas(); desenhar(); return; }
     var m = t.closest('[data-modo]'); if (m) { modo = m.getAttribute('data-modo'); marcarModo(); desenhar(); return; }
     if (t.closest('#todas')) { var on = svg.classList.toggle('todas'); t.closest('#todas').setAttribute('aria-pressed', String(on)); return; }
     if (t.closest('#tema')) { var cl = document.documentElement.getAttribute('data-tema') === 'claro'; document.documentElement.setAttribute('data-tema', cl ? 'escuro' : 'claro'); $('#tema').textContent = cl ? 'Tema claro' : 'Tema escuro'; return; }
@@ -285,7 +308,7 @@
   $('#q').addEventListener('input', function (e) {
     var q = norm(e.target.value).trim();
     $('#sug').innerHTML = q.length < 2 ? '' : NOS.filter(function (n) { return norm(n.n).indexOf(q) >= 0; }).sort(function (a, b) { return (norm(a.n).indexOf(q) === 0 ? 0 : 1) - (norm(b.n).indexOf(q) === 0 ? 0 : 1) || b.nota - a.nota; }).slice(0, 8)
-      .map(function (n) { return '<button type="button" data-ir="' + esc(n.id) + '"><b>' + esc(n.n) + '</b> <small>' + esc(TIPO[n.t] + ' · ' + GER(n.g)) + '</small></button>'; }).join('');
+      .map(function (n) { return '<button type="button" data-ir="' + esc(n.id) + '"><b>' + esc(n.n) + '</b>' + ident(n, true) + '</button>'; }).join('');
   });
   document.addEventListener('click', function (e) { if (!e.target.closest || !e.target.closest('.busca')) $('#sug').innerHTML = ''; });
   $('#rodape').textContent = 'Gerado pelo PRODUCERia Studio em ' + dt(D.geradoEm) + '. Pontos e ligações do Big Data do mercado (notícias, Cenp, LinkedIn e as fontes de cada ponto). Cada ponto aparece na primeira ramificação em que é alcançado; a força soma quem contrata produção, conta nova ou mudança recente, encaixe do craft e ponte com a PRODUCERIA.';

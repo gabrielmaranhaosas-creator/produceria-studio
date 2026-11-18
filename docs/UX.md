@@ -150,3 +150,17 @@ O HTML baixado pelo botão "Baixar o mapa interativo" passa a usar o mesmo desen
 - Controles em duas linhas: o rastro e a busca em cima; visão, abertura e fora de alcance embaixo, com o botão de baixar à direita.
 - Big Data, Por setor: "Sem setor" saiu das barras. Ele achatava a escala e não filtrava nada. Agora vira nota com a contagem. A coluna do número tem largura fixa, para as barras alinharem, e o nome cortado mostra o texto inteiro ao passar o mouse.
 - Licitações, Habilitação: o CNPJ e os CNAEs quebram linha (antes invadiam a coluna vizinha). Também entrou um respiro entre a tabela e os cartões.
+
+### Investigação: Pontes para o que está longe (18/11/2026)
+
+- Diagnóstico: os fora de alcance formam ilhas. São agências com o próprio pessoal e marcas com a sua agência, sem fio até a semente. Só 6 de 346 pessoas tinham trajetória. Os dados que já existiam ligam poucos pontos; a ponte depende de informação nova, com fonte.
+- O motor passou a usar dois campos que estavam parados. A campanha da pessoa ("Marca · campanha") liga a pessoa à marca, e a agência dela à marca. O grupo/holding liga as casas do mesmo grupo, pela casa-mãe quando ela está no mapa.
+- Coleção `mapa_ligacoes`: ligações registradas no Studio. Tipos: trabalha em, passou por, atende a conta, fez campanha para, mesmo grupo e ponte com a equipe (que exige dizer quem da equipe conhece). Toda ligação pede fonte: um link, ou na ponte o registro da conversa.
+- Painel "Pontes", logo abaixo de "Tamanho do multiverso":
+  - "Ilhas fora de alcance" lista cada ilha pelo valor, com os membros e as missões. As missões são: Juntar (o mesmo nome escrito de outro jeito), Trajetória (com o link do LinkedIn quando há), Equipe (quem conhece alguém lá), Agência (descobrir a agência da marca) e Pista (mesmo setor de uma casa alcançada).
+  - "Abertos longe" lista os pontos da 3ª ramificação em diante, com o caminho atual e as missões que os trazem para perto.
+- "Registrar ligação" fica no dossiê e em cada cartão. A busca do outro ponto usa a mesma busca da Investigação, e o mapa se refaz com a ligação gravada. No modo consulta, a gravação avisa que é só leitura.
+
+### 18/11/2026 · Ramificações sem abertos e identidade em destaque
+- Arquivo do mapa: na vista "Só a reação aberta", da 4ª ramificação em diante não há pontos abertos. Se as ramificações deixadas à mostra não têm nenhum aberto, o mapa passa sozinho para "Multiverso inteiro" e avisa; com tudo escondido, o mapa diz isso e oferece "Mostrar todas".
+- Arquivo e Studio: radar, dossiê, busca, atalhos e leads mostram o tipo como etiqueta (Agência cheia, Anunciante com contorno, Pessoa tracejada), o cargo em negrito e a organização em destaque.

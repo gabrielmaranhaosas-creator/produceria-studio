@@ -87,7 +87,8 @@ describe('Investigação: a tela', () => {
     const { montar } = await import('../src/paginas/investigacao');
     const raiz = document.createElement('div'); document.body.appendChild(raiz);
     const fim = montar(raiz);
-    await new Promise((r) => setTimeout(r, 150));
+    // espera os dados chegarem (com folga para a máquina ocupada, quando a suíte inteira roda junto)
+    for (let i = 0; i < 40 && !raiz.querySelector('.iv-dos.ext'); i++) await new Promise((r) => setTimeout(r, 50));
     expect(raiz.querySelector('.iv-quadro .iv-zero')).toBeTruthy();
     expect(raiz.querySelector('.iv-dos.ext .iv-car')?.textContent).toBe('Extinta');
     expect(raiz.querySelectorAll('.iv-radar .iv-ld').length).toBeGreaterThan(0);

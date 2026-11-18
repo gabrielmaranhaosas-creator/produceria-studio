@@ -6,7 +6,7 @@ import { hoje as hojeISO, addDias } from '../lib/datas';
 import { slug } from '../lib/nomes';
 import { banco, lerBase, type Colecao } from '../lib/db';
 import { montarGrafo, NIVEIS, type MercadoBase, type MovimentoBase, type EmpresaMapa, type AgenciaMapa, type PessoaMapa } from '../lib/grafo';
-import { montarUniverso, reacao, caminho, leads, buscarNo, linhagem, novidades, chegadas, multiverso, ordenarReacao, dadosDoArquivo, ORIGEM, type Novidades, type Ramo, type Universo, type Reacao, type NoU, type PessoaInv, type OrgInv, type Multiverso } from '../lib/investigacao';
+import { montarUniverso, reacao, caminho, leads, buscarNo, linhagem, novidades, chegadas, multiverso, ordenarReacao, dadosDoArquivo, ilhas, atalhos, ehEquipe, ORIGEM, TIPOS_LIGACAO, type Novidades, type Ramo, type Universo, type Reacao, type NoU, type PessoaInv, type OrgInv, type Multiverso, type LigacaoInv, type Missao, type TipoLigacao } from '../lib/investigacao';
 import { htmlDoMapa, fontesDaPagina } from '../lib/mapa-arquivo';
 import { baixarArquivo } from './oficina';
 import type { Alvo } from '../lib/tipos';
@@ -22,6 +22,7 @@ const GER = ['Ponto de partida', '1ª ramificação', '2ª ramificação', '3ª 
 const LIMITES = [10, 14, 18, 14];
 /** "1 pessoa" / "2 pessoas" */
 const pl = (n: number, um: string, varios: string) => (n === 1 ? um : varios);
+const ROT_MISSAO: Record<Missao['tipo'], string> = { juntar: 'Juntar', trajetoria: 'Trajetória', equipe: 'Equipe', agencia: 'Agência', setor: 'Pista' };
 
 export function montar(root: HTMLElement): () => void {
   root.innerHTML = `<div class="wrap iv">
@@ -38,6 +39,7 @@ export function montar(root: HTMLElement): () => void {
   <button type="button" class="iv-baixar" id="ivB" data-baixar>Baixar o mapa interativo</button>
  </section>
  <section class="iv-mv" id="ivMv" aria-labelledby="ivMvT"></section>
+ <section class="iv-pon" id="ivPt" aria-labelledby="ivPtT"></section>
  <p class="note iv-dica" id="ivDica"></p>
  <div class="iv-mesa" id="ivMesa">
   <div class="iv-rd" id="ivRd" role="region" aria-label="Multiverso: o ponto de partida no centro, uma volta por ramificação"><svg class="iv-rd-s" id="ivRdS" role="group" aria-label="Pontos da reação"><g id="ivRdG"></g></svg>
@@ -56,6 +58,9 @@ export function montar(root: HTMLElement): () => void {
   let U: Universo = montarUniverso({ empresas: [], agencias: [], pessoas: [], orgsInv: [] });
   let R: Reacao = reacao(U, ORIGEM), M: Multiverso = multiverso(U, ORIGEM, R), G: Reacao['geracoes'] = ordenarReacao(R), sel = '', ab = 1, lf = '', lim = 10, rastroIds: string[] = [ORIGEM], colAlvos: Colecao<Alvo> | null = null;
   const offs: (() => void)[] = [];
+  // pontes: ligações registradas no Studio, a aba do painel e o rascunho do formulário (sobrevive às atualizações)
+  let ligs: LigacaoInv[] = [], colLig: Colecao<LigacaoInv> | null = null, ptAba: 'fora' | 'longe' = 'fora', ptLim = 6, ligDe = '';
+  let rasc: { tipo: TipoLigacao; q: string; para: string; quem: string; fonte: string; msg: string } = { tipo: 'trabalha', q: '', para: '', quem: '', fonte: '', msg: '' };
   // o que chegou: faixa "Hoje no mapa", etiqueta "novo", linha do tempo e a reação que abre pela troca do dia
   let N: Novidades = novidades(U, []), novos = new Set<string>(), foco = '', janela = 30;
   let vazioAntes = true, ultimaSem = '', animarAte = 0, tAnim = 0;
@@ -76,6 +81,13 @@ export function montar(root: HTMLElement): () => void {
   const no = (id: string) => U.nos.get(id);
   const ramos = () => new Map(R.geracoes.flat().map((r) => [r.id, r]));
 
+  /** O que identifica um ponto, em destaque: tipo, cargo e organização (pessoa) ou setor e grupo (organização). */
+  const ident = (n: NoU, ger = '') => {
+    let h = `<span class="iv-id"><span class="iv-tp t-${n.tipo}">${esc(TIPO[n.tipo])}</span>`;
+    if (n.tipo === 'pessoa') { if (n.sub) h += `<b class="iv-cg">${esc(curto(n.sub, 50))}</b>`; if (n.org) h += `<span class="iv-og">${esc(n.org)}</span>`; }
+    else if (n.tipo !== 'origem') { const st = n.sub.split(' · ').filter((x) => x && !/^(Agência|Anunciante|Organização)$/.test(x)).join(' · '); if (st) h += `<span class="iv-st">${esc(curto(st, 40))}</span>`; }
+    return h + (ger ? `<span class="iv-gr">${esc(ger)}</span>` : '') + '</span>';
+  };
   const cartao = (n: NoU, forca: number) => {
     if (n.tipo === 'origem') return `<button type="button" class="iv-c iv-zero" data-n="${esc(n.id)}"><b>PRODUCERIA</b><span class="iv-m">ponto zero · equipe e pontes</span></button>`;
     const pes = n.tipo === 'pessoa', cls = pes ? `iv-fic n-${n.nivel}` : `iv-dos${n.tipo === 'empresa' ? ' emp' : ''}${n.extinta ? ' ext' : ''}`;
@@ -123,7 +135,7 @@ export function montar(root: HTMLElement): () => void {
     const mv = $('#ivRd');
     if (q.classList.contains('entra')) mv.classList.add('entra'); else mv.classList.remove('entra');
     if (performance.now() < animarAte) { vk = 1; vx = 0; vy = 0; }
-    radial(); acender(); desenhar(); ficha(); radar(L); graficos(L, todos.length); extintas(); tamanho();
+    radial(); acender(); desenhar(); ficha(); radar(L); graficos(L, todos.length); extintas(); tamanho(); pontes();
   }
 
   /** Aplica a visão (multiverso ou colunas) nos controles e na mesa. */
@@ -298,6 +310,53 @@ export function montar(root: HTMLElement): () => void {
     $('#ivFoN').textContent = String(M.fora);
   }
 
+  /** Pontes: como ligar as ilhas fora de alcance e encurtar o caminho dos abertos que estão longe. */
+  function pontes() {
+    const el = $('#ivPt'); if (U.nos.size <= 1) { el.innerHTML = ''; return; }
+    const I = ilhas(U, M), A = atalhos(U, R), nome = no(M.semente)?.nome || '';
+    const semTraj = [...U.nos.values()].filter((n) => n.tipo === 'pessoa' && !(U.adj.get(n.id) || []).some((a) => a.rotulo === 'passou por')).length;
+    const chip = (id: string) => { const y = no(id); return y ? `<button type="button" class="chip sm" data-n="${esc(id)}">${esc(curto(y.nome, 30))}</button>` : ''; };
+    const missao = (m: Missao) => `<li><span class="iv-pon-k">${ROT_MISSAO[m.tipo]}</span><span>${esc(m.texto)}${m.link ? ` ${link(m.link, 'LinkedIn')}` : ''}${m.com ? ' ' + chip(m.com) : ''}</span></li>`;
+    const tipos = (i: (typeof I)[number]) => [[i.agencias, 'agência', 'agências'], [i.empresas, 'anunciante', 'anunciantes'], [i.pessoas, 'pessoa', 'pessoas']].filter(([n]) => n).map(([n, a, b]) => `${n} ${n === 1 ? a : b}`).join(' · ');
+    const cartaoIlha = (i: (typeof I)[number]) => `<li class="iv-pon-c"><div class="iv-pon-t"><b class="num" title="Valor da ilha: a nota do ponto mais forte e o tamanho">${i.valor}</b><span><button type="button" class="lnk" data-n="${esc(i.chefe)}"><b>${esc(no(i.chefe)?.nome || '')}</b></button> <span class="note">ilha de ${i.ids.length} · ${tipos(i)}</span></span></div>
+      ${i.ids.length > 1 ? `<p class="iv-cam">${i.ids.slice(1, 8).map(chip).join(' ')}${i.ids.length > 8 ? ` <span class="note">e mais ${i.ids.length - 8}</span>` : ''}</p>` : ''}
+      <ul class="iv-pon-m">${i.missoes.map(missao).join('')}</ul><div class="iv-acoes"><button type="button" class="ghost sm" data-ligar="${esc(i.chefe)}">Registrar ligação</button></div></li>`;
+    const cartaoAtalho = (a: (typeof A)[number]) => { const n = no(a.id)!; return `<li class="iv-pon-c"><div class="iv-pon-t"><b class="num" title="Força na reação">${a.forca}</b><span><button type="button" class="lnk" data-n="${esc(a.id)}"><b>${esc(n.nome)}</b></button> ${ident(n, GER[a.ger] || a.ger + 'ª ramificação')}</span></div>
+      <p class="iv-m">${esc(caminho(R, a.id).map((c) => no(c.id)?.nome || '').join(' → '))}</p><ul class="iv-pon-m">${a.missoes.map(missao).join('')}</ul><div class="iv-acoes"><button type="button" class="ghost sm" data-ligar="${esc(a.id)}">Registrar ligação</button></div></li>`; };
+    const lista = ptAba === 'fora' ? I.slice(0, ptLim).map(cartaoIlha) : A.slice(0, ptLim).map(cartaoAtalho), total = ptAba === 'fora' ? I.length : A.length;
+    el.innerHTML = `<header class="iv-mv-h"><h2 class="iv-h" id="ivPtT">Pontes</h2><p class="note">Como ligar o que está longe de <b>${esc(nome)}</b>. Os fora de alcance formam <b>${I.length}</b> ${pl(I.length, 'ilha', 'ilhas')}: pontos ligados entre si, sem fio até aqui. Cada ilha traz as pistas que o mapa já tem e as missões que buscam a informação que falta. Ligação só entra com fonte: ache, registre com o link, e a ilha entra na reação.</p></header>
+      <div class="iv-pon-bar"><div class="seg sm" role="group" aria-label="Mostrar"><button type="button" data-pt="fora" aria-pressed="${ptAba === 'fora'}">Ilhas fora de alcance · ${I.length}</button><button type="button" data-pt="longe" aria-pressed="${ptAba === 'longe'}">Abertos longe · ${A.length}</button></div>
+      <p class="note">${semTraj} ${pl(semTraj, 'pessoa', 'pessoas')} sem trajetória no Big Data · ${ligs.length} ${pl(ligs.length, 'ligação registrada', 'ligações registradas')} no Studio</p></div>
+      ${ptAba === 'longe' ? '<p class="note">Pontos da reação a partir da 3ª ramificação: uma ponte direta da equipe (ou uma casa da trajetória) os traz para perto.</p>' : ''}
+      ${lista.length ? `<ol class="iv-pon-l">${lista.join('')}</ol>` : `<p class="note">${ptAba === 'fora' ? 'Nenhum ponto fora de alcance: tudo no mapa se liga a ' + esc(nome) + '.' : 'Nenhum aberto além da 2ª ramificação.'}</p>`}
+      ${total > ptLim ? `<p class="iv-radar-mais"><button type="button" class="ghost" data-ptmais>Mostrar mais ${Math.min(6, total - ptLim)} (${total - ptLim} restantes)</button></p>` : ''}`;
+  }
+  /** O formulário de ligação, dentro do dossiê. */
+  function formLigacao(n: NoU): string {
+    const eq = pes.filter(ehEquipe).sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR')), ponte = rasc.tipo === 'ponte';
+    return `<form class="iv-lig" data-form-lig novalidate><span class="lab">Registrar ligação de ${esc(curto(n.nome, 40))}</span>
+      <div class="f"><label for="ivLigT">Tipo</label><select id="ivLigT" name="tipo">${TIPOS_LIGACAO.map(([v, t]) => `<option value="${v}"${v === rasc.tipo ? ' selected' : ''}>${t}</option>`).join('')}</select></div>
+      ${ponte ? `<div class="f"><label for="ivLigQ2">Quem da equipe</label><select id="ivLigQ2" name="quem"><option value="">Escolha</option>${eq.map((m) => `<option value="${esc(m.id)}"${m.id === rasc.quem ? ' selected' : ''}>${esc(m.nome)}</option>`).join('')}</select></div>`
+        : `<div class="f iv-busca"><label for="ivLigQ">Com</label><input id="ivLigQ" name="q" type="search" autocomplete="off" placeholder="Empresa, agência ou pessoa" value="${esc(rasc.q)}"><div class="iv-sug" id="ivLigS" role="list"></div></div>`}
+      <div class="f"><label for="ivLigF">Fonte</label><input id="ivLigF" name="fonte" value="${esc(rasc.fonte)}" placeholder="${ponte ? 'Link ou registro: conversa com a equipe em 18/11' : 'Link: LinkedIn, notícia, site, ficha técnica'}"></div>
+      <div class="iv-acoes"><button type="submit">Gravar ligação</button><button type="button" class="ghost" data-ligar-fechar>Cancelar</button></div>
+      <p class="note" role="status">${esc(rasc.msg)}</p></form>`;
+  }
+  async function gravarLigacao(f: HTMLFormElement) {
+    const n = no(ligDe); if (!n) return;
+    const ponte = rasc.tipo === 'ponte', para = ponte ? ligDe : rasc.para, de = ponte ? ORIGEM : ligDe, fonte = rasc.fonte.trim();
+    const erro = ponte ? (!rasc.quem ? 'Escolha quem da equipe conhece.' : !fonte ? 'Diga de onde vem a ponte (link ou registro da conversa).' : '')
+      : !para || !no(para) ? 'Escolha com quem é a ligação, na lista que aparece ao digitar.' : para === ligDe ? 'Escolha outro ponto.' : !/^https?:\/\//.test(fonte) ? 'A fonte precisa ser um link (https://…).' : '';
+    if (erro) { rasc.msg = erro; ficha(); return; }
+    const doc: LigacaoInv = { id: 'lg-' + slug(`${de}-${para}-${rasc.tipo}`).slice(0, 80), de, para, tipo: rasc.tipo, deNome: no(de)?.nome, paraNome: no(para)?.nome, ...(ponte ? { quem: rasc.quem } : {}), fonte, criadoEm: new Date().toISOString() };
+    const b = f.querySelector<HTMLButtonElement>('[type=submit]'); if (b) { b.disabled = true; b.textContent = 'Gravando…'; }
+    try {
+      if (colLig) await colLig.doc(doc.id).set(doc); else ligs = [...ligs.filter((x) => x.id !== doc.id), doc];
+      $('#ivLive').textContent = `Ligação gravada: ${doc.deNome} → ${doc.paraNome}${colLig ? '' : ' (só nesta sessão)'}`;
+      rasc = { tipo: rasc.tipo, q: '', para: '', quem: '', fonte: '', msg: 'Ligação gravada. O mapa se refaz com ela.' }; agendar();
+    } catch (e) { rasc.msg = 'Não foi possível gravar: ' + mensagem(e); ficha(); }
+  }
+
   /** O arquivo do mapa: HTML único, com o multiverso inteiro desenhado e navegável, para guardar ou mandar. */
   async function baixar(btn: HTMLButtonElement) {
     if (U.nos.size <= 1) return;
@@ -359,7 +418,7 @@ export function montar(root: HTMLElement): () => void {
     const viz = (U.adj.get(sel) || []).slice().sort((a, b) => (no(b.b)?.nota || 0) - (no(a.b)?.nota || 0));
     const chip = (id: string, extra = '') => { const y = no(id); return y ? `<button type="button" class="chip sm" data-n="${esc(id)}">${esc(curto(y.nome, 34))}${extra}</button>` : ''; };
     el.innerHTML = `<article class="iv-dossie"><header><span class="iv-k">Dossiê · ${esc(TIPO[n.tipo])}${r ? ' · ' + esc(GER[r.ger] || '') : M.foraIds.includes(sel) ? ' · Fora de alcance' : ''}</span><h3>${esc(n.nome)}</h3>${n.extinta ? '<span class="iv-car">Extinta</span>' : ''}<button type="button" class="iv-fechar" data-fechar aria-label="Fechar o dossiê">×</button></header>
-    ${n.sub || n.org ? `<p><b>${esc(n.sub)}</b>${n.tipo === 'pessoa' && n.org ? ' · ' + esc(n.org) : ''}${n.nivel ? ` <span class="note">(${esc(ROT[n.nivel] || '')})</span>` : ''}</p>` : ''}
+    ${n.tipo !== 'origem' ? `<p class="iv-idd">${ident(n)}${n.nivel ? ` <span class="note">(${esc(ROT[n.nivel] || '')})</span>` : ''}</p>` : ''}
     ${n.tipo !== 'origem' && !n.extinta ? `<div><span class="lab">Possibilidade de negócio</span><div class="iv-forca"><span class="iv-bar" aria-hidden="true"><i style="width:${n.nota}%"></i></span><b class="num">${n.nota}</b></div></div>` : ''}
     ${!r && M.foraIds.includes(sel) ? `<p class="note">Sem ligação com ${esc(no(R.semente)?.nome || '')} no Big Data. Abra a reação a partir daqui para ver o que ele alcança.</p>` : ''}
     ${n.fatos.length ? `<ul class="iv-fatos">${n.fatos.map((f) => `<li>${esc(f)}</li>`).join('')}</ul>` : ''}
@@ -367,7 +426,7 @@ export function montar(root: HTMLElement): () => void {
     ${r && r.pais.length > 1 ? `<p class="note">${r.pais.length} caminhos chegam aqui: ${r.pais.map((p) => esc(no(p.id)?.nome || '')).join(', ')}.</p>` : ''}
     ${viz.length ? `<div><span class="lab">Ligações no Big Data (${viz.length})</span><p class="iv-cam">${viz.slice(0, 10).map((a) => chip(a.b, ` <span class="iv-rot">${esc(curto(a.rotulo, 26))}</span>`)).join(' ')}${viz.length > 10 ? ` <span class="note">e mais ${viz.length - 10}</span>` : ''}</p></div>` : ''}
     ${n.fontes.length ? `<p class="note"><span class="lab">Fontes</span> ${[...new Set(n.fontes)].slice(0, 5).map((u) => link(u, host(u))).filter(Boolean).join(' · ')}</p>` : ''}
-    <div class="iv-acoes">${sel !== R.semente ? `<button type="button" data-s="${esc(sel)}">Abrir a reação a partir daqui</button>` : ''}${n.tipo !== 'origem' && !n.extinta ? (n.alvo ? '<a class="tag ok" href="#captacao">Já está no radar da Captação</a>' : `<button type="button" class="ghost" data-alvo="${esc(sel)}">Pôr no radar da Captação</button>`) : ''}<a class="lnk" href="#bigdata">Ver no Big Data</a></div></article>`;
+    <div class="iv-acoes">${sel !== R.semente ? `<button type="button" data-s="${esc(sel)}">Abrir a reação a partir daqui</button>` : ''}${n.tipo !== 'origem' && !n.extinta ? (n.alvo ? '<a class="tag ok" href="#captacao">Já está no radar da Captação</a>' : `<button type="button" class="ghost" data-alvo="${esc(sel)}">Pôr no radar da Captação</button>`) : ''}${n.tipo !== 'origem' && ligDe !== sel ? `<button type="button" class="ghost" data-ligar="${esc(sel)}">Registrar ligação</button>` : ''}<a class="lnk" href="#bigdata">Ver no Big Data</a></div>${ligDe === sel && n.tipo !== 'origem' ? formLigacao(n) : ''}</article>`;
   }
 
   function radar(L: ReturnType<typeof leads>) {
@@ -378,7 +437,7 @@ export function montar(root: HTMLElement): () => void {
     $('#ivLM').innerHTML = resto > 0 ? `<button type="button" class="ghost" data-rmais>Mostrar mais ${Math.min(10, resto)} (${resto} restantes)</button>` : '';
     $('#ivL').innerHTML = L.length ? L.slice(0, lim).map((x) => {
       const cam = caminho(R, x.id).map((c) => no(c.id)?.nome || '').join(' → ');
-      return `<li class="iv-ld${x.id === sel ? ' on' : ''}"><span class="iv-ldn num">${x.forca}</span><span class="iv-ldc"><button type="button" class="lnk" data-n="${esc(x.id)}"><b>${esc(x.no.nome)}</b></button>${novo(x.id) ? ' <span class="iv-novo">novo</span>' : ''} <span class="note">${esc(TIPO[x.no.tipo])}${x.no.tipo === 'pessoa' ? ' · ' + esc(curto(x.no.sub, 50)) + (x.no.org ? ' · ' + esc(x.no.org) : '') : ''}</span><span class="iv-m">${esc(curto(cam, 140))}</span>${x.no.fatos.length ? `<span class="iv-fatos-l">${x.no.fatos.slice(0, 3).map((f) => `<span>${esc(f)}</span>`).join('')}</span>` : ''}</span><span class="iv-lda">${x.no.alvo ? '<span class="tag ok">no radar</span>' : `<button type="button" class="ghost sm" data-alvo="${esc(x.id)}">Pôr no radar</button>`}<button type="button" class="ghost sm" data-s="${esc(x.id)}">Partir daqui</button></span></li>`;
+      return `<li class="iv-ld${x.id === sel ? ' on' : ''}"><span class="iv-ldn num">${x.forca}</span><span class="iv-ldc"><button type="button" class="lnk" data-n="${esc(x.id)}"><b>${esc(x.no.nome)}</b></button>${novo(x.id) ? ' <span class="iv-novo">novo</span>' : ''} ${ident(x.no)}<span class="iv-m">${esc(curto(cam, 140))}</span>${x.no.fatos.length ? `<span class="iv-fatos-l">${x.no.fatos.slice(0, 3).map((f) => `<span>${esc(f)}</span>`).join('')}</span>` : ''}</span><span class="iv-lda">${x.no.alvo ? '<span class="tag ok">no radar</span>' : `<button type="button" class="ghost sm" data-alvo="${esc(x.id)}">Pôr no radar</button>`}<button type="button" class="ghost sm" data-s="${esc(x.id)}">Partir daqui</button></span></li>`;
     }).join('') : `<li class="note">${lf === 'novo' ? 'Nada novo neste dia.' : 'Nenhuma possibilidade a partir deste ponto ainda.'}</li>`;
   }
 
@@ -400,7 +459,7 @@ export function montar(root: HTMLElement): () => void {
   const reabrir = () => { lim = 10; R = reacao(U, rastroIds[rastroIds.length - 1], LIMITES.map((l) => Math.round(l * (ab === 2 ? 1.8 : 1)))); G = ordenarReacao(R); M = multiverso(U, R.semente, R); if (sel && !ramos().has(sel)) sel = ''; render(); };
   const recalcular = () => {
     const G = montarGrafo({ mercado, movimentos: movs, empresas: emp, agencias: ags, pessoas: pes.filter((p) => p.nome && p.organizacao) as PessoaMapa[] });
-    U = montarUniverso({ empresas: G.empresas, agencias: G.agencias, pessoas: pes, orgsInv: [...ags, ...emp], alvos });
+    U = montarUniverso({ empresas: G.empresas, agencias: G.agencias, pessoas: pes, orgsInv: [...ags, ...emp], alvos, ligacoes: ligs });
     rastroIds = rastroIds.filter((id) => U.nos.has(id)); if (!rastroIds.length) rastroIds = [ORIGEM];
     // a tela sempre abre pela PRODUCERIA; a troca de conta do dia fica a um clique, na faixa "Hoje no mapa"
     reabrir();
@@ -442,6 +501,11 @@ export function montar(root: HTMLElement): () => void {
     const el = elDe(ev);
     const a = el.closest<HTMLButtonElement>('[data-alvo]'); if (a) { ev.preventDefault(); porNoRadar(a.dataset.alvo || '', a); return; }
     const bx = el.closest<HTMLButtonElement>('[data-baixar]'); if (bx) { ev.preventDefault(); baixar(bx); return; }
+    if (el.closest('[data-ligar-fechar]')) { ligDe = ''; rasc.msg = ''; ficha(); return; }
+    const lg = el.closest<HTMLElement>('[data-ligar]'); if (lg) { const id = lg.dataset.ligar || ''; if (ligDe !== id) rasc = { tipo: no(id)?.tipo === 'pessoa' ? 'passou' : 'atende', q: '', para: '', quem: '', fonte: '', msg: '' }; ligDe = id; if (sel !== id) { sel = id; acender(); desenhar(); } ficha(); $('#ivMesa').scrollIntoView({ behavior: 'smooth', block: 'start' }); root.querySelector<HTMLElement>('#ivLigT')?.focus(); return; }
+    const lp = el.closest<HTMLElement>('[data-lig-para]'); if (lp) { rasc.para = lp.dataset.ligPara || ''; rasc.q = no(rasc.para)?.nome || ''; ficha(); return; }
+    const pt = el.closest<HTMLElement>('[data-pt]'); if (pt) { ptAba = pt.dataset.pt === 'longe' ? 'longe' : 'fora'; ptLim = 6; pontes(); return; }
+    if (el.closest('[data-ptmais]')) { ptLim += 6; pontes(); return; }
     if (el.closest('[data-fora]')) { foraOn = !foraOn; try { localStorage.setItem(FORA, foraOn ? '1' : '0'); } catch { /* sem armazenamento */ } if (!foraOn && sel && !ramos().has(sel)) sel = ''; aplicarVisao(); render(); $('#ivLive').textContent = foraOn ? `${M.fora} pontos fora de alcance no multiverso` : 'Fora de alcance escondidos'; return; }
     const vb = el.closest<HTMLElement>('[data-visao]'); if (vb) { visao = vb.dataset.visao === 'colunas' ? 'colunas' : 'multiverso'; try { localStorage.setItem(MODO, visao); } catch { /* sem armazenamento */ } aplicarVisao(); render(); return; }
     const zb = el.closest<HTMLElement>('[data-zoom]'); if (zb) { const f = Number(zb.dataset.zoom); if (f) zoom(f, mvW / 2, mvH / 2, true); else { vk = 1; vx = 0; vy = 0; mover(true); clearTimeout(tRot); tRot = window.setTimeout(rotulos, 380); } return; }
@@ -457,15 +521,27 @@ export function montar(root: HTMLElement): () => void {
     const k = el.closest<HTMLElement>('[data-ab]'); if (k) { ab = Number(k.dataset.ab) || 1; $('#ivA').querySelectorAll<HTMLElement>('[data-ab]').forEach((b) => b.setAttribute('aria-pressed', String(b === k))); reabrir(); return; }
     const b = el.closest<HTMLElement>('[data-n]'); if (!b || !root.contains(b)) return;
     ev.preventDefault(); const id = b.dataset.n || '';
-    if (!ramos().has(id) && !(b.closest('#ivRd') && foraSet().has(id))) { partir(id); return; } // ponto fora da reação: abre a partir dele (no multiverso, o fora de alcance abre o dossiê)
+    if (!ramos().has(id) && !(b.closest('#ivRd') && foraSet().has(id)) && !b.closest('#ivPt, #ivFi')) { partir(id); return; }
+    if (b.closest('#ivPt')) { if (sel !== id) escolher(id); $('#ivMesa').scrollIntoView({ behavior: 'smooth', block: 'start' }); return; } // ponto fora da reação: abre a partir dele (no multiverso, o fora de alcance abre o dossiê)
     escolher(id); if (b.closest('#ivFi, #ivL, #ivG')) root.querySelector<HTMLElement>(`.iv-quadro [data-n="${CSS.escape(sel)}"]`)?.focus();
   });
   const tecla = (ev: KeyboardEvent) => { if (ev.key === 'Escape' && sel && !(ev.target as HTMLElement).closest?.('#ivQ')) { const v = sel; escolher(sel); root.querySelector<HTMLElement>(`.iv-quadro [data-n="${CSS.escape(v)}"]`)?.focus(); } };
   document.addEventListener('keydown', tecla);
   $<HTMLInputElement>('#ivQ').oninput = (e) => {
     const l = buscarNo(U, (e.target as HTMLInputElement).value);
-    $('#ivS').innerHTML = l.map((n) => `<button type="button" role="listitem" data-s="${esc(n.id)}"><b>${esc(n.nome)}</b> <span class="note">${esc(TIPO[n.tipo])}${n.sub ? ' · ' + esc(curto(n.sub, 40)) : ''}</span></button>`).join('');
+    $('#ivS').innerHTML = l.map((n) => `<button type="button" role="listitem" data-s="${esc(n.id)}"><b>${esc(n.nome)}</b>${ident(n)}</button>`).join('');
   };
+  root.addEventListener('input', (ev) => {
+    const t = ev.target as HTMLInputElement; if (!t.closest?.('[data-form-lig]')) return;
+    if (t.name === 'fonte') rasc.fonte = t.value;
+    if (t.name === 'q') { rasc.q = t.value; rasc.para = ''; const s = root.querySelector('#ivLigS'); if (s) s.innerHTML = buscarNo(U, t.value).filter((n) => n.id !== ligDe && n.id !== ORIGEM).map((n) => `<button type="button" role="listitem" data-lig-para="${esc(n.id)}"><b>${esc(n.nome)}</b>${ident(n)}</button>`).join(''); }
+  });
+  root.addEventListener('change', (ev) => {
+    const t = ev.target as HTMLSelectElement; if (!t.closest?.('[data-form-lig]')) return;
+    if (t.name === 'tipo') { rasc.tipo = t.value as TipoLigacao; rasc.msg = ''; ficha(); root.querySelector<HTMLElement>('#ivLigT')?.focus(); }
+    if (t.name === 'quem') rasc.quem = t.value;
+  });
+  root.addEventListener('submit', (ev) => { const f = (ev.target as HTMLElement).closest<HTMLFormElement>('[data-form-lig]'); if (!f) return; ev.preventDefault(); gravarLigacao(f); });
   let quadro = 0, quadroMv = 0;
   const redesenhar = () => { cancelAnimationFrame(quadro); quadro = requestAnimationFrame(desenhar); };
   const ro = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(redesenhar) : null;
@@ -501,6 +577,8 @@ export function montar(root: HTMLElement): () => void {
     sub<AgenciaMapa & OrgInv>('mapa_agencias', (l) => { ags = l; });
     sub<EmpresaMapa & OrgInv>('mapa_empresas', (l) => { emp = l; });
     colAlvos = db.collection<Alvo>('alvos');
+    colLig = db.collection<LigacaoInv>('mapa_ligacoes');
+    sub<LigacaoInv>('mapa_ligacoes', (l) => { ligs = l; });
     sub<Alvo>('alvos', (l) => { alvos = l; });
   })();
   return () => { document.removeEventListener('keydown', tecla); ro?.disconnect(); cancelAnimationFrame(quadro); clearTimeout(tRe); clearTimeout(tAnim); clearTimeout(tRot); roMv?.disconnect(); cancelAnimationFrame(quadroMv); for (const o of offs) { try { o(); } catch { /* já cancelado */ } } };
