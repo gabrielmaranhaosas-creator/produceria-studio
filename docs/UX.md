@@ -129,3 +129,14 @@ Agora ele é a visão padrão da Investigação, ao lado de "Colunas", e lê os 
 - Os pontos aceitam Tab e Enter.
 - Os pontos novos pulsam, e na troca de ponto de partida as voltas entram uma por vez.
 - Na cópia de consulta, o "+" do zoom deixa de ser escondido junto com os botões de gravar.
+
+### Arquivo do Multiverso com o desenho novo (18/11/2026)
+
+O HTML baixado pelo botão "Baixar o mapa interativo" passa a usar o mesmo desenho do Multiverso do Studio, no lugar da árvore radial com nomes girados:
+- Elipses por ramificação, cada ponto perto de quem o trouxe. Cada volta ganha espaço conforme a quantidade de pontos, para a 2ª volta (117 pontos) não espremer as outras.
+- Abre em "Só a reação aberta" (os 50 pontos mais fortes). "Multiverso inteiro" mostra os 221 alcançáveis.
+- Os nomes ficam na horizontal, só os que cabem inteiros e sem encavalar: o caminho aceso primeiro, depois os da lista do radar e os mais fortes.
+- O clique acende o caminho até o centro, os filhos e as outras ligações, abre o dossiê e desliza o mapa para o grupo caber. Escolher pela busca um ponto escondido pelo filtro mostra o multiverso inteiro.
+- O arraste anda pelo mapa. Ctrl + rolar, a pinça e os botões aproximam em torno do cursor. A rolagem do trackpad também anda.
+- Esconder uma ramificação redesenha as voltas que sobram.
+- No celular, os pontos encolhem e a 1ª volta sai mais afastada do centro.

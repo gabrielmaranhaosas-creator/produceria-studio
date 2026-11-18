@@ -28,7 +28,6 @@ export function htmlDoMapa(d: MapaArquivo, fontes = ''): string {
 <meta name="description" content="Mapa da prospecção da PRODUCERIA: ${d.alcance} pontos alcançados a partir de ${esc(d.sementeNome)}, em ${d.camadas.length - 1} ramificações.">
 <style>${fontes}
 ${estilo}</style>
-<style id="esconde"></style>
 </head>
 <body>
 <div class="app">
@@ -39,13 +38,13 @@ ${estilo}</style>
  <main class="palco" aria-label="Mapa radial: o ponto de partida no centro, uma volta por ramificação">
   <div class="ferr">
    <div class="busca"><label class="sr" for="q">Buscar um ponto</label><input id="q" type="search" placeholder="Buscar empresa, agência ou pessoa" autocomplete="off"><div class="sug" id="sug"></div></div>
-   <div class="seg" role="group" aria-label="O que mostrar"><button type="button" data-modo="todos" aria-pressed="true">Multiverso inteiro</button><button type="button" data-modo="abertos" aria-pressed="false">Só a reação aberta</button></div>
+   <div class="seg" role="group" aria-label="O que mostrar"><button type="button" data-modo="abertos" aria-pressed="true">Só a reação aberta</button><button type="button" data-modo="todos" aria-pressed="false">Multiverso inteiro</button></div>
    <button type="button" class="btn" id="todas" aria-pressed="false">Todas as ligações</button>
    <button type="button" class="btn" id="tema">Tema claro</button>
   </div>
   <svg id="tela" role="group" aria-label="Pontos do multiverso" preserveAspectRatio="xMidYMid meet"></svg>
   <div class="zoom" role="group" aria-label="Zoom"><button type="button" id="zmais" aria-label="Aproximar">+</button><button type="button" id="zmenos" aria-label="Afastar">−</button><button type="button" id="zinicio" aria-label="Ver tudo">⌂</button></div>
-  <p class="dica">Role para aproximar · arraste para andar · clique num ponto para acender o caminho</p>
+  <p class="dica">Clique num ponto para acender o caminho · arraste para andar · Ctrl + rolar, pinça ou os botões aproximam</p>
  </main>
  <aside class="painel">
   <section><span class="lab">Ramificações · clique para mostrar ou esconder</span><ol class="camadas" id="voltas"></ol>
