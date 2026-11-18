@@ -187,3 +187,57 @@
 .iv .iv-mv-leg span{display:inline-flex;align-items:center;gap:6px}
 .iv .iv-mv-leg i{display:inline-block;width:18px;height:10px}
 @media (max-width:760px){.iv .iv-mv-l{grid-template-columns:auto minmax(0,1fr) auto;gap:10px}.iv .iv-mv-g{white-space:nowrap;font-size:10px}.iv .iv-mv-t{grid-column:1/-1;margin-top:-6px}.iv .iv-baixar{margin-left:0}}
+
+/* Multiverso: visão radial da reação. Semente no centro, uma elipse por ramificação, nomes na horizontal */
+.iv .iv-rd{position:relative;height:clamp(520px,calc(100vh - 150px),880px);border:1px solid var(--line);background:var(--surface-100);overflow:hidden;border-radius:4px}
+.iv .iv-rd[hidden],.iv .iv-rolo[hidden]{display:none}
+.iv .iv-rd-s{display:block;width:100%;height:100%;cursor:grab;touch-action:none;user-select:none;-webkit-user-select:none}
+.iv .iv-rd-s.anda{cursor:grabbing}
+.iv #ivRdG{transform-origin:0 0}
+.iv #ivRdG.suave{transition:transform .35s cubic-bezier(.2,.7,.2,1)}
+.iv .mv-anel{fill:none;stroke:var(--line);stroke-width:1;stroke-dasharray:2 5;vector-effect:non-scaling-stroke}
+.iv .mv-anel-t{font:400 calc(10px / var(--k,1)) var(--font-text);letter-spacing:.12em;text-transform:uppercase;fill:var(--ink-muted);text-anchor:middle;paint-order:stroke;stroke:var(--surface-100);stroke-width:4px;stroke-linejoin:round}
+.iv .mv-f{fill:none;stroke:var(--line-strong);stroke-width:1;opacity:.35;vector-effect:non-scaling-stroke;transition:opacity .2s}
+.iv .mv-f.novo{stroke:var(--ink);opacity:.7;stroke-width:1.5}
+.iv .mv-f.acesa{stroke:var(--ink);stroke-width:2.5;opacity:1}
+.iv .mv-f.apaga{opacity:.06}
+.iv .mv-n{cursor:pointer;outline:none;transition:opacity .2s}
+.iv .mv-n .mv-c{fill:var(--surface-200);stroke:var(--ink);stroke-width:1.5;vector-effect:non-scaling-stroke;transition:r .15s}
+.iv .mv-n.ag .mv-c{fill:var(--ink)}
+.iv .mv-n.pe .mv-c{fill:var(--ink-muted);stroke:none}
+.iv .mv-n.pe.ct .mv-c{fill:var(--ink);stroke:var(--surface-100);stroke-width:1.5}
+.iv .mv-n.ext .mv-c{fill:none;stroke-dasharray:3 2}
+.iv .mv-n.zero .mv-c{fill:var(--ink);stroke:var(--surface-100);stroke-width:4}
+.iv .mv-n.alvo .mv-c{stroke-width:3}
+.iv .mv-n:hover .mv-c,.iv .mv-n:focus-visible .mv-c{stroke:var(--ink);stroke-width:3}
+.iv .mv-n:focus-visible .mv-c{outline:none;stroke-width:4}
+.iv .mv-n.on .mv-c{stroke:var(--ink);stroke-width:4;fill:var(--ink)}
+.iv .mv-n.apaga{opacity:.18}
+.iv .mv-l{font:500 calc(12px / var(--k,1)) var(--font-text);fill:var(--ink);paint-order:stroke;stroke:var(--surface-100);stroke-width:calc(4px / var(--k,1));stroke-linejoin:round;opacity:0;pointer-events:none;transition:opacity .15s}
+.iv .mv-l.mostra,.iv .mv-n:hover .mv-l,.iv .mv-n:focus-visible .mv-l{opacity:1}
+.iv .mv-n.on .mv-l{font-weight:700;opacity:1}
+.iv .mv-n.zero .mv-l{font:400 calc(15px / var(--k,1)) var(--font-display);letter-spacing:.04em}
+.iv .mv-pulso{fill:none;stroke:var(--ink);stroke-width:2;vector-effect:non-scaling-stroke;transform-box:fill-box;transform-origin:center;animation:mvPulso 1.8s ease-out infinite}
+@keyframes mvPulso{from{transform:scale(.8);opacity:.8}to{transform:scale(2.2);opacity:0}}
+.iv .iv-rd-z{position:absolute;right:12px;bottom:12px;display:grid;gap:4px}
+.iv .iv-rd-z button{width:34px;height:34px;border-radius:40px;border:1px solid var(--line-strong);background:var(--surface-200);color:var(--ink);font:400 18px/1 var(--font-text);cursor:pointer}
+.iv .iv-rd-z button:hover{border-color:var(--ink)}
+.iv .iv-rd-leg{position:absolute;left:12px;bottom:10px;display:flex;flex-wrap:wrap;gap:4px 14px;margin:0;padding:6px 10px;list-style:none;font-size:11px;color:var(--ink-muted);background:color-mix(in srgb,var(--surface-100) 88%,transparent);border-radius:40px}
+.iv .iv-rd-leg li{display:flex;align-items:center;gap:6px}
+.iv .iv-rd-leg i{display:inline-block;width:10px;height:10px;border-radius:50%;border:1.5px solid var(--ink)}
+.iv .iv-rd-leg i.ag{background:var(--ink)}
+.iv .iv-rd-leg i.em{background:var(--surface-200)}
+.iv .iv-rd-leg i.pe{width:7px;height:7px;border:0;background:var(--ink-muted)}
+.iv .iv-rd-leg i.ct{width:7px;height:7px;border:0;background:var(--ink)}
+/* entrada: os pontos crescem uma volta por vez e os fios se desenham */
+@keyframes mvEntra{from{opacity:0;transform:scale(.2)}to{opacity:1;transform:none}}
+.iv .iv-rd.entra .mv-n{transform-box:fill-box;transform-origin:center;animation:mvEntra .45s cubic-bezier(.2,.7,.2,1) both;animation-delay:calc(var(--g,0) * .18s)}
+.iv .iv-rd.entra .mv-f{stroke-dasharray:1200;stroke-dashoffset:1200;animation:mvFio .7s ease-out forwards;animation-delay:calc(var(--g,1) * .18s - .1s)}
+@keyframes mvFio{to{stroke-dashoffset:0}}
+/* no Multiverso o dossiê flutua por cima, sem apertar o mapa */
+@media (min-width:1181px){
+  .iv .iv-mesa.mv,.iv .iv-mesa.mv.com-ficha{display:block;position:relative}
+  .iv .iv-mesa.mv .iv-ficha{position:absolute;top:12px;right:12px;width:min(370px,calc(100% - 24px));max-height:calc(100% - 24px);z-index:3;box-shadow:0 12px 32px rgba(0,0,0,.16)}
+}
+@media (max-width:820px){.iv .iv-rd{height:min(78vh,620px)}.iv .iv-rd-leg{display:none}}
+@media (prefers-reduced-motion:reduce){.iv .mv-pulso,.iv .iv-rd.entra .mv-n,.iv .iv-rd.entra .mv-f{animation:none}.iv .iv-rd.entra .mv-f{stroke-dasharray:none;stroke-dashoffset:0}.iv #ivRdG.suave{transition:none}}

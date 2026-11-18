@@ -113,3 +113,19 @@ Investigação viva, fase 1 (18/11/2026): o mapa passa a mostrar o que a coleta 
 - **Baixar o mapa interativo:** gera um HTML único (cerca de 260 KB, sem rede, com as fontes da casa) com o multiverso inteiro em árvore radial: o ponto de partida no centro, uma volta por ramificação, cada ponto num arco proporcional ao que ele abre. Zoom pela roda ou pinça, arrasto, busca, dossiê com caminho, fatos e fontes, radar dos mais fortes, ramificações que se escondem, "Só a reação aberta", "Todas as ligações" e tema claro ou escuro. Pontos e rótulos mantêm o tamanho na tela em qualquer zoom.
 
 Lógica em `multiverso`, `ordenarReacao` e `dadosDoArquivo` (`src/lib/investigacao.ts`, testadas em `tests/multiverso.test.ts`); o arquivo em `src/lib/mapa-arquivo.ts`, com o visor em `src/lib/mapa-visor.js` e `mapa-visor.css`.
+Multiverso dentro da Investigação (18/11/2026). O mapa radial que circulava como arquivo solto tinha cinco problemas:
+- o clique não abria o dossiê;
+- o zoom fugia do cursor;
+- os nomes ficavam girados e encavalados;
+- 117 pontos se espremiam na 2ª volta;
+- o desenho usava menos da metade do palco.
+
+Agora ele é a visão padrão da Investigação, ao lado de "Colunas", e lê os dados vivos que a coleta diária alimenta:
+- A semente fica no centro, com uma elipse por ramificação para usar a largura da tela. A 1ª volta sai afastada do centro.
+- O mapa mostra só a reação aberta (Essencial ou Ampla), não o universo inteiro. Cada ponto fica perto de quem o trouxe.
+- Os nomes ficam na horizontal. Aparecem os que cabem sem encavalar, com o caminho aceso primeiro e depois os mais fortes. Os demais aparecem ao passar o mouse. Ao aproximar, cabem mais nomes, que mantêm o tamanho de leitura.
+- Clicar acende o caminho e os vizinhos, apaga o resto e abre o dossiê flutuando por cima do mapa. O mapa desliza para deixar o grupo aceso inteiro na parte livre.
+- O arraste anda pelo mapa sem selecionar nada. A pinça, Ctrl + rolar e os botões aproximam no ponto do cursor. A rolagem comum continua rolando a página.
+- Os pontos aceitam Tab e Enter.
+- Os pontos novos pulsam, e na troca de ponto de partida as voltas entram uma por vez.
+- Na cópia de consulta, o "+" do zoom deixa de ser escondido junto com os botões de gravar.

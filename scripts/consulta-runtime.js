@@ -77,6 +77,7 @@
     var bs = document.querySelectorAll('main button, main [data-lead], main [data-x="lead"]');
     for (var j = 0; j < bs.length; j++) {
       var b = bs[j], t = (b.textContent || '').replace(/\s+/g, ' ').trim();
+      if (b.hasAttribute('data-zoom')) continue; // zoom do Multiverso: só leitura, fica
       if (b.hasAttribute('data-lead') || b.getAttribute('data-x') === 'lead' || b.getAttribute('data-x') === 'salvo' || b.getAttribute('data-x') === 'arquivado' || BOTOES_FORA.test(t)) b.style.display = 'none';
     }
   }
