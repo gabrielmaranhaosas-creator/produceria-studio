@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 import { describe, expect, it, vi, afterEach } from 'vitest';
-import { citados, montarCaso, linhagem, montarUniverso, reacao, caminho, leads, buscarNo, ORIGEM, type PessoaInv, type OrgInv, type OrgGrafo } from '../src/lib/investigacao';
+import { citados, montarCaso, linhagem, montarUniverso, reacao, caminho, leads, buscarNo, novidades, chegadas, idDeOrg, ORIGEM, type PessoaInv, type OrgInv, type OrgGrafo } from '../src/lib/investigacao';
 
 const equipe: PessoaInv[] = [
   { id: 'pe-renato-siqueira', nome: 'Renato Siqueira', organizacao: 'PRODUCERIA', trajetoria: 'Suno United Creators (2018-2023); F.biz (2015-2018)' },
@@ -98,5 +98,49 @@ describe('Investigação: a tela', () => {
     raiz.querySelector<HTMLElement>('.iv-dossie [data-s]')!.click();
     expect(raiz.querySelector('#ivR [aria-current="true"]')?.textContent).toBe('Ana Lima Alves');
     fim();
+  });
+});
+
+describe('Investigação: o que chegou', () => {
+  const U = montarUniverso({
+    agencias: [org('Lola\\TBWA', [{ empresa: 'Natura', agencia: 'Lola\\TBWA', disciplina: 'conta criativa', data: '2026-11-17', fonte: 'https://x' }]), org('Agência Velha', [], { perfil: 'extinta' })],
+    empresas: [org('Natura', [], { radar: { criterios: ['imagem', 'varejo'] } })],
+    pessoas: [
+      { id: 'pe-a', nome: 'Pessoa A', cargo: 'Produtora gráfica', organizacao: 'Natura', atualizadoEm: '2026-11-18T10:12:00Z' },
+      { id: 'pe-b', nome: 'Pessoa B', cargo: 'Gerente de marketing', organizacao: 'Natura', atualizadoEm: '2026-11-17T10:12:00Z' },
+      { id: 'pe-c', nome: 'Pessoa C', cargo: 'Diretora de criação', organizacao: 'Lola\\TBWA' },
+    ],
+    orgsInv: [], hoje: '2026-11-18',
+  });
+  const movs = [
+    { data: '2026-11-17', anunciante: 'Natura', agencia: 'Lola\\TBWA' },
+    { data: '2026-11-10', anunciante: 'Natura', agencia: 'Agência Velha' },
+  ];
+  it('guarda o dia em que a coleta gravou cada pessoa e acha a casa pelo nome', () => {
+    expect(U.nos.get('p:pe-a')!.chegou).toBe('2026-11-18');
+    expect(U.nos.get('p:pe-c')!.chegou).toBeUndefined();
+    expect(idDeOrg(U, 'Lola\\TBWA')).toBe('o:lola tbwa');
+    expect(idDeOrg(U, 'Casa que não existe')).toBeUndefined();
+  });
+  it('novidades: pessoas da coleta mais recente, casas das trocas mais recentes e a semente do dia', () => {
+    const N = novidades(U, movs);
+    expect(N.diaP).toBe('2026-11-18'); expect(N.pessoas).toEqual(['p:pe-a']);
+    expect(N.diaM).toBe('2026-11-17'); expect(N.trocas).toHaveLength(1);
+    expect(N.orgs.sort()).toEqual(['o:lola tbwa', 'o:natura']);
+    expect(N.semente).toBe('o:natura'); // a casa mais forte da troca
+  });
+  it('um dia em foco troca o recorte, e casa extinta não vira semente', () => {
+    const F = novidades(U, movs, '2026-11-10');
+    expect(F.pessoas).toEqual([]); expect(F.orgs).toContain('o:agencia velha');
+    expect(F.semente).toBe('o:natura');
+    expect(novidades(U, movs, '2026-11-17').pessoas).toEqual(['p:pe-b']);
+    expect(novidades(U, []).semente).toBeUndefined();
+  });
+  it('chegadas contam pessoas e trocas por dia, só dentro da janela', () => {
+    const C = chegadas(U, movs, 7, '2026-11-18');
+    expect(C).toHaveLength(7); expect(C[6]).toEqual({ dia: '2026-11-18', pessoas: 1, contas: 0 });
+    expect(C[5]).toEqual({ dia: '2026-11-17', pessoas: 1, contas: 1 });
+    expect(C[0].dia).toBe('2026-11-12'); // o dia 10 fica fora da janela de 7
+    expect(chegadas(U, movs, 30, '2026-11-18').reduce((s, c) => s + c.contas, 0)).toBe(2);
   });
 });

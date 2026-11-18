@@ -9,7 +9,7 @@ import { nivelDe, type Nivel } from './grafo';
 
 export interface PessoaInv {
   id: string; nome: string; cargo?: string; organizacao?: string; nivel?: Nivel; area?: string;
-  conexao?: string; trajetoria?: string; linkedin?: string; fonte?: string; data?: string;
+  conexao?: string; trajetoria?: string; linkedin?: string; fonte?: string; data?: string; atualizadoEm?: string;
 }
 export interface OrgInv {
   id: string; nome: string; perfil?: string; grupo?: string; nota?: string; fontes?: string[]; sucessora?: string;
@@ -112,6 +112,8 @@ export type TipoNo = 'origem' | 'empresa' | 'agencia' | 'pessoa';
 export interface NoU {
   id: string; tipo: TipoNo; nome: string; sub: string; nota: number; fatos: string[];
   extinta?: boolean; nivel?: Nivel; org?: string; fontes: string[]; recente?: string; alvo?: boolean;
+  /** Dia (AAAA-MM-DD) em que a coleta diária gravou ou atualizou a pessoa. */
+  chegou?: string;
 }
 export interface Aresta { a: string; b: string; rotulo: string; data?: string; fonte?: string }
 export interface Universo { nos: Map<string, NoU>; adj: Map<string, Aresta[]> }
@@ -155,7 +157,7 @@ export function montarUniverso(d: {
   const achaOrg = (nome?: string) => { const b = base(nome); if (!chave(b)) return undefined; return nos.get(idOrg(b)) || orgs.find((n) => mesmaEmpresa(base(n.nome), b)); };
   for (const p of outros) {
     const nivel = nivelContato(p), o = achaOrg(p.organizacao);
-    add({ id: 'p:' + p.id, tipo: 'pessoa', nome: p.nome, sub: p.cargo || '', nota: 0, fatos: [], nivel, org: o?.nome || p.organizacao, fontes: [p.linkedin, p.fonte].filter(Boolean) as string[] });
+    add({ id: 'p:' + p.id, tipo: 'pessoa', nome: p.nome, sub: p.cargo || '', nota: 0, fatos: [], nivel, org: o?.nome || p.organizacao, fontes: [p.linkedin, p.fonte].filter(Boolean) as string[], chegou: dia(p.atualizadoEm) || undefined });
     if (o) ligar('p:' + p.id, o.id, p.cargo || 'trabalha em', p.data, p.fonte);
     else if (chave(base(p.organizacao))) { const id = idOrg(p.organizacao!); add({ id, tipo: 'empresa', nome: base(p.organizacao), sub: 'Organização', nota: 0, fatos: [], fontes: [], alvo: ehAlvo(p.organizacao!) }); orgs.push(nos.get(id)!); ligar('p:' + p.id, id, p.cargo || 'trabalha em', p.data, p.fonte); }
   }
@@ -216,6 +218,7 @@ export function montarUniverso(d: {
   }
   return { nos, adj };
 }
+const dia = (s?: string) => (s && /^\d{4}-\d{2}-\d{2}/.test(s) ? s.slice(0, 10) : '');
 const curto2 = (s: string, n = 90) => (s.length > n ? s.slice(0, n - 1) + '…' : s);
 
 export interface Ramo { id: string; pais: { id: string; rotulo: string }[]; forca: number; ger: number }
@@ -267,4 +270,48 @@ export function leads(U: Universo, R: Reacao): (Ramo & { no: NoU })[] {
 export function buscarNo(U: Universo, q: string, max = 8): NoU[] {
   const t = norm(q).trim(); if (t.length < 2) return [];
   return [...U.nos.values()].filter((n) => norm(n.nome).includes(t)).sort((a, b) => (norm(a.nome).startsWith(t) ? 0 : 1) - (norm(b.nome).startsWith(t) ? 0 : 1) || b.nota - a.nota).slice(0, max);
+}
+
+/* ───────────────────────── O que chegou ─────────────────────────
+ * O mapa se alimenta sozinho: a coleta diária da Central grava pessoas (com a data em que gravou) e trocas de conta
+ * (com a data da notícia). Daqui saem a faixa "Hoje no mapa", a etiqueta "novo", a linha do tempo e o ponto de partida
+ * do dia.
+ */
+export interface MovDia { data: string; anunciante: string; agencia: string; tipo?: string; fonte?: string }
+export interface Chegada { dia: string; pessoas: number; contas: number }
+export interface Novidades { diaP: string; diaM: string; pessoas: string[]; orgs: string[]; trocas: (MovDia & { a?: string; b?: string })[]; semente?: string }
+
+/** O ponto de uma organização pelo nome, com a mesma regra de junção do universo. */
+export function idDeOrg(U: Universo, nome: string): string | undefined {
+  const b = base(nome); if (!chave(b)) return undefined;
+  const id = 'o:' + chave(b); if (U.nos.has(id)) return id;
+  for (const n of U.nos.values()) if ((n.tipo === 'empresa' || n.tipo === 'agencia') && mesmaEmpresa(base(n.nome), b)) return n.id;
+  return undefined;
+}
+
+/** Pessoas e trocas de conta que chegaram por dia, nos últimos `dias` dias até `hoje` (inclusive). */
+export function chegadas(U: Universo, movs: MovDia[], dias: number, hoje: string): Chegada[] {
+  const out: Chegada[] = [];
+  for (let i = dias - 1; i >= 0; i--) out.push({ dia: antes(hoje, i), pessoas: 0, contas: 0 });
+  const ix = new Map(out.map((c) => [c.dia, c]));
+  for (const n of U.nos.values()) if (n.tipo === 'pessoa') { const c = ix.get(n.chegou || ''); if (c) c.pessoas++; }
+  for (const m of movs) { const c = ix.get(dia(m.data)); if (c) c.contas++; }
+  return out;
+}
+
+/**
+ * O que é novo: as pessoas da coleta mais recente e as casas das trocas de conta mais recentes (ou as de um dia
+ * escolhido). A semente é a casa mais forte dessas trocas, de onde a reação do dia abre.
+ */
+export function novidades(U: Universo, movs: MovDia[], foco = ''): Novidades {
+  const pes = [...U.nos.values()].filter((n) => n.tipo === 'pessoa' && n.chegou);
+  const diaP = foco || pes.reduce((m, n) => (n.chegou! > m ? n.chegou! : m), '');
+  const diaM = foco || movs.reduce((m, x) => (dia(x.data) > m ? dia(x.data) : m), '');
+  const pessoas = diaP ? pes.filter((n) => n.chegou === diaP).sort((a, b) => b.nota - a.nota).map((n) => n.id) : [];
+  const trocas = diaM ? movs.filter((m) => dia(m.data) === diaM).map((m) => ({ ...m, a: idDeOrg(U, m.anunciante), b: idDeOrg(U, m.agencia) })) : [];
+  const orgs = [...new Set(trocas.flatMap((t) => [t.a, t.b]).filter((x): x is string => !!x))];
+  // a semente pesa a nota e o tamanho da reação que ela abre: a reação do dia precisa ter para onde ir
+  const peso = (id: string) => U.nos.get(id)!.nota + Math.min(40, reacao(U, id).geracoes.flat().length);
+  const semente = orgs.filter((id) => !U.nos.get(id)?.extinta).sort((x, y) => peso(y) - peso(x))[0];
+  return { diaP, diaM, pessoas, orgs, trocas, semente };
 }
