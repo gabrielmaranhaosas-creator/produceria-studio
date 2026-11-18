@@ -39,6 +39,12 @@
 .mc .lc-st{text-decoration:none}
 .mc .lc-val-d{margin-top:6px;min-height:36px;padding:4px 8px;font-size:13px;width:auto}
 .mc .lc-emp{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,260px),1fr));gap:24px}
+.mc .lc-emp{margin-top:36px;padding-top:24px;border-top:1px solid var(--line)}
+.mc .lc-emp .p{min-width:0}
+.mc .lc-emp h3{text-wrap:balance;margin:0 0 8px}
+.mc .lc-id{display:flex;flex-wrap:wrap;gap:4px 14px;margin:0 0 4px}
+.mc .lc-cnae{display:flex;flex-wrap:wrap;gap:4px 10px;align-items:baseline;margin:0 0 10px}
+.mc .lc-cnae .num{text-align:left}
 .mc .lc-vias{list-style:none;margin:0;padding:0;counter-reset:via;display:flex;flex-direction:column}
 .mc .lc-vias li{counter-increment:via;display:grid;grid-template-columns:48px minmax(0,1fr);gap:4px 12px;padding:16px 0;border-bottom:1px solid var(--line)}
 .mc .lc-vias li::before{content:"0" counter(via);grid-row:span 2;font-variant-numeric:tabular-nums;color:var(--ink-muted);font-size:13px;padding-top:4px}

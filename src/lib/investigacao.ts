@@ -322,7 +322,7 @@ export function novidades(U: Universo, movs: MovDia[], foco = ''): Novidades {
  * (o vizinho mais forte da ramificação anterior), e daí sai a árvore ordenada que o quadro e o arquivo desenham.
  */
 export interface Camada { ger: number; ids: string[]; empresas: number; agencias: number; pessoas: number; extintas: number; abertos: number }
-export interface Multiverso { semente: string; camadas: Camada[]; pai: Map<string, { id: string; rotulo: string }>; alcance: number; fora: number; total: number }
+export interface Multiverso { semente: string; camadas: Camada[]; pai: Map<string, { id: string; rotulo: string }>; alcance: number; fora: number; total: number; /** os pontos sem ligação com a semente, do mais forte ao mais fraco */ foraIds: string[] }
 
 export function multiverso(U: Universo, semente: string, R?: Reacao): Multiverso {
   const abertos = new Set((R?.geracoes || []).flat().map((r) => r.id));
@@ -350,7 +350,8 @@ export function multiverso(U: Universo, semente: string, R?: Reacao): Multiverso
   }
   // total: os pontos do mapa sem o ponto zero; fora: os que nenhuma ligação alcança a partir daqui
   const total = U.nos.size - 1, alcance = visto.size - 1;
-  return { semente, camadas, pai, alcance, fora: Math.max(0, total - alcance - (semente === ORIGEM ? 0 : 1)), total };
+  const foraIds = [...U.nos.values()].filter((n) => !visto.has(n.id) && n.id !== ORIGEM).sort((x, y) => y.nota - x.nota || x.nome.localeCompare(y.nome, 'pt-BR')).map((n) => n.id);
+  return { semente, camadas, pai, alcance, fora: foraIds.length, total, foraIds };
 }
 
 /**
@@ -368,7 +369,8 @@ export function ordenarReacao(R: Reacao): Ramo[][] {
   return out;
 }
 
-/** Os dados do arquivo do mapa: o multiverso inteiro a partir do ponto de partida, com a reação aberta marcada. */
+/** Os dados do arquivo do mapa: o multiverso inteiro a partir do ponto de partida, com a reação aberta marcada, e os
+ * pontos fora de alcance (g = -1, sem pai), para o arquivo poder mostrá-los numa volta própria. */
 export interface MapaArquivo {
   geradoEm: string; semente: string; sementeNome: string; total: number; alcance: number; fora: number;
   camadas: { ger: number; n: number; empresas: number; agencias: number; pessoas: number; abertos: number }[];
@@ -385,7 +387,12 @@ export function dadosDoArquivo(U: Universo, R: Reacao, M: Multiverso, o: { gerad
       nota: n.nota, g: c.ger, ...(p ? { p: p.id, r: p.rotulo } : {}), ...(forca.has(id) ? { f: forca.get(id) } : {}), fa: n.fatos.slice(0, 4), fo: [...new Set(n.fontes)].filter((u) => /^https?:/.test(u)).slice(0, 3),
       ...(o.novos?.has(id) ? { novo: 1 as const } : {}), ...(n.alvo ? { alvo: 1 as const } : {}) });
   }
-  // as outras ligações entre pontos alcançados (além da árvore), para acender ao escolher um ponto
+  for (const id of M.foraIds) {
+    const n = U.nos.get(id)!; ger.set(id, -1);
+    nos.push({ id, t: n.tipo, n: n.nome, s: n.sub, ...(n.org && n.tipo === 'pessoa' ? { o: n.org } : {}), ...(n.nivel && n.tipo === 'pessoa' ? { nv: n.nivel } : {}), ...(n.extinta ? { x: 1 as const } : {}),
+      nota: n.nota, g: -1, fa: n.fatos.slice(0, 4), fo: [...new Set(n.fontes)].filter((u) => /^https?:/.test(u)).slice(0, 3), ...(o.novos?.has(id) ? { novo: 1 as const } : {}), ...(n.alvo ? { alvo: 1 as const } : {}) });
+  }
+  // as outras ligações entre os pontos do arquivo (além da árvore), para acender ao escolher um ponto
   const extras: [string, string, string][] = [], visto = new Set<string>();
   for (const id of ger.keys()) for (const a of U.adj.get(id) || []) {
     if (!ger.has(a.b) || M.pai.get(a.b)?.id === id || M.pai.get(id)?.id === a.b) continue;

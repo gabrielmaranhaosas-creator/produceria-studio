@@ -1,7 +1,12 @@
 /* Investigação: a reação em cadeia na identidade do Studio (só preto, cinzas, linhas e off-white).
    O quadro cabe numa tela e rola dentro dele; o dossiê abre ao lado do quadro, junto do clique. */
 .iv .iv-h{font:400 clamp(22px,2.4vw,30px)/1.15 var(--font-display);margin:0 0 6px}
-.iv .iv-ctl{display:flex;flex-wrap:wrap;gap:12px 20px;align-items:flex-end}
+.iv .iv-ctl{display:grid;grid-template-columns:minmax(0,1fr) minmax(260px,440px);gap:16px 28px;align-items:end}
+.iv .iv-opc{display:flex;flex-wrap:wrap;gap:10px 14px;align-items:center}
+.iv .iv-fo{font:400 13px/1 var(--font-text);background:none;color:var(--ink);border:1px solid var(--line-strong);border-radius:999px;padding:8px 14px;display:inline-flex;gap:8px;align-items:center;cursor:pointer;min-height:36px}
+.iv .iv-fo b{font-weight:600}
+.iv .iv-fo[aria-pressed=true]{background:var(--ink);color:var(--surface-000,#fff);border-color:var(--ink)}
+.iv .iv-fo[hidden]{display:none}
 .iv .iv-eq{display:flex;flex-wrap:wrap;gap:8px;flex:1 1 420px;align-items:center}
 .iv .iv-rastro{display:flex;flex-wrap:wrap;align-items:center;gap:6px}
 .iv .iv-rastro [aria-current=true]{background:var(--ink);border-color:var(--ink);color:var(--surface-000)}
@@ -168,7 +173,12 @@
 .iv .iv-fios path.f-extra{opacity:.14}
 .iv .iv-fios path.f-extra.acesa{opacity:.9}
 /* baixar o mapa */
-.iv .iv-baixar{margin-left:auto;white-space:nowrap}
+.iv .iv-baixar{justify-self:end;white-space:nowrap}
+@media (max-width:760px){.iv .iv-ctl{grid-template-columns:minmax(0,1fr)}.iv .iv-baixar{justify-self:start}}
+.iv .mv-anel-t.some{display:none}
+.iv .mv-anel.fora{stroke-dasharray:1 7;opacity:.7}
+.iv .mv-n.longe .mv-c{opacity:.4}
+.iv .mv-n.longe .mv-l{fill:var(--ink-muted)}
 /* tamanho do multiverso */
 .iv .iv-mv{margin:24px 0 8px;padding:20px 0 4px;border-top:1px solid var(--line)}
 .iv .iv-mv-h p{max-width:78ch;margin:4px 0 14px}

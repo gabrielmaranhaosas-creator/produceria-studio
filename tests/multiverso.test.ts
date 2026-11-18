@@ -23,6 +23,7 @@ describe('Multiverso da investigação', () => {
     expect(ger('p:pe-x')).toBe(3);
     expect(M.alcance).toBe(M.camadas.slice(1).reduce((t, c) => t + c.ids.length, 0));
     expect(M.fora).toBe(2); // Solta e Cliente Solto não têm ligação com a PRODUCERIA
+    expect(M.foraIds.sort()).toEqual(['o:cliente solto', 'o:solta']);
     expect(M.alcance + M.fora).toBe(M.total);
     expect(M.camadas[1].abertos).toBe(1); // a reação abriu 1 por ramificação
     expect(M.pai.get('o:cliente 3')!.id).toBe('o:agencia b');
@@ -43,7 +44,10 @@ describe('Multiverso da investigação', () => {
   });
   it('monta um arquivo HTML único, sem rede, com os dados protegidos dentro do script', () => {
     const d = dadosDoArquivo(U, R, M, { geradoEm: '2026-11-18T12:00:00Z', novos: new Set(['p:pe-x']) });
-    expect(d.nos).toHaveLength(M.alcance + 1);
+    expect(d.nos).toHaveLength(M.alcance + 1 + M.fora); // os fora de alcance vão junto, numa volta própria
+    expect(d.nos.filter((n) => n.g === -1).map((n) => n.id).sort()).toEqual([...M.foraIds].sort());
+    expect(d.nos.find((n) => n.g === -1)!.p).toBeUndefined();
+    expect(d.extras.some(([a, b]) => [a, b].includes('o:solta') && [a, b].includes('o:cliente solto'))).toBe(true); // a ligação entre dois fora de alcance acende
     expect(d.nos.find((n) => n.id === 'p:pe-x')).toMatchObject({ g: 3, novo: 1, p: 'o:cliente 3' });
     expect(d.nos.filter((n) => n.f != null).length).toBe(R.geracoes.flat().length);
     const html = htmlDoMapa(d, '@font-face{font-family:PTYPE;src:url(data:font/woff2;base64,AA)}');

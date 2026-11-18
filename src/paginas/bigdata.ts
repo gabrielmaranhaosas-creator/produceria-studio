@@ -136,10 +136,12 @@ export function montar(root: HTMLElement): () => void {
     const ordem = <T extends { nome: string; ultima?: string }>(L: T[]) => F.o === 'nome' ? [...L].sort((x, y) => chave(x.nome).localeCompare(chave(y.nome))) : F.o === 'recente' ? [...L].sort((x, y) => (y.ultima || '').localeCompare(x.ultima || '')) : L;
     let html = '', n = 0, pn: string[] = [];
     const busca = (b: Barra[]) => b.map((x) => ({ ...x, ativo: chave(x.rotulo) === q }));
+    // "Sem setor" não é setor: fica fora das barras (esmagava a escala e não filtrava nada) e vira nota com a contagem
+    const porSetor = (L: NoEmpresa[]) => { const sem = L.filter((e) => !e.setor).length; return barras('Por setor', busca(contar(L, (e) => e.setor)), { attr: 'q', nota: `clique para filtrar${sem ? ` · ${int(sem)} de ${int(L.length)} ainda sem setor no Big Data` : ''}`, vazio: 'Nenhuma empresa com setor informado.' }); };
     const nAg = (e: NoEmpresa) => new Set(e.ligacoes.map((l) => l.agencia)).size;
     if (F.v === 'empresas') {
       const L = ordem(G.empresas.filter((e) => !q || chave([e.nome, e.setor, e.grupo, ...e.ligacoes.map((l) => l.agencia), ...e.pessoas.map((p) => p.nome)].join(' ')).includes(q)));
-      pn = [barras('Por setor', busca(contar(L, (e) => e.setor || 'Sem setor')), { attr: 'q', nota: 'clique para filtrar' }),
+      pn = [porSetor(L),
         barras('Mais agências ligadas', L.map((e) => ({ rotulo: nomeLegivel(e.nome), valor: nAg(e), dado: e.k })).sort((a, b) => b.valor - a.valor), { attr: 'e', nota: 'clique para abrir' }),
         barras('Mais portas de entrada', L.map((e) => ({ rotulo: nomeLegivel(e.nome), valor: portas(e.pessoas), dado: e.k })).sort((a, b) => b.valor - a.valor), { attr: 'e', nota: 'pessoas que contratam produção' })];
       n = L.length; html = L.length ? `<ul class="bd-l">${L.slice(0, lim).map(linhaEmpresa).join('')}</ul>` : '';
@@ -148,7 +150,7 @@ export function montar(root: HTMLElement): () => void {
       const L = F.o === 'relevancia' ? [...base].sort((x, y) => notaEncaixe(y.radar) - notaEncaixe(x.radar) || porNome(x, y)) : ordem(base);
       const P = L.flatMap((e) => (e.radar?.pilulas || []).map((x) => ({ x, e })));
       pn = [barras('Maior encaixe do craft', [...L].sort((x, y) => notaEncaixe(y.radar) - notaEncaixe(x.radar)).map((e) => ({ rotulo: nomeLegivel(e.nome), valor: notaEncaixe(e.radar), dado: e.k })), { attr: 'e', nota: 'nota de 0 a 100; clique para abrir' }),
-        barras('Por setor', busca(contar(L, (e) => e.setor || 'Sem setor')), { attr: 'q', nota: 'clique para filtrar' }),
+        porSetor(L),
         barras('Pílulas por tipo', contar(P, (y) => (TIPOS_PILULA.find((t) => t[0] === y.x.tipo) || [y.x.tipo, y.x.tipo])[1]))];
       const PF = P.filter((y) => !F.p || y.x.tipo === F.p);
       const modo = `<div class="pills bd-modo" role="group" aria-label="Mostrar"><button type="button" data-r="lista" aria-pressed="${F.r === 'lista'}">Empresas por encaixe <span class="note">${int(L.length)}</span></button><button type="button" data-r="pilulas" aria-pressed="${F.r === 'pilulas'}">Pílulas de ação <span class="note">${int(P.length)}</span></button></div>`;

@@ -20,6 +20,8 @@ const ROT: Record<string, string> = Object.fromEntries(NIVEIS.map(([n, t]) => [n
 const TIPO: Record<string, string> = { origem: 'Ponto zero', empresa: 'Anunciante', agencia: 'Agência', pessoa: 'Pessoa' };
 const GER = ['Ponto de partida', '1ª ramificação', '2ª ramificação', '3ª ramificação', '4ª ramificação'];
 const LIMITES = [10, 14, 18, 14];
+/** "1 pessoa" / "2 pessoas" */
+const pl = (n: number, um: string, varios: string) => (n === 1 ? um : varios);
 
 export function montar(root: HTMLElement): () => void {
   root.innerHTML = `<div class="wrap iv">
@@ -28,8 +30,11 @@ export function montar(root: HTMLElement): () => void {
  <section class="iv-ctl" aria-label="Ponto de partida">
   <div class="iv-eq"><span class="lab">Rastro</span><div class="iv-rastro" id="ivR"></div></div>
   <div class="f iv-busca"><label for="ivQ">Partir de outro ponto</label><input id="ivQ" type="search" placeholder="Empresa, agência ou pessoa" autocomplete="off" aria-controls="ivS"><div class="iv-sug" id="ivS" role="list"></div></div>
-  <div class="seg sm" id="ivV" role="group" aria-label="Visão do mapa"><button type="button" data-visao="multiverso" aria-pressed="true">Multiverso</button><button type="button" data-visao="colunas" aria-pressed="false">Colunas</button></div>
-  <div class="seg sm" id="ivA" role="group" aria-label="Abertura dos ramos"><button type="button" data-ab="1" aria-pressed="true">Essencial</button><button type="button" data-ab="2" aria-pressed="false">Ampla</button></div>
+  <div class="iv-opc">
+   <div class="seg sm" id="ivV" role="group" aria-label="Visão do mapa"><button type="button" data-visao="multiverso" aria-pressed="true">Multiverso</button><button type="button" data-visao="colunas" aria-pressed="false">Colunas</button></div>
+   <div class="seg sm" id="ivA" role="group" aria-label="Abertura dos ramos"><button type="button" data-ab="1" aria-pressed="true" title="Os pontos mais fortes de cada ramificação">Essencial</button><button type="button" data-ab="2" aria-pressed="false" title="Quase o dobro de pontos por ramificação">Ampla</button></div>
+   <button type="button" class="iv-fo" id="ivFo" data-fora aria-pressed="false" title="Mostrar no multiverso os pontos sem ligação com o ponto de partida">Fora de alcance <b class="num" id="ivFoN"></b></button>
+  </div>
   <button type="button" class="iv-baixar" id="ivB" data-baixar>Baixar o mapa interativo</button>
  </section>
  <section class="iv-mv" id="ivMv" aria-labelledby="ivMvT"></section>
@@ -52,12 +57,16 @@ export function montar(root: HTMLElement): () => void {
   let R: Reacao = reacao(U, ORIGEM), M: Multiverso = multiverso(U, ORIGEM, R), G: Reacao['geracoes'] = ordenarReacao(R), sel = '', ab = 1, lf = '', lim = 10, rastroIds: string[] = [ORIGEM], colAlvos: Colecao<Alvo> | null = null;
   const offs: (() => void)[] = [];
   // o que chegou: faixa "Hoje no mapa", etiqueta "novo", linha do tempo e a reação que abre pela troca do dia
-  let N: Novidades = novidades(U, []), novos = new Set<string>(), foco = '', janela = 30, auto = true, abriuDia = false;
+  let N: Novidades = novidades(U, []), novos = new Set<string>(), foco = '', janela = 30;
   let vazioAntes = true, ultimaSem = '', animarAte = 0, tAnim = 0;
   // Multiverso: visão radial (padrão) ou colunas; zoom e arraste próprios
   const MODO = 'studio.iv.visao';
   let visao: 'multiverso' | 'colunas' = (() => { try { return localStorage.getItem(MODO) === 'colunas' ? 'colunas' : 'multiverso'; } catch { return 'multiverso'; } })();
   let vk = 1, vx = 0, vy = 0, mvW = 0, mvH = 0, tRot = 0;
+  // fora de alcance: uma volta própria, por fora do multiverso; a escolha fica guardada para as próximas visitas
+  const FORA = 'studio.iv.fora';
+  let foraOn = (() => { try { return localStorage.getItem(FORA) === '1'; } catch { return false; } })();
+  const foraSet = () => new Set(foraOn && visao === 'multiverso' ? M.foraIds : []);
   const pos = new Map<string, { x: number; y: number; a: number; g: number; r: number }>();
   const VISTO = 'studio.iv.visto';
   const visto = new Set<string>((() => { try { const v = JSON.parse(localStorage.getItem(VISTO) || '[]'); return Array.isArray(v) ? v.map(String) : []; } catch { return []; } })());
@@ -84,9 +93,9 @@ export function montar(root: HTMLElement): () => void {
     const orgsU = [...U.nos.values()].filter((n) => n.tipo !== 'pessoa' && n.tipo !== 'origem').length, pesU = [...U.nos.values()].filter((n) => n.tipo === 'pessoa').length;
     $('#ivK').innerHTML = kpis([
       { rotulo: 'Pontos no mapa', valor: numero(String(U.nos.size - 1)), nota: `${orgsU} organizações e ${pesU} pessoas, de todas as fontes` },
-      { rotulo: 'Possibilidades na reação', valor: numero(String(L.length)), nota: `em ${R.geracoes.length - 1} ramificações` },
-      { rotulo: 'Portas que contratam', valor: numero(String(portas)), nota: 'pessoas que pedem orçamento de produção' },
-      { rotulo: 'Gatilhos recentes', valor: numero(String(gat)), nota: 'conta nova ou mudança nos últimos 120 dias' },
+      { rotulo: 'Possibilidades na reação', valor: numero(String(L.length)), nota: `em ${R.geracoes.length - 1} ${pl(R.geracoes.length - 1, 'ramificação', 'ramificações')} · ${M.fora} fora de alcance` },
+      { rotulo: 'Portas que contratam', valor: numero(String(portas)), nota: `${pl(portas, 'pessoa que pede', 'pessoas que pedem')} orçamento de produção` },
+      { rotulo: 'Gatilhos recentes', valor: numero(String(gat)), nota: `${pl(gat, 'conta nova ou mudança', 'contas novas ou mudanças')} nos últimos 120 dias` },
     ]);
     $('#ivR').innerHTML = rastroIds.map((id, i) => { const n = no(id); return n ? `${i ? '<span class="iv-seta" aria-hidden="true">→</span>' : ''}<button type="button" class="chip sm" data-s="${esc(id)}" aria-current="${id === R.semente}">${esc(curto(n.nome, 28))}</button>` : ''; }).join('');
     if (U.nos.size <= 1) {
@@ -121,6 +130,7 @@ export function montar(root: HTMLElement): () => void {
   function aplicarVisao() {
     const m = visao === 'multiverso';
     $('#ivRd').hidden = !m; $('#ivRolo').hidden = m; $('#ivMesa').classList.toggle('mv', m);
+    const fo = $('#ivFo'); fo.hidden = !m; fo.setAttribute('aria-pressed', String(foraOn));
     $('#ivV').querySelectorAll<HTMLElement>('[data-visao]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.visao === visao)));
     $('#ivDica').textContent = m ? 'Clique num ponto para acender o caminho e abrir o dossiê. Arraste para andar; pinça, Ctrl + rolar ou os botões aproximam.' : 'Clique num ponto para acender o caminho até ele e ver o dossiê ao lado. O quadro rola por dentro, para baixo e para os lados.';
   }
@@ -130,11 +140,13 @@ export function montar(root: HTMLElement): () => void {
     if (visao !== 'multiverso') return;
     const svg = root.querySelector<SVGSVGElement>('#ivRdS'), g0 = root.querySelector<SVGGElement>('#ivRdG'); if (!svg || !g0) return;
     const B = svg.getBoundingClientRect(); if (!B.width || U.nos.size <= 1) { g0.innerHTML = ''; return; }
-    const W = B.width, H = B.height, G = R.geracoes.length - 1; mvW = W; mvH = H;
+    const W = B.width, H = B.height, G = R.geracoes.length - 1, F = foraSet(), Gt = G + (F.size ? 1 : 0); mvW = W; mvH = H;
     svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
     // a 1ª volta sai afastada do centro (para o nome da semente respirar); no celular os nomes pedem menos margem
-    const cx = W / 2, cy = H / 2 + 8, mx = W < 600 ? 70 : 150, ax = G ? Math.max(40, (W / 2 - mx) / (G + 0.6)) : 0, ay = G ? Math.max(30, (H / 2 - 44) / (G + 0.6)) : 0;
-    const rx = (g: number) => (g + 0.6) * ax, ry = (g: number) => (g + 0.6) * ay;
+    // com os fora de alcance, a reação fica nos 80% de dentro e eles ocupam só a borda
+    const cx = W / 2, cy = H / 2 + 8, mx = W < 600 ? 70 : 150, lim = F.size ? 0.8 : 1, ax = G ? Math.max(40, ((W / 2 - mx) * lim) / (G + 0.6)) : 0, ay = G ? Math.max(30, ((H / 2 - 44) * lim) / (G + 0.6)) : 0;
+    const RXf = Math.max(60, W / 2 - mx) * 0.95, RYf = Math.max(50, H / 2 - 44) * 0.95;
+    const rx = (g: number) => (F.size && g === Gt ? RXf : (g + 0.6) * ax), ry = (g: number) => (F.size && g === Gt ? RYf : (g + 0.6) * ay);
     pos.clear(); pos.set(R.semente, { x: cx, y: cy, a: -Math.PI / 2, g: 0, r: 24 });
     const tam = (n: NoU, f: number) => (n.tipo === 'pessoa' ? 3.5 + f / 22 : 5.5 + f / 11);
     for (let g = 1; g <= G; g++) {
@@ -147,8 +159,15 @@ export function montar(root: HTMLElement): () => void {
       if (g > 1) { let ss = 0, cc = 0; ord.forEach((x, i) => { const d = pref(x) - i * passo; ss += Math.sin(d); cc += Math.cos(d); }); ini = Math.atan2(ss, cc); }
       ord.forEach((x, i) => { const a = ini + i * passo; pos.set(x.id, { x: cx + Math.cos(a) * rx(g), y: cy + Math.sin(a) * ry(g), a, g, r: tam(no(x.id)!, x.forca) }); });
     }
+    // fora de alcance: agências, anunciantes e pessoas em blocos, em faixas finas quando são muitos
+    const TORD: Record<string, number> = { agencia: 0, empresa: 1, pessoa: 2 }, lf = [...F].map((id) => no(id)!).filter(Boolean).sort((a, b) => (TORD[a.tipo] ?? 3) - (TORD[b.tipo] ?? 3) || b.nota - a.nota);
+    const faixas = Math.max(1, Math.ceil(lf.length / 160)), pf = (2 * Math.PI) / Math.max(1, lf.length), vf = Math.max(1.4, Math.min(rx(Gt), ry(Gt)) * pf * faixas * 0.42);
+    lf.forEach((n, i) => { const a = -Math.PI / 2 + i * pf, k = 1 + (i % faixas) * 0.035; pos.set(n.id, { x: cx + Math.cos(a) * rx(Gt) * k, y: cy + Math.sin(a) * ry(Gt) * k, a, g: -1, r: Math.min(tam(n, n.nota * 0.6) * 0.8, vf) }); });
     let h = '';
-    for (let g = G; g >= 1; g--) h += `<ellipse class="mv-anel" cx="${cx}" cy="${cy}" rx="${rx(g)}" ry="${ry(g)}"></ellipse><text class="mv-anel-t" x="${cx}" y="${cy - ry(g) - 6}">${GER[g]} · ${R.geracoes[g].length}${R.ocultos[g] ? ` de ${R.geracoes[g].length + R.ocultos[g]}` : ''}</text>`;
+    const voltas: [number, string][] = []; for (let g = 1; g <= G; g++) voltas.push([g, `${GER[g]} · ${R.geracoes[g].length}${R.ocultos[g] ? ` de ${R.geracoes[g].length + R.ocultos[g]}` : ''}`]);
+    if (lf.length) voltas.push([Gt, '']); // a volta de fora não leva nome: os pontos ocupam o topo, e o botão traz a contagem
+    // o nome de cada volta alterna entre o topo e a base, para as voltas vizinhas não se encavalarem
+    for (let i = voltas.length - 1; i >= 0; i--) { const [g, t] = voltas[i], y = i % 2 ? cy + ry(g) + 14 : cy - ry(g) - 6; h += `<ellipse class="mv-anel${lf.length && g === Gt ? ' fora' : ''}" cx="${cx}" cy="${cy}" rx="${rx(g)}" ry="${ry(g)}"></ellipse>${t ? `<text class="mv-anel-t" data-y="${y.toFixed(1)}" x="${cx}" y="${y.toFixed(1)}">${t}</text>` : ''}`; }
     let fios = '';
     for (const x of R.geracoes.flat()) for (const p of x.pais) {
       const a = pos.get(p.id), b = pos.get(x.id); if (!a || !b) continue;
@@ -156,11 +175,12 @@ export function montar(root: HTMLElement): () => void {
       fios += `<path class="mv-f${novo(x.id) ? ' novo' : ''}" data-de="${esc(p.id)}" data-para="${esc(x.id)}" d="M${a.x.toFixed(1)},${a.y.toFixed(1)} Q${qx.toFixed(1)},${qy.toFixed(1)} ${b.x.toFixed(1)},${b.y.toFixed(1)}" style="--g:${b.g}"><title>${esc(p.rotulo)}</title></path>`;
     }
     let nos = '';
-    for (const x of R.geracoes.flat()) {
-      const n = no(x.id), q = pos.get(x.id); if (!n || !q) continue;
+    const forcaR = new Map(R.geracoes.flat().map((x) => [x.id, x.forca]));
+    for (const id of [...R.geracoes.flat().map((x) => x.id), ...lf.map((n) => n.id)]) {
+      const x = { id, forca: forcaR.get(id) ?? 0 }, n = no(x.id), q = pos.get(x.id); if (!n || !q) continue;
       const dir = Math.cos(q.a) >= 0 || q.g === 0, cls = n.tipo === 'origem' ? 'zero' : n.tipo === 'pessoa' ? `pe${n.nivel === 'contrata' ? ' ct' : ''}` : n.tipo === 'agencia' ? 'ag' : 'em';
       const lab = q.g === 0 ? `<text class="mv-l mostra fixo" x="${q.x}" y="${q.y + q.r + 16}" text-anchor="middle">${esc(n.tipo === 'origem' ? 'PRODUCERIA' : curto(n.nome, 30))}</text>` : `<text class="mv-l" x="${(q.x + (dir ? q.r + 5 : -q.r - 5)).toFixed(1)}" y="${(q.y + 4).toFixed(1)}" text-anchor="${dir ? 'start' : 'end'}">${esc(curto(n.nome, 28))}</text>`;
-      nos += `<g class="mv-n ${cls}${n.extinta ? ' ext' : ''}${novo(x.id) ? ' novo' : ''}${n.alvo ? ' alvo' : ''}" data-n="${esc(x.id)}" tabindex="0" role="button" aria-label="${esc(`${n.nome}, ${TIPO[n.tipo]}${n.tipo === 'pessoa' && n.sub ? ', ' + n.sub : ''}${q.g ? ', ' + GER[q.g] + ', força ' + x.forca : ''}`)}" style="--g:${q.g}">${novo(x.id) ? `<circle class="mv-pulso" cx="${q.x}" cy="${q.y}" r="${q.r + 4}"></circle>` : ''}<circle class="mv-c" cx="${q.x}" cy="${q.y}" r="${q.r}"></circle>${lab}</g>`;
+      nos += `<g class="mv-n ${cls}${q.g < 0 ? ' longe' : ''}${n.extinta ? ' ext' : ''}${novo(x.id) ? ' novo' : ''}${n.alvo ? ' alvo' : ''}" data-n="${esc(x.id)}" tabindex="0" role="button" aria-label="${esc(`${n.nome}, ${TIPO[n.tipo]}${n.tipo === 'pessoa' && n.sub ? ', ' + n.sub : ''}${q.g < 0 ? ', fora de alcance' : q.g ? ', ' + GER[q.g] + ', força ' + x.forca : ''}`)}" style="--g:${q.g}">${novo(x.id) ? `<circle class="mv-pulso" cx="${q.x}" cy="${q.y}" r="${q.r + 4}"></circle>` : ''}<circle class="mv-c" cx="${q.x}" cy="${q.y}" r="${q.r}"></circle>${lab}</g>`;
     }
     g0.innerHTML = `<g class="mv-aneis">${h}</g><g class="mv-fios">${fios}</g><g class="mv-nos">${nos}</g>`;
     mover(false); rotulos();
@@ -175,17 +195,39 @@ export function montar(root: HTMLElement): () => void {
   function rotulos() {
     if (visao !== 'multiverso' || !pos.size) return;
     const viz = acesos(), rm = ramos(), caixas: [number, number, number, number][] = [];
-    const ids = [...pos.keys()].filter((id) => pos.get(id)!.g > 0).sort((a, b) => Number(!!viz?.has(b)) - Number(!!viz?.has(a)) || (rm.get(b)?.forca || 0) - (rm.get(a)?.forca || 0));
+    const bate = (x0: number, y0: number, w: number, h: number) => caixas.some(([x, y, ww, hh]) => x0 < x + ww && x0 + w > x && y0 < y + hh && y0 + h > y);
     const q0 = pos.get(R.semente); if (q0) caixas.push([q0.x * vk + vx - 60, q0.y * vk + vy - q0.r * vk, 120, q0.r * vk * 2 + 22]);
+    // prioridade: caminho aceso, 1ª ramificação (as portas da reação), força; os fora de alcance por último
+    const peso = (id: string) => { const q = pos.get(id)!; return q.g < 0 ? -1 : (rm.get(id)?.forca || 0) + (q.g === 1 ? 100 : 0); };
+    const ids = [...pos.keys()].filter((id) => pos.get(id)!.g !== 0).sort((a, b) => Number(!!viz?.has(b)) - Number(!!viz?.has(a)) || peso(b) - peso(a));
+    // os nomes das voltas entram logo depois da 1ª ramificação: o que bater num nome já posto some (o quadro "Tamanho do multiverso" traz todos)
+    let voltas = false;
+    const nomesDasVoltas = () => { voltas = true;
+      root.querySelectorAll<SVGTextElement>('#ivRdG .mv-anel-t').forEach((el) => {
+        const w = (el.textContent || '').length * 7.4, x0 = (mvW / 2) * vk + vx - w / 2, y0 = Number(el.dataset.y) * vk + vy - 11;
+        const ok = !viz && x0 > 0 && x0 + w < mvW && y0 > 0 && y0 + 14 < mvH - 30 && !bate(x0, y0, w, 14);
+        el.classList.toggle('some', !ok); if (ok) caixas.push([x0, y0, w, 14]);
+      });
+      // daqui em diante, os pontos de dentro também viram obstáculo: nome não cobre ponto (os fora de alcance, densos, não contam)
+      for (const [id, q] of pos) if (id !== R.semente && q.g > 0) { const r = q.r * vk; caixas.push([q.x * vk + vx - r, q.y * vk + vy - r, 2 * r, 2 * r]); }
+    };
     for (const id of ids) {
+      if (!voltas && !viz?.has(id) && peso(id) < 100) nomesDasVoltas();
       const q = pos.get(id)!, el = root.querySelector<SVGTextElement>(`#ivRdG [data-n="${CSS.escape(id)}"] .mv-l`); if (!el) continue;
-      const w = (el.textContent || '').length * 6.6 + 4, dir = el.getAttribute('text-anchor') === 'start';
-      const x0 = q.x * vk + vx + (dir ? q.r * vk + 5 : -q.r * vk - 5 - w), y0 = q.y * vk + vy - 9;
-      const livre = !caixas.some(([x, y, ww, hh]) => x0 < x + ww && x0 + w > x && y0 < y + hh && y0 + 16 > y);
+      const w = (el.textContent || '').length * 6.6 + 4, pref = Math.cos(q.a) >= 0, sx = q.x * vk + vx, sy = q.y * vk + vy, r = q.r * vk;
+      // lugares, na ordem: o lado de fora do mapa, o outro lado, acima e abaixo do ponto
+      const lugares: [number, number, string, number, number][] = [true, false].map((d): [number, number, string, number, number] => {
+        const dir = d === pref; return [dir ? sx + r + 5 : sx - r - 5 - w, sy - 9, dir ? 'start' : 'end', q.x + (dir ? q.r + 5 : -q.r - 5), q.y + 4];
+      });
+      lugares.push([sx - w / 2, sy - r - 18, 'middle', q.x, q.y - q.r - 6 / vk], [sx - w / 2, sy + r + 2, 'middle', q.x, q.y + q.r + 14 / vk]);
+      const cabe = (l: (typeof lugares)[number]) => l[0] >= 2 && l[0] + w <= mvW - 2 && l[1] > 0 && l[1] + 16 < mvH && !bate(l[0], l[1], w, 16);
+      const achou = lugares.find(cabe), l = achou || lugares[0], livre = !!achou, x0 = l[0], y0 = l[1];
+      el.setAttribute('text-anchor', l[2]); el.setAttribute('x', l[3].toFixed(1)); el.setAttribute('y', l[4].toFixed(1));
       const forcado = !!viz?.has(id) && (id === sel || viz.size <= 14);
       const mostra = (livre && (!viz || viz.has(id))) || forcado;
       el.classList.toggle('mostra', mostra); if (mostra) caixas.push([x0, y0, w, 16]);
     }
+    if (!voltas) nomesDasVoltas();
   }
   function mvAcender() {
     if (visao !== 'multiverso') return;
@@ -243,15 +285,17 @@ export function montar(root: HTMLElement): () => void {
   /** O tamanho do multiverso: quantos pontos cada ramificação alcança, quantos a reação abriu e quantos ficam fora. */
   function tamanho() {
     const el = $('#ivMv'); if (U.nos.size <= 1) { el.innerHTML = ''; return; }
-    const C = M.camadas.slice(1), max = Math.max(1, M.fora, ...C.map((c) => c.ids.length)), nome = no(M.semente)?.nome || '';
+    const C = M.camadas.slice(1), max = Math.max(1, ...C.map((c) => c.ids.length)), nome = no(M.semente)?.nome || '';
     const pc = (n: number) => `${Math.max(n ? 0.6 : 0, (n / max) * 100).toFixed(2)}%`;
     const linha = (c: (typeof C)[number]) => {
       const nAb = c.abertos, resto = c.ids.length - nAb, tipos = [[c.agencias, 'agência', 'agências'], [c.empresas, 'anunciante', 'anunciantes'], [c.pessoas, 'pessoa', 'pessoas']].filter(([n]) => n).map(([n, a, b]) => `${n} ${n === 1 ? a : b}`).join(' · ');
-      return `<li class="iv-mv-l"><span class="iv-mv-g">${GER[c.ger] || c.ger + 'ª ramificação'}</span><span class="iv-mv-b" role="img" aria-label="${c.ids.length} pontos alcançados, ${nAb} abertos na reação"><i class="ab" style="width:${pc(nAb)}"></i><i class="al" style="width:${pc(resto)}"></i></span><span class="iv-mv-n"><b class="num">${c.ids.length}</b>${nAb ? ` <span class="note">${nAb} abertos</span>` : ''}</span><span class="iv-mv-t note">${tipos}${c.extintas ? ` · ${c.extintas} extinta${c.extintas > 1 ? 's' : ''}` : ''}</span></li>`;
+      return `<li class="iv-mv-l"><span class="iv-mv-g">${GER[c.ger] || c.ger + 'ª ramificação'}</span><span class="iv-mv-b" role="img" aria-label="${c.ids.length} pontos alcançados, ${nAb} abertos na reação"><i class="ab" style="width:${pc(nAb)}"></i><i class="al" style="width:${pc(resto)}"></i></span><span class="iv-mv-n"><b class="num">${c.ids.length}</b>${nAb ? ` <span class="note">${nAb === c.ids.length ? (nAb === 1 ? 'aberto' : 'todos abertos') : `${nAb} ${pl(nAb, 'aberto', 'abertos')}`}</span>` : ''}</span><span class="iv-mv-t note">${tipos}${c.extintas ? ` · ${c.extintas} extinta${c.extintas > 1 ? 's' : ''}` : ''}</span></li>`;
     };
-    el.innerHTML = `<header class="iv-mv-h"><h2 class="iv-h" id="ivMvT">Tamanho do multiverso</h2><p class="note">A partir de <b>${esc(nome)}</b>, as ligações do Big Data alcançam <b>${M.alcance}</b> dos ${M.total} pontos do mapa em <b>${C.length}</b> ramificações. A reação abre só os mais fortes de cada uma (preto); os demais estão alcançáveis (cinza) e aparecem em "Ampla", na busca e no arquivo baixado.</p></header>
-      <ol class="iv-mv-lista">${C.map(linha).join('')}<li class="iv-mv-l fora"><span class="iv-mv-g">Fora de alcance</span><span class="iv-mv-b" aria-hidden="true"><i class="fo" style="width:${pc(M.fora)}"></i></span><span class="iv-mv-n"><b class="num">${M.fora}</b></span><span class="iv-mv-t note">pontos sem ligação com ${esc(curto(nome, 30))}: partem de outro ponto</span></li></ol>
-      <p class="iv-mv-leg note"><span><i class="ab"></i>abertos na reação</span><span><i class="al"></i>alcançáveis</span><span><i class="fo"></i>fora de alcance</span></p>`;
+    const pcF = M.total ? Math.round((M.fora / M.total) * 100) : 0;
+    el.innerHTML = `<header class="iv-mv-h"><h2 class="iv-h" id="ivMvT">Tamanho do multiverso</h2><p class="note">A partir de <b>${esc(nome)}</b>, as ligações do Big Data alcançam <b>${M.alcance}</b> dos ${M.total} pontos do mapa em <b>${C.length}</b> ${pl(C.length, 'ramificação', 'ramificações')}. A reação abre só os mais fortes de cada uma (preto); os demais estão alcançáveis (cinza) e aparecem em "Ampla", na busca e no arquivo baixado.${M.fora ? ` Os outros <b>${M.fora}</b> (${pcF}% do mapa) não têm ligação com ${esc(curto(nome, 30))}: aparecem com "Fora de alcance".` : ''}</p></header>
+      <ol class="iv-mv-lista">${C.map(linha).join('')}${M.fora ? `<li class="iv-mv-l fora"><span class="iv-mv-g">Fora de alcance</span><span class="iv-mv-b iv-mv-pc" role="img" aria-label="${pcF}% do mapa"><i class="fo" style="width:${pcF}%"></i></span><span class="iv-mv-n"><b class="num">${M.fora}</b> <span class="note">${pcF}% do mapa</span></span><span class="iv-mv-t"><button type="button" class="ghost sm" data-fora aria-pressed="${foraOn}">${foraOn ? 'Esconder do multiverso' : 'Mostrar no multiverso'}</button></span></li>` : ''}</ol>
+      <p class="iv-mv-leg note"><span><i class="ab"></i>abertos na reação</span><span><i class="al"></i>alcançáveis daqui</span>${M.fora ? '<span><i class="fo"></i>fora de alcance, em % do mapa inteiro</span>' : ''}</p>`;
+    $('#ivFoN').textContent = String(M.fora);
   }
 
   /** O arquivo do mapa: HTML único, com o multiverso inteiro desenhado e navegável, para guardar ou mandar. */
@@ -278,8 +322,10 @@ export function montar(root: HTMLElement): () => void {
   /** Ids acesos: o caminho até a semente e os filhos diretos do ponto. */
   function acesos(): Set<string> | null {
     if (!sel) return null;
-    const s = subida();
-    for (const r of ramos().values()) if (r.pais.some((p) => p.id === sel)) s.add(r.id);
+    const s = subida(), rm = ramos();
+    for (const r of rm.values()) if (r.pais.some((p) => p.id === sel)) s.add(r.id);
+    // fora de alcance: acende as ligações próprias que também estão no desenho
+    if (!rm.has(sel)) for (const a of U.adj.get(sel) || []) if (pos.has(a.b)) s.add(a.b);
     return s;
   }
   function acender() {
@@ -312,9 +358,10 @@ export function montar(root: HTMLElement): () => void {
     const r = ramos().get(sel), cam = caminho(R, sel);
     const viz = (U.adj.get(sel) || []).slice().sort((a, b) => (no(b.b)?.nota || 0) - (no(a.b)?.nota || 0));
     const chip = (id: string, extra = '') => { const y = no(id); return y ? `<button type="button" class="chip sm" data-n="${esc(id)}">${esc(curto(y.nome, 34))}${extra}</button>` : ''; };
-    el.innerHTML = `<article class="iv-dossie"><header><span class="iv-k">Dossiê · ${esc(TIPO[n.tipo])}${r ? ' · ' + esc(GER[r.ger] || '') : ''}</span><h3>${esc(n.nome)}</h3>${n.extinta ? '<span class="iv-car">Extinta</span>' : ''}<button type="button" class="iv-fechar" data-fechar aria-label="Fechar o dossiê">×</button></header>
+    el.innerHTML = `<article class="iv-dossie"><header><span class="iv-k">Dossiê · ${esc(TIPO[n.tipo])}${r ? ' · ' + esc(GER[r.ger] || '') : M.foraIds.includes(sel) ? ' · Fora de alcance' : ''}</span><h3>${esc(n.nome)}</h3>${n.extinta ? '<span class="iv-car">Extinta</span>' : ''}<button type="button" class="iv-fechar" data-fechar aria-label="Fechar o dossiê">×</button></header>
     ${n.sub || n.org ? `<p><b>${esc(n.sub)}</b>${n.tipo === 'pessoa' && n.org ? ' · ' + esc(n.org) : ''}${n.nivel ? ` <span class="note">(${esc(ROT[n.nivel] || '')})</span>` : ''}</p>` : ''}
     ${n.tipo !== 'origem' && !n.extinta ? `<div><span class="lab">Possibilidade de negócio</span><div class="iv-forca"><span class="iv-bar" aria-hidden="true"><i style="width:${n.nota}%"></i></span><b class="num">${n.nota}</b></div></div>` : ''}
+    ${!r && M.foraIds.includes(sel) ? `<p class="note">Sem ligação com ${esc(no(R.semente)?.nome || '')} no Big Data. Abra a reação a partir daqui para ver o que ele alcança.</p>` : ''}
     ${n.fatos.length ? `<ul class="iv-fatos">${n.fatos.map((f) => `<li>${esc(f)}</li>`).join('')}</ul>` : ''}
     ${cam.length > 1 ? `<div><span class="lab">Caminho</span><p class="iv-cam">${cam.map((c, i) => `${i ? `<span class="iv-seta" aria-hidden="true">→</span><span class="iv-rot" title="${esc(c.rotulo)}">${esc(curto(c.rotulo, 34))}</span>` : ''}${chip(c.id)}`).join(' ')}</p></div>` : ''}
     ${r && r.pais.length > 1 ? `<p class="note">${r.pais.length} caminhos chegam aqui: ${r.pais.map((p) => esc(no(p.id)?.nome || '')).join(', ')}.</p>` : ''}
@@ -355,15 +402,8 @@ export function montar(root: HTMLElement): () => void {
     const G = montarGrafo({ mercado, movimentos: movs, empresas: emp, agencias: ags, pessoas: pes.filter((p) => p.nome && p.organizacao) as PessoaMapa[] });
     U = montarUniverso({ empresas: G.empresas, agencias: G.agencias, pessoas: pes, orgsInv: [...ags, ...emp], alvos });
     rastroIds = rastroIds.filter((id) => U.nos.has(id)); if (!rastroIds.length) rastroIds = [ORIGEM];
-    // na chegada, a reação abre pela troca de conta mais recente (até 7 dias), com a PRODUCERIA no rastro para voltar
-    abriuDia = false;
-    if (auto && movs.length && pes.length && rastroIds.length === 1 && rastroIds[0] === ORIGEM) {
-      const n0 = novidades(U, movs);
-      if (n0.semente && n0.diaM >= addDias(hojeISO(), -7)) { rastroIds = [ORIGEM, n0.semente]; abriuDia = true; }
-      auto = false;
-    }
+    // a tela sempre abre pela PRODUCERIA; a troca de conta do dia fica a um clique, na faixa "Hoje no mapa"
     reabrir();
-    if (abriuDia) $('#ivLive').textContent = `A reação abriu pela troca de conta de ${dt(N.diaM)}: ${no(R.semente)?.nome || ''}. Volte à PRODUCERIA pelo rastro.`;
   };
   let tRe = 0;
   const agendar = () => { clearTimeout(tRe); tRe = window.setTimeout(recalcular, 60); };
@@ -400,24 +440,24 @@ export function montar(root: HTMLElement): () => void {
 
   root.addEventListener('click', (ev) => {
     const el = elDe(ev);
-    auto = false; // quem já mexeu no mapa não é levado para outro ponto quando chegam dados
     const a = el.closest<HTMLButtonElement>('[data-alvo]'); if (a) { ev.preventDefault(); porNoRadar(a.dataset.alvo || '', a); return; }
     const bx = el.closest<HTMLButtonElement>('[data-baixar]'); if (bx) { ev.preventDefault(); baixar(bx); return; }
+    if (el.closest('[data-fora]')) { foraOn = !foraOn; try { localStorage.setItem(FORA, foraOn ? '1' : '0'); } catch { /* sem armazenamento */ } if (!foraOn && sel && !ramos().has(sel)) sel = ''; aplicarVisao(); render(); $('#ivLive').textContent = foraOn ? `${M.fora} pontos fora de alcance no multiverso` : 'Fora de alcance escondidos'; return; }
     const vb = el.closest<HTMLElement>('[data-visao]'); if (vb) { visao = vb.dataset.visao === 'colunas' ? 'colunas' : 'multiverso'; try { localStorage.setItem(MODO, visao); } catch { /* sem armazenamento */ } aplicarVisao(); render(); return; }
     const zb = el.closest<HTMLElement>('[data-zoom]'); if (zb) { const f = Number(zb.dataset.zoom); if (f) zoom(f, mvW / 2, mvH / 2, true); else { vk = 1; vx = 0; vy = 0; mover(true); clearTimeout(tRot); tRot = window.setTimeout(rotulos, 380); } return; }
     if (arrastou) { arrastou = false; return; }
-    const d = el.closest<HTMLElement>('[data-dia]'); if (d) { const v = d.dataset.dia || ''; foco = foco === v ? '' : v; auto = false; if (lf === 'novo') lim = 10; render(); $('#ivLive').textContent = foco ? `Dia em foco: ${dt(foco)}` : 'De volta ao mais recente'; return; }
+    const d = el.closest<HTMLElement>('[data-dia]'); if (d) { const v = d.dataset.dia || ''; foco = foco === v ? '' : v; if (lf === 'novo') lim = 10; render(); $('#ivLive').textContent = foco ? `Dia em foco: ${dt(foco)}` : 'De volta ao mais recente'; return; }
     const j = el.closest<HTMLElement>('[data-jan]'); if (j) { janela = Number(j.dataset.jan) || 30; hoje(); return; }
     if (el.closest('[data-novos]')) { lf = 'novo'; lim = 10; $('#ivLF').querySelectorAll<HTMLElement>('[data-lf]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.lf === 'novo'))); radar(leads(U, R)); $('#ivLT').scrollIntoView({ behavior: 'smooth', block: 'start' }); return; }
     if (el.closest('[data-vistos]')) { novos.forEach((id) => visto.add(id)); guardar(); render(); $('#ivLive').textContent = 'Tudo marcado como visto'; return; }
-    const s = el.closest<HTMLElement>('[data-s]'); if (s) { ev.preventDefault(); auto = false; $<HTMLInputElement>('#ivQ').value = ''; $('#ivS').innerHTML = ''; partir(s.dataset.s || ''); return; }
+    const s = el.closest<HTMLElement>('[data-s]'); if (s) { ev.preventDefault(); $<HTMLInputElement>('#ivQ').value = ''; $('#ivS').innerHTML = ''; partir(s.dataset.s || ''); return; }
     if (el.closest('[data-fechar]')) { const v = sel; escolher(sel); root.querySelector<HTMLElement>(`.iv-quadro [data-n="${CSS.escape(v)}"]`)?.focus(); return; }
     if (el.closest('[data-rmais]')) { lim += 10; radar(leads(U, R)); return; }
     const f = el.closest<HTMLElement>('[data-lf]'); if (f) { lf = f.dataset.lf || ''; lim = 10; $('#ivLF').querySelectorAll<HTMLElement>('[data-lf]').forEach((b) => b.setAttribute('aria-pressed', String(b === f))); radar(leads(U, R)); return; }
     const k = el.closest<HTMLElement>('[data-ab]'); if (k) { ab = Number(k.dataset.ab) || 1; $('#ivA').querySelectorAll<HTMLElement>('[data-ab]').forEach((b) => b.setAttribute('aria-pressed', String(b === k))); reabrir(); return; }
     const b = el.closest<HTMLElement>('[data-n]'); if (!b || !root.contains(b)) return;
     ev.preventDefault(); const id = b.dataset.n || '';
-    if (!ramos().has(id)) { partir(id); return; } // ponto fora da reação: abre a partir dele
+    if (!ramos().has(id) && !(b.closest('#ivRd') && foraSet().has(id))) { partir(id); return; } // ponto fora da reação: abre a partir dele (no multiverso, o fora de alcance abre o dossiê)
     escolher(id); if (b.closest('#ivFi, #ivL, #ivG')) root.querySelector<HTMLElement>(`.iv-quadro [data-n="${CSS.escape(sel)}"]`)?.focus();
   });
   const tecla = (ev: KeyboardEvent) => { if (ev.key === 'Escape' && sel && !(ev.target as HTMLElement).closest?.('#ivQ')) { const v = sel; escolher(sel); root.querySelector<HTMLElement>(`.iv-quadro [data-n="${CSS.escape(v)}"]`)?.focus(); } };

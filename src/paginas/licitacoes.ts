@@ -311,7 +311,7 @@ Estruture: Recomendação (GO, GO com condições ou NO-GO) · Por quê (3 a 5 p
       const s = situacao(q);
       return `<td><button type="button" class="lnk lc-st" data-hab="${e.id}" data-req="${r.id}" aria-label="${esc(r.nome)} · ${esc(e.nome)}: ${SIT_TXT[s]}. Alternar."><span class="tag ${SIT_CLS[s]}">${SIT_TXT[s]}</span></button>${q.status === 'ok' && r.id !== 'cnae' ? `<input type="date" class="lc-val-d" data-val="${e.id}" data-req="${r.id}" aria-label="Validade · ${esc(r.nome)} · ${esc(e.nome)}" value="${esc(q.validade || '')}">` : ''}${q.nota ? `<span class="sub">${esc(q.nota)}</span>` : ''}</td>`;
     }).join('')}</tr>`).join('')}</tbody></table></div>
-    <div class="lc-emp">${EMPRESAS.map((e) => `<div class="p"><h3 class="d d-sub">${esc(e.nome)}</h3><p class="note num">CNPJ ${e.cnpj} · ${e.porte} · CNAE ${e.cnaes.join(' · ')}</p><p class="note">${esc(e.vocacao)}</p></div>`).join('')}</div>`;
+    <div class="lc-emp">${EMPRESAS.map((e) => `<div class="p"><h3 class="d d-sub">${esc(e.nome)}</h3><p class="note lc-id"><span>CNPJ <span class="num">${e.cnpj}</span></span><span>${e.porte}</span></p><p class="note lc-cnae"><span class="lab">CNAE</span> ${e.cnaes.map((c) => `<span class="num">${c}</span>`).join(' ')}</p><p class="note">${esc(e.vocacao)}</p></div>`).join('')}</div>`;
   }
 
   async function mudarRequisito(emp: string, req: string, d: Partial<Requisito>) {

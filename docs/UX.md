@@ -140,3 +140,13 @@ O HTML baixado pelo botão "Baixar o mapa interativo" passa a usar o mesmo desen
 - O arraste anda pelo mapa. Ctrl + rolar, a pinça e os botões aproximam em torno do cursor. A rolagem do trackpad também anda.
 - Esconder uma ramificação redesenha as voltas que sobram.
 - No celular, os pontos encolhem e a 1ª volta sai mais afastada do centro.
+
+### Investigação: fora de alcance, nomes legíveis e tela inicial fixa (18/11/2026)
+
+- A tela abre sempre pela PRODUCERIA. A troca de conta do dia (antes aberta sozinha, por exemplo Wigoo) fica a um clique em "Abrir a reação pela troca do dia", na faixa "Hoje no mapa".
+- O botão "Fora de alcance" mostra no Multiverso os pontos sem ligação com o ponto de partida. Eles ficam numa volta própria, na borda, com a reação nos 80% de dentro. A escolha fica guardada. Clicar num desses pontos abre o dossiê e acende as ligações próprias dele. O arquivo baixado leva os mesmos pontos (g = -1) e tem o mesmo botão na lista de ramificações.
+- Os nomes tentam quatro lugares: o lado de fora do mapa, o outro lado, acima e abaixo do ponto. A 1ª ramificação tem prioridade. Os nomes das voltas alternam entre topo e base e somem quando batem em outro nome. Depois da 1ª ramificação, os pontos também contam como obstáculo.
+- Em "Tamanho do multiverso", as barras usam a escala das ramificações. O fora de alcance aparece em % do mapa, com o botão de mostrar. Os plurais foram revistos: "1 aberto", "todos abertos", "1 pessoa que pede", "contas novas ou mudanças".
+- Controles em duas linhas: o rastro e a busca em cima; visão, abertura e fora de alcance embaixo, com o botão de baixar à direita.
+- Big Data, Por setor: "Sem setor" saiu das barras. Ele achatava a escala e não filtrava nada. Agora vira nota com a contagem. A coluna do número tem largura fixa, para as barras alinharem, e o nome cortado mostra o texto inteiro ao passar o mouse.
+- Licitações, Habilitação: o CNPJ e os CNAEs quebram linha (antes invadiam a coluna vizinha). Também entrou um respiro entre a tabela e os cartões.

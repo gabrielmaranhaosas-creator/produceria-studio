@@ -92,7 +92,7 @@ export function barras(titulo: string, itens: Barra[], o: OpcoesBarras = {}): st
   const lista = itens.filter((b) => b.valor > 0).slice(0, o.max ?? 8);
   const topo = Math.max(...lista.map((b) => b.valor), 1);
   const linha = (b: Barra) => {
-    const corpo = `<span class="pn-r">${esc(b.rotulo)}${b.nota ? `<small>${esc(b.nota)}</small>` : ''}</span><span class="pn-t" aria-hidden="true"><i style="width:${Math.max(2, Math.round((100 * b.valor) / topo))}%"></i></span><b>${fmt(b.valor)}</b>`;
+    const corpo = `<span class="pn-r" title="${esc(b.rotulo)}">${esc(b.rotulo)}${b.nota ? `<small>${esc(b.nota)}</small>` : ''}</span><span class="pn-t" aria-hidden="true"><i style="width:${Math.max(2, Math.round((100 * b.valor) / topo))}%"></i></span><b>${fmt(b.valor)}</b>`;
     return o.attr && b.dado !== undefined
       ? `<li><button type="button" class="pn-l" data-${o.attr}="${esc(b.dado)}" aria-pressed="${!!b.ativo}" aria-label="${esc(b.rotulo)}: ${fmt(b.valor)}. Filtrar a lista">${corpo}</button></li>`
       : `<li class="pn-l">${corpo}</li>`;
