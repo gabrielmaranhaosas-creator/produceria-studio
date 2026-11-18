@@ -3,7 +3,7 @@
 import { esc, int, brl, brk, dt } from '../lib/formato';
 import { banco, type Banco } from '../lib/db';
 import { comId } from './dom';
-import { kpis, vazio } from '../componentes';
+import { kpis, vazio, sugerir, irPara, itensDe } from '../componentes';
 
 export interface ItemPca { numero: number; descricao: string; frente: string; classe: string; valor: number | null; quantidade: number | null; unidadeFornecimento: string; dataDesejada: string | null; requisitante?: string; unidade?: string }
 export interface Pca {
@@ -55,10 +55,10 @@ export function montarPca(el: HTMLElement, avisar: (t: string) => void): () => v
     const sp = P.filter((p) => p.uf === 'SP'), col = P.map((p) => p.coletadoEm || '').sort().pop();
     $('#pcaFonte').textContent = carregado && P.length ? `PCA ${anos.join(' e ')} publicados no PNCP${col ? `, coletados em ${dt(col)}` : ''}. Atualização mensal pela rotina do Claude.` : '';
     $('#pcaK').innerHTML = carregado && P.length ? `<div class="kpis">${kpis([
-      { rotulo: 'Órgãos com demanda no escopo', valor: `<b>${int(P.length)}</b>`, nota: `${int(itens)} itens planejados` },
-      { rotulo: 'Valor planejado', valor: `<b title="${esc(brl(total))}">${brk(total)}</b>`, nota: 'estimativa dos próprios órgãos' },
-      { rotulo: 'Em São Paulo', valor: `<b>${int(sp.length)}</b>`, nota: sp.length ? brk(sp.reduce((s, p) => s + p.total, 0)) + ' planejados' : 'nenhum ainda' },
-      { rotulo: 'No funil', valor: `<b>${int(P.filter((p) => funil.some((x) => x.titulo === tituloFunil(p))).length)}</b>`, nota: 'levados ao funil daqui' },
+      { rotulo: 'Órgãos com demanda no escopo', kpi: 'todos', ativo: !f.uf && !f.frente && !f.q, acao: 'Ver todos', valor: `<b>${int(P.length)}</b>`, nota: `${int(itens)} itens planejados` },
+      { rotulo: 'Valor planejado', kpi: 'valor', ativo: f.ordem === 'valor', acao: 'Ordenar pelo maior valor', valor: `<b title="${esc(brl(total))}">${brk(total)}</b>`, nota: 'estimativa dos próprios órgãos' },
+      { rotulo: 'Em São Paulo', kpi: 'sp', ativo: f.uf === 'SP', acao: 'Ver só SP', valor: `<b>${int(sp.length)}</b>`, nota: sp.length ? brk(sp.reduce((s, p) => s + p.total, 0)) + ' planejados' : 'nenhum ainda' },
+      { rotulo: 'No funil', href: '#funil', acao: 'Abrir o funil', valor: `<b>${int(P.filter((p) => funil.some((x) => x.titulo === tituloFunil(p))).length)}</b>`, nota: 'levados ao funil daqui' },
     ])}</div>` : '';
     const L = filtrarPca(P, f);
     $('#pcaL').innerHTML = !carregado ? '<p class="note">Carregando…</p>'
@@ -81,6 +81,10 @@ export function montarPca(el: HTMLElement, avisar: (t: string) => void): () => v
     const b = (ev.target as HTMLElement).closest<HTMLButtonElement>('button');
     if (!b || !el.contains(b)) return;
     const d = b.dataset;
+    if (d.kpi) {
+      if (d.kpi === 'todos') Object.assign(f, { uf: '', frente: '', q: '' }); else if (d.kpi === 'sp') f.uf = f.uf === 'SP' ? '' : 'SP'; else f.ordem = 'valor';
+      $<HTMLInputElement>('#pcaQ').value = f.q; limite = 40; opcoes(); $<HTMLSelectElement>('#pcaO').value = f.ordem; render(); irPara($('#pcaL')); return;
+    }
     if (d.pcaAbre) { if (abertos.has(d.pcaAbre)) abertos.delete(d.pcaAbre); else abertos.add(d.pcaAbre); render(); el.querySelector<HTMLElement>(`[data-pca-abre="${CSS.escape(d.pcaAbre)}"]`)?.focus(); return; }
     if (d.pcaMais) { limite += 40; render(); return; }
     if (d.pcaFunil) {
@@ -96,6 +100,11 @@ export function montarPca(el: HTMLElement, avisar: (t: string) => void): () => v
       } catch { b.disabled = false; avisar('Não foi possível levar ao funil. Tente de novo.'); }
     }
   });
+  sugerir('pcaQ', () => [
+    { nome: 'Órgãos', itens: P.map((p) => ({ texto: p.orgao, sub: [p.municipio, p.uf, brk(p.total)].filter(Boolean).join(' · '), peso: p.total })) },
+    { nome: 'Municípios', itens: itensDe(P, (p) => p.municipio, (p) => p.uf) },
+    { nome: 'Itens planejados', itens: itensDe(P.flatMap((p) => p.itens), (i) => i.classe || i.descricao.slice(0, 60)) },
+  ]);
   el.addEventListener('input', (ev) => { const t = ev.target as HTMLInputElement; if (t.id === 'pcaQ') { f.q = t.value; limite = 40; render(); } });
   el.addEventListener('change', (ev) => {
     const t = ev.target as HTMLSelectElement;

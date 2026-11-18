@@ -3,7 +3,7 @@ import { esc, int, dt } from '../lib/formato';
 import { banco, type Banco } from '../lib/db';
 import { armazem, quemSou, nomes, tamanho, LIMITE, ERROS_ENVIO, type Armazem } from '../lib/arquivos';
 import { seletor, comId } from './dom';
-import { kpis, confirmarNoBotao } from '../componentes';
+import { kpis, confirmarNoBotao, irPara } from '../componentes';
 import { cabecalho } from './oficina';
 
 export const CATEGORIAS = ['Guia de marca', 'Key visual / master', 'Fontes', 'Specs de veículo e formato', 'Glossário e regras de texto', 'Contratos e cadastros', 'Certidões e habilitação', 'Outro'];
@@ -41,9 +41,9 @@ export function montar(root: HTMLElement): () => void {
 
   function lista() {
     $('#biK').innerHTML = `<div class="kpis">${kpis([
-      { rotulo: 'Arquivos', valor: `<b>${int(A.length)}</b>` },
-      { rotulo: 'Clientes com acervo', valor: `<b>${int(clientes().length)}</b>` },
-      { rotulo: 'Masters e KVs', valor: `<b>${int(A.filter((a) => a.categoria === 'Key visual / master').length)}</b>`, nota: 'base para desdobramento e reaproveitamento' },
+      { rotulo: 'Arquivos', valor: `<b>${int(A.length)}</b>`, kpi: 'todos', ativo: !fCli && !fCat, acao: 'Ver todos' },
+      { rotulo: 'Clientes com acervo', valor: `<b>${int(clientes().length)}</b>`, kpi: 'cli', acao: 'Escolher um cliente' },
+      { rotulo: 'Masters e KVs', kpi: 'kv', ativo: fCat === 'Key visual / master', acao: 'Ver só masters e KVs', valor: `<b>${int(A.filter((a) => a.categoria === 'Key visual / master').length)}</b>`, nota: 'base para desdobramento e reaproveitamento' },
     ])}</div>`;
     $('#biC').innerHTML = [['', 'Todos'], [HUB, HUB], ...clientes().map((c) => [c, c])].map(([v, t]) => `<button type="button" class="chip" data-fcli="${esc(v)}" aria-pressed="${fCli === v}">${esc(t)}</button>`).join('');
     $('#biT').innerHTML = [['', 'Todos os tipos'], ...CATEGORIAS.map((c) => [c, c])].map(([v, t]) => `<button type="button" class="chip" data-fcat="${esc(v)}" aria-pressed="${fCat === v}">${esc(t)}</button>`).join('');
@@ -84,6 +84,7 @@ export function montar(root: HTMLElement): () => void {
     const b = (ev.target as HTMLElement).closest<HTMLButtonElement>('button');
     if (!b || !root.contains(b)) return;
     if (b.dataset.cat) { cat = b.dataset.cat; envio(); root.querySelector<HTMLElement>(`[data-cat="${CSS.escape(cat)}"]`)?.focus(); return; }
+    if (b.dataset.kpi) { const k = b.dataset.kpi; if (k === 'todos') { fCli = ''; fCat = ''; } else if (k === 'kv') fCat = fCat === 'Key visual / master' ? '' : 'Key visual / master'; lista(); irPara(k === 'cli' ? $('#biC') : $('#biL')); return; }
     if (b.dataset.fcli !== undefined) { fCli = b.dataset.fcli; lista(); return; }
     if (b.dataset.fcat !== undefined) { fCat = b.dataset.fcat; lista(); }
   });

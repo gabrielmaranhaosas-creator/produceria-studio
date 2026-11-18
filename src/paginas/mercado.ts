@@ -4,7 +4,7 @@ import { esc, int, brk, dt } from '../lib/formato';
 import { banco, lerBase, type Banco } from '../lib/db';
 import { chave } from '../lib/nomes';
 import { seletor, comId, abaNoEndereco, type Dialogo } from './dom';
-import { kpis, vazio, abrirDialogo, devolverFoco, barras, porMes, contar, painel } from '../componentes';
+import { kpis, vazio, abrirDialogo, devolverFoco, barras, porMes, contar, painel, sugerir, irPara, itensDe } from '../componentes';
 
 export interface Conta { data: string; anunciante: string; escopo: string; fonte: string; tipo: string; anterior: string }
 export interface Perda { data: string; anunciante: string; para: string; fonte: string }
@@ -104,10 +104,10 @@ export function montar(root: HTMLElement): () => void {
   function topo() {
     const x = m!.meta;
     $('#mkK').innerHTML = `<div class="kpis">${kpis([
-      { rotulo: 'Movimentações de conta', valor: `<b>${int(x.movimentos)}</b>`, nota: 'com fonte, de 2025 até hoje' },
-      { rotulo: 'Nos últimos 90 dias', valor: `<b>${int(m!.movimentos.filter((v) => recente(v.data, 90)).length)}</b>`, nota: 'agências com conta nova' },
-      { rotulo: 'Agências mapeadas', valor: `<b>${int(x.agencias)}</b>`, nota: '30 do ranking Cenp-Meios 2025' },
-      { rotulo: 'Trocas de conta em 2025', valor: `<b>${int(x.mudancas2025)}</b>`, nota: fonteLink(x.fonteMudancas2025, 'balanço M&amp;M') },
+      { rotulo: 'Movimentações de conta', valor: `<b>${int(x.movimentos)}</b>`, nota: 'com fonte, de 2025 até hoje', kpi: 'mv:todos', ativo: visao === 'movimentos' && f.periodo === 'todos', acao: 'Ver todas' },
+      { rotulo: 'Nos últimos 90 dias', valor: `<b>${int(m!.movimentos.filter((v) => recente(v.data, 90)).length)}</b>`, nota: 'agências com conta nova', kpi: 'mv:90', ativo: visao === 'movimentos' && f.periodo === '90', acao: 'Ver as dos últimos 90 dias' },
+      { rotulo: 'Agências mapeadas', valor: `<b>${int(x.agencias)}</b>`, nota: '30 do ranking Cenp-Meios 2025', kpi: 'agencias', ativo: visao === 'agencias', acao: 'Ver as agências' },
+      { rotulo: 'Trocas de conta em 2025', valor: `<b>${int(x.mudancas2025)}</b>`, nota: 'segundo o balanço M&amp;M', href: x.fonteMudancas2025 || undefined, acao: 'Abrir o balanço da fonte' },
     ])}</div>`;
   }
 
@@ -222,6 +222,7 @@ export function montar(root: HTMLElement): () => void {
   root.addEventListener('click', (ev) => {
     const b = (ev.target as HTMLElement).closest<HTMLElement>('button');
     if (!b || !root.contains(b) || D.contains(b) || !m) return;
+    if (b.dataset.kpi) { const [v, p] = b.dataset.kpi.split(':'); if (v === 'mv') { f.periodo = p as Filtros['periodo']; abas.ir('movimentos'); } else abas.ir('agencias'); filtros(); topo(); lim = 30; lista(); irPara($('#mkO')); return; }
     if (b.dataset.visao) { abas.ir(b.dataset.visao as Visao); root.querySelector<HTMLElement>(`[data-visao="${visao}"]`)?.focus(); return; }
     if (b.dataset.ag) { const a = m.agencias.find((x) => x.nome === b.dataset.ag); if (a) abrirAgencia(a, b); return; }
     if (b.id === 'mkCSV') baixar();
@@ -236,6 +237,11 @@ export function montar(root: HTMLElement): () => void {
     lim = 30; lista();
   });
 
+  sugerir('mkQ', () => m ? [
+    { nome: 'Agências', itens: m.agencias.map((a) => ({ texto: a.nome, sub: [a.cenp ? `${a.cenp}º no Cenp` : '', a.uf, a.tipo].filter(Boolean).join(' · ') || undefined, peso: a.prioridade })) },
+    { nome: 'Anunciantes', itens: itensDe(m.movimentos, (v) => v.anunciante, (v) => `foi para ${v.agencia}`) },
+    { nome: 'Saíram de', itens: itensDe(m.movimentos, (v) => v.anterior, (v) => `perdeu ${v.anunciante}`) },
+  ] : []);
   (async () => {
     try { base = await lerBase<Mercado>('mercado'); recalcular(); }
     catch (e) { $('#mkK').innerHTML = `<div class="lc-box"><p>Não consegui abrir a base de mercado (${esc(e instanceof Error ? e.message : String(e))}).</p></div>`; }

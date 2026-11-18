@@ -6,7 +6,7 @@ import {CANAIS,RESULTADOS,passoAtual,sugerirProximo,registrarContato,type Result
 import {banco,type Colecao} from '../lib/db';
 import type {Alvo} from '../lib/tipos';
 import {seletor,elDe,mensagem,comId,type Dialogo} from './dom';
-import {kpis,numero} from '../componentes';
+import {kpis,numero,irPara} from '../componentes';
 
 type Aba = 'hoje'|'semana'|'todos'|'conv';
 interface ItemFila { a: Alvo; d: string; p: { nota: number; motivo: string } }
@@ -47,10 +47,10 @@ function tempos(): string{const dif: [string,number][]=[];for(const a of A){cons
 function render(){try{localStorage.setItem('ag.aba',aba)}catch(e){}
  const F=fila(),h=hoje(),fim=addDias(h,7),atras=F.filter(x=>x.d&&x.d<h),hj=F.filter(x=>x.d===h),sem=F.filter(x=>x.d>h&&x.d<=fim),semd=F.filter(x=>!x.d);
  $('#agK').innerHTML=kpis([
-  {rotulo:'Para hoje',valor:numero(int(atras.length+hj.length)),nota:`${int(atras.length)} atrasado${atras.length===1?'':'s'}`},
-  {rotulo:'Próximos 7 dias',valor:numero(int(sem.length)),nota:'toques agendados'},
-  {rotulo:'Alvos ativos',valor:numero(int(F.length)),nota:`${int(semd.length)} sem data de próximo passo`},
-  {rotulo:'Contatos registrados · 30 dias',valor:numero(int(A.reduce((s,a)=>s+(a.toques||[]).filter(t=>String(t.em).slice(0,10)>=addDias(h,-30)).length,0))),nota:'pela agenda'}]);
+  {rotulo:'Para hoje',kpi:'hoje',ativo:aba==='hoje',acao:'Ver a fila de hoje',valor:numero(int(atras.length+hj.length)),nota:`${int(atras.length)} atrasado${atras.length===1?'':'s'}`},
+  {rotulo:'Próximos 7 dias',kpi:'semana',ativo:aba==='semana',acao:'Ver a semana',valor:numero(int(sem.length)),nota:'toques agendados'},
+  {rotulo:'Alvos ativos',kpi:'todos',ativo:aba==='todos',acao:'Ver todos os ativos',valor:numero(int(F.length)),nota:`${int(semd.length)} sem data de próximo passo`},
+  {rotulo:'Contatos registrados · 30 dias',kpi:'conv',ativo:aba==='conv',acao:'Ver a conversão',valor:numero(int(A.reduce((s,a)=>s+(a.toques||[]).filter(t=>String(t.em).slice(0,10)>=addDias(h,-30)).length,0))),nota:'pela agenda'}]);
  const tabs: [Aba,string][]=[['hoje',`Hoje (${atras.length+hj.length})`],['semana',`Semana (${sem.length})`],['todos',`Todos os ativos (${F.length})`],['conv','Conversão']];
  $('#agT').innerHTML=tabs.map(([v,t])=>`<button type="button" role="tab" id="tab-${v}" aria-selected="${aba===v}" aria-pressed="${aba===v}" aria-controls="agO" data-aba="${v}">${t}</button>`).join('');
  const L=aba==='hoje'?[...atras,...hj]:aba==='semana'?sem:F;
@@ -75,7 +75,7 @@ function registrar(a: Alvo,btn: HTMLElement){const d=$<Dialogo>('#agD'),ps=proxi
   const sb=d.querySelector<HTMLButtonElement>('[type=submit]')!;sb.disabled=true;sb.textContent='Salvando…';
   if(await salvar(a,patch)){d.close();$('#agLive').textContent=`Contato com ${a.nome} registrado${novo!==a.status?', etapa: '+novo:''}.`}else{sb.disabled=false;sb.textContent='Salvar contato'}}}
 $('#agD').addEventListener('close',()=>{const d=$<Dialogo>('#agD');const id=d._ret&&d._ret.dataset&&d._ret.dataset.reg;const b=id?root.querySelector<HTMLElement>(`[data-reg="${CSS.escape(id)}"]`):null;(b||$<HTMLElement>('#agT button[aria-selected=true]'))?.focus()});
-root.addEventListener('click',async e=>{const el=elDe(e);const t=el.closest<HTMLElement>('[data-aba]');if(t){aba=t.dataset.aba as Aba;render();root.querySelector<HTMLElement>(`[data-aba="${aba}"]`)!.focus();return}
+root.addEventListener('click',async e=>{const el=elDe(e);const kk=el.closest<HTMLElement>('[data-kpi]');if(kk){aba=kk.dataset.kpi as Aba;render();irPara($('#agO'));return}const t=el.closest<HTMLElement>('[data-aba]');if(t){aba=t.dataset.aba as Aba;render();root.querySelector<HTMLElement>(`[data-aba="${aba}"]`)!.focus();return}
  const r=el.closest<HTMLElement>('[data-reg]');if(r){const a=A.find(x=>x.id===r.dataset.reg);a&&registrar(a,r);return}
  const ad=el.closest<HTMLButtonElement>('[data-adi]');if(ad){const a=A.find(x=>x.id===ad.dataset.adi);if(!a)return;ad.disabled=true;const nd=addUteis(hoje(),2);await salvar(a,{proximoToque:{...(a.proximoToque||{}),data:nd},prazo:nd});$('#agLive').textContent=`${a.nome} adiado para ${dt(nd)}.`}});
 root.addEventListener('keydown',e=>{const t=elDe(e).closest<HTMLElement>('[role=tab]');if(!t||!['ArrowLeft','ArrowRight'].includes(e.key))return;const all=[...root.querySelectorAll<HTMLElement>('[role=tab]')],i=all.indexOf(t),n=all[(i+(e.key==='ArrowRight'?1:-1)+all.length)%all.length];n.click()});

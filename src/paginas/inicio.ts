@@ -52,11 +52,11 @@ export function montar(root: HTMLElement): () => void {
     const carteira = D.b2g.filter((o) => o.carteira), vCart = carteira.reduce((s, o) => s + (Number(o.valor) || 0), 0);
     const P = passos(D.pipeline, D.alvos, D.b2g), atras = P.filter((p) => p.d < h).length, prox = P.filter((p) => p.d >= h && p.d <= sem).length;
     $('#inK').innerHTML = `<div class="kpis ini-k">${kpis([
-      { rotulo: 'Funil aberto', valor: `<b>${int(abertas.length)}</b>`, nota: emJogo ? brl(emJogo) + ' em jogo' : 'sem valor registrado' },
-      { rotulo: 'Alvos em andamento', valor: `<b>${int(andamento.length)}</b>`, nota: `${D.alvos.filter((a) => a.status === 'Cliente').length} viraram cliente` },
-      { rotulo: 'Carteira de licitações', valor: `<b>${int(carteira.length)}</b>`, nota: vCart ? brl(vCart) + ' estimados' : 'sem valor estimado' },
-      { rotulo: 'Passos atrasados', valor: `<b${atras ? ' class="quente"' : ''}>${int(atras)}</b>`, nota: `${prox} vencem nos próximos 7 dias` },
-      { rotulo: 'Biblioteca', valor: `<b>${int(D.biblioteca.length)}</b>`, nota: `${D.casos.length} caso(s) no portfólio` },
+      { rotulo: 'Funil aberto', href: '#funil', acao: 'Abrir o funil', valor: `<b>${int(abertas.length)}</b>`, nota: emJogo ? brl(emJogo) + ' em jogo' : 'sem valor registrado' },
+      { rotulo: 'Alvos em andamento', href: '#captacao', acao: 'Abrir a Captação', valor: `<b>${int(andamento.length)}</b>`, nota: `${D.alvos.filter((a) => a.status === 'Cliente').length} viraram cliente` },
+      { rotulo: 'Carteira de licitações', href: '#b2g/carteira', acao: 'Abrir a carteira', valor: `<b>${int(carteira.length)}</b>`, nota: vCart ? brl(vCart) + ' estimados' : 'sem valor estimado' },
+      { rotulo: 'Passos atrasados', href: '#agenda', acao: 'Abrir a agenda', valor: `<b${atras ? ' class="quente"' : ''}>${int(atras)}</b>`, nota: `${prox} vencem nos próximos 7 dias` },
+      { rotulo: 'Biblioteca', href: '#biblioteca', acao: 'Abrir a biblioteca', valor: `<b>${int(D.biblioteca.length)}</b>`, nota: `${D.casos.length} caso(s) no portfólio` },
     ])}</div>`;
     const hojeL = (D.alvos as unknown as Alvo[]).filter((a) => ativo(a) && a.status !== 'Descartado').map((a) => ({ a, d: devido(a) })).filter((x) => x.d && x.d <= h).sort((x, y) => x.d.localeCompare(y.d));
     $('#inH').innerHTML = hojeL.length ? `<ul class="vc-l">${hojeL.slice(0, 5).map(({ a, d }) => `<li><a class="ini-passo" href="#agenda"><span class="num${d < h ? ' cp-venc' : ' note'}">${d < h ? 'atrasado' : 'hoje'}</span><span class="vc-c"><b>${esc(a.nome)}</b><span class="note">${esc(a.proximoToque?.texto || a.proximoPasso || 'Definir próximo passo')}</span></span></a></li>`).join('')}</ul>` : '<p class="note">Nenhum contato vencendo hoje.</p>';

@@ -5,7 +5,7 @@ import { banco, type Colecao } from '../lib/db';
 import { perguntar, CONTEXTO, ErroIA } from '../lib/ia';
 import type { Oportunidade, Habilitacao, Requisito } from '../lib/tipos';
 import { seletor, comId, abaNoEndereco, type Dialogo } from './dom';
-import { kpis, numero, vazio, abrirDialogo, devolverFoco } from '../componentes';
+import { kpis, numero, vazio, abrirDialogo, devolverFoco, sugerir, irPara, itensDe } from '../componentes';
 import { montarPca } from './pca';
 
 // ---------------------------------------------------------------- dados fixos do hub
@@ -173,10 +173,10 @@ export function montar(root: HTMLElement): () => void {
       : 'Varredura diária no PNCP ainda não registrada.';
     const chip = (id: string, txt: string, on: boolean, dica = '') => `<button type="button" class="chip" data-tg="${id}" aria-pressed="${on}"${dica ? ` title="${esc(dica)}"` : ''}>${txt}</button>`;
     return `<section class="kpis" aria-label="Resumo do radar">${kpis([
-      { rotulo: 'No escopo do hub', valor: numero(int(vivos.length)), nota: `${int(diretas)} por compra direta · ${int(foraEsc)} lidas e deixadas de fora · ${int(descartadas)} descartadas` },
-      { rotulo: 'Trabalho de estúdio', valor: numero(int(estudio.length)), nota: 'craft 60 ou mais: filme, foto, transmissão, arte, som, conteúdo' },
-      { rotulo: 'Ticket médio estimado', valor: ticket ? numero(brl(ticket)) : '<b class="nd">—</b>', nota: `${int(comValor.length)} com valor divulgado` },
-      { rotulo: 'Abertas hoje', valor: numero(int(abertas.length)), nota: 'com prazo de recebimento futuro' },
+      { rotulo: 'No escopo do hub', kpi: 'escopo', ativo: !F.estudio && !F.abertas && !F.direta && !F.foraEscopo && !F.descartadas && !F.nota60 && !F.frente && !F.q, acao: 'Ver todas, sem filtros', valor: numero(int(vivos.length)), nota: `${int(diretas)} por compra direta · ${int(foraEsc)} lidas e deixadas de fora · ${int(descartadas)} descartadas` },
+      { rotulo: 'Trabalho de estúdio', kpi: 'estudio', ativo: F.estudio, acao: 'Ver só estúdio', valor: numero(int(estudio.length)), nota: 'craft 60 ou mais: filme, foto, transmissão, arte, som, conteúdo' },
+      { rotulo: 'Ticket médio estimado', href: '#vencedores/precos', acao: 'Comparar com os preços pagos', valor: ticket ? numero(brl(ticket)) : '<b class="nd">—</b>', nota: `${int(comValor.length)} com valor divulgado` },
+      { rotulo: 'Abertas hoje', kpi: 'abertas', ativo: F.abertas, acao: 'Ver só as abertas', valor: numero(int(abertas.length)), nota: 'com prazo de recebimento futuro' },
     ])}</section>
   <div class="grid">
     <section class="p" aria-labelledby="lc-dem"><div class="ph"><h2 class="d d-sub" id="lc-dem">Onde está a demanda</h2><span class="note">por frente · com nota acima de zero</span></div>
@@ -187,7 +187,7 @@ export function montar(root: HTMLElement): () => void {
       <p class="note lc-varr">${varredura}</p>
       <div class="acts"><button type="button" id="lcEd">Ler edital ou aviso</button></div></section>
   </div>
-  <section aria-label="Oportunidades">
+  <section aria-label="Oportunidades" id="lcOp">
     <div class="lc-filtros">
       <div class="seg sm" role="group" aria-label="Aderência">${(['', 'direta', 'condicionada'] as const).map((v) => `<button type="button" data-ad="${v}" aria-pressed="${F.aderencia === v}">${v === '' ? 'Todas' : v === 'direta' ? 'Aderência direta' : 'Condicionada'}</button>`).join('')}</div>
       ${chip('direta', `Compra direta · ${int(diretas)}`, !!F.direta, 'Dispensa e inexigibilidade (Lei 14.133, arts. 72 a 75): contratação sem disputa aberta, onde pesa estar cadastrado e ser lembrado na pesquisa de preços')}
@@ -300,9 +300,9 @@ Estruture: Recomendação (GO, GO com condições ou NO-GO) · Por quê (3 a 5 p
     const total = sits.length, emDia = sits.filter((s) => s === 'ok' || s === 'vence').length;
     const venc = sits.filter((s) => s === 'vencida').length, vence = sits.filter((s) => s === 'vence').length;
     return `<section class="kpis" aria-label="Resumo da habilitação">${kpis([
-      { rotulo: 'Requisitos em dia', valor: numero(`${emDia}/${total}`), nota: 'clique no status para alternar' },
-      { rotulo: 'Vencidas', valor: numero(int(venc)), nota: 'reemitir antes da próxima sessão' },
-      { rotulo: 'Vencem em 30 dias', valor: numero(int(vence)), nota: 'o FGTS vale só 30 dias' },
+      { rotulo: 'Requisitos em dia', kpi: 'hab', acao: 'Ver na tabela', valor: numero(`${emDia}/${total}`), nota: 'clique no status para alternar' },
+      { rotulo: 'Vencidas', kpi: 'hab', acao: 'Ver na tabela', valor: numero(int(venc)), nota: 'reemitir antes da próxima sessão' },
+      { rotulo: 'Vencem em 30 dias', kpi: 'hab', acao: 'Ver na tabela', valor: numero(int(vence)), nota: 'o FGTS vale só 30 dias' },
       { rotulo: 'Empresas', valor: numero(int(EMPRESAS.length)), nota: 'todas ME' },
     ])}</section>
     <div class="tw" tabindex="0" role="region" aria-label="Requisitos por empresa"><table class="lc-hab"><thead><tr><th scope="col"><span class="th">Requisito</span></th>${EMPRESAS.map((e) => `<th scope="col"><span class="th">${esc(e.nome.replace('Produceria ', ''))}</span></th>`).join('')}</tr></thead><tbody>
@@ -425,6 +425,12 @@ ${txt.slice(0, 30000)}`, { json: true })) as Record<string, unknown> | null;
     if (!b || !root.contains(b) || D.contains(b)) return;
     const d = b.dataset;
     if (d.aba) { abas.ir(d.aba as Aba); $<HTMLElement>('#lc-tab-' + aba).focus(); return; }
+    if (d.kpi) {
+      if (d.kpi === 'hab') { irPara(root.querySelector('.lc-hab')?.closest('.tw') || null); return; }
+      if (d.kpi === 'escopo') Object.assign(F, { estudio: false, abertas: false, direta: false, foraEscopo: false, descartadas: false, nota60: false, frente: '', q: '' });
+      else { const k = d.kpi as 'estudio' | 'abertas'; F[k] = !F[k]; }
+      limite = 60; render(); irPara($('#lcOp')); return;
+    }
     if (d.fr !== undefined) { F.frente = F.frente === d.fr ? '' : d.fr; limite = 60; render(); return; }
     if (d.ad !== undefined) { F.aderencia = d.ad as FiltroRadar['aderencia']; limite = 60; render(); return; }
     if (d.tg) { const k = d.tg as 'nota60' | 'abertas' | 'estudio' | 'descartadas' | 'foraEscopo' | 'direta'; F[k] = !F[k]; limite = 60; render(); return; }
@@ -465,6 +471,16 @@ ${txt.slice(0, 30000)}`, { json: true })) as Record<string, unknown> | null;
     }, 200);
   });
 
+  // a busca do radar abre com os órgãos, estados, frentes e modalidades que existem nas oportunidades
+  sugerir('lcQ', () => {
+    const vivos = O.filter((o) => o.triagem !== 'Descartar');
+    return [
+      { nome: 'Órgãos', itens: itensDe(vivos, (o) => o.orgao, (o) => [o.uf, o.modalidade].filter(Boolean).join(' · ')) },
+      { nome: 'Estados', itens: itensDe(vivos, (o) => o.uf).map((x) => ({ ...x, sub: `${int(x.peso || 1)} oportunidade(s)` })) },
+      { nome: 'Frentes', itens: itensDe(vivos, (o) => o.frente).map((x) => ({ ...x, sub: `${int(x.peso || 1)} oportunidade(s)` })) },
+      { nome: 'Modalidades', itens: itensDe(vivos, (o) => o.modalidade).map((x) => ({ ...x, sub: `${int(x.peso || 1)} oportunidade(s)` })) },
+    ];
+  }, { aoEscolher: (it) => { F.q = it.texto; limite = 60; if (aba !== 'radar') abas.ir('radar'); else render(); irPara($('#lcOp')); } });
   render();
   (async () => {
     const db = await banco();

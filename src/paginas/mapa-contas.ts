@@ -3,7 +3,7 @@ import {nomeLegivel,chave,slug,mesmaEmpresa} from '../lib/nomes';
 import {banco,lerBase,type Colecao} from '../lib/db';
 import type {Alvo,ContratoPublico,Movimento} from '../lib/tipos';
 import {seletor,elDe,mensagem,comId,type Dialogo} from './dom';
-import {confirmarNoBotao,kpis,numero} from '../componentes';
+import {confirmarNoBotao,kpis,numero,sugerir,irPara,itensDe} from '../componentes';
 
 type TipoConta='publica'|'privada';
 /** Conta como entra no mapa (cadastro, importação ou bases publicadas). */
@@ -95,10 +95,10 @@ function render(){persist();
  const cols: [string,string][]=[['empresa','Empresa'],['cliente','Cliente / órgão'],['servico','Serviço'],['tipo','Tipo'],['valor','Valor'],['fim','Vigência até']];
  o.innerHTML=`<section class="kpis" aria-label="Resumo da seleção">
 ${kpis([
-  {rotulo:'Contas encontradas',valor:numero(int(L.length)),nota:L.length===rows.length?'todas as bases':'de '+int(rows.length)+' no total'},
-  {rotulo:'Valor somado',valor:cv.length?numero(brk(tot),brl(tot)):'<b class="nd">Não divulgado</b>',nota:cv.length?`${int(cv.length)} com valor${sv?` · ${int(sv)} sem valor, fora da soma`:''}`:'nenhuma conta da seleção divulga valor'},
-  {rotulo:'Empresas detentoras',valor:numero(int(emp)),nota:tot&&emp>10?`as 10 maiores somam ${Math.round(top/tot*100)}% do valor`:cv.length?'concentração baixa':'por número de contas'},
-  {rotulo:'Vencem em 90 dias',valor:numero(int(v90)),nota:v90&&F.v!=='90'?'<button type="button" class="lnk" data-v90>Ver só estas</button>':F.v==='90'?'filtro ativo':'nenhum vencimento próximo'}])}
+  {rotulo:'Contas encontradas',kpi:'tab',acao:'Ver a tabela',valor:numero(int(L.length)),nota:L.length===rows.length?'todas as bases':'de '+int(rows.length)+' no total'},
+  {rotulo:'Valor somado',kpi:'valor',ativo:sort.k==='valor'&&sort.d<0,acao:'Ordenar pelo maior valor',valor:cv.length?numero(brk(tot),brl(tot)):'<b class="nd">Não divulgado</b>',nota:cv.length?`${int(cv.length)} com valor${sv?` · ${int(sv)} sem valor, fora da soma`:''}`:'nenhuma conta da seleção divulga valor'},
+  {rotulo:'Empresas detentoras',kpi:'emp',acao:'Ver o gráfico das empresas',valor:numero(int(emp)),nota:tot&&emp>10?`as 10 maiores somam ${Math.round(top/tot*100)}% do valor`:cv.length?'concentração baixa':'por número de contas'},
+  {rotulo:'Vencem em 90 dias',kpi:'v90',ativo:F.v==='90',acao:'Ver só estas',valor:numero(int(v90)),nota:F.v==='90'?'filtro ativo':v90?'renovação ou nova licitação à vista':'nenhum vencimento próximo'}])}
  </section>
  <div class="medir" role="group" aria-labelledby="lMed"><span class="lab" id="lMed">Ordenar gráficos por</span><div class="seg sm" id="sMed">${[['auto','Automático'],['valor','Valor'],['n','Nº de contas']].map(([v,t])=>`<button type="button" data-m="${v}" aria-pressed="${metric===v}">${t}</button>`).join('')}</div>${metric==='auto'&&!cv.length?'<span class="note">Sem valores divulgados nesta seleção: os gráficos contam contas.</span>':''}</div>
  <div class="grid">${chart('emp','Empresas detentoras',L,'empresa',by)}${chart('cli','Clientes e órgãos',L,'cliente',by)}${chart('srv','Serviços',L,'servico',by)}
@@ -142,7 +142,9 @@ $('#bAdd').onclick=form;$('#bImp').onclick=imp;$('#bCsv').onclick=baixar;
 $('#chips').onclick=e=>{const el=elDe(e);if(el.closest('#bClr'))return reset();const c=el.closest<HTMLElement>('[data-x]');if(!c)return;const k=c.dataset.x as keyof Filtros;(F as unknown as Record<string,unknown>)[k]=k==='m'?0:'';lim=50;syncInputs();render();const nx=root.querySelector<HTMLElement>('#chips [data-x]')||$<HTMLElement>('#fQ');nx.focus()};
 root.addEventListener('keydown',e=>{const t=e.target as HTMLInputElement;if(e.key==='Escape'&&!$<HTMLDialogElement>('#dl').open&&t.matches('#fQ,#fC')&&t.value){t.value='';F[t.id==='fQ'?'q':'c']='';render()}});
 const onKey=(e: KeyboardEvent)=>{const t=e.target as Element|null;if(e.key==='/'&&!e.ctrlKey&&!e.metaKey&&!$<HTMLDialogElement>('#dl').open&&!(t&&t.matches&&t.matches('input,textarea,select,[contenteditable]'))&&root.isConnected&&root.offsetParent!==null){e.preventDefault();$('#fQ').focus()}};document.addEventListener('keydown',onKey);
-$('#out').onclick=e=>{const el=elDe(e);const r=el.closest<HTMLElement>('.row');if(r){const key=r.dataset.f as Eixo,k=r.dataset.k!,m=FK[key];F[m]=ativo(key,k)?'':k;lim=50;syncInputs();render();const again=root.querySelector<HTMLElement>(`.row[data-f="${key}"][data-k="${CSS.escape(k)}"]`);again&&again.focus();return}
+$('#out').onclick=e=>{const el=elDe(e);
+ const kk=el.closest<HTMLElement>('[data-kpi]');if(kk){const k=kk.dataset.kpi;if(k==='emp'){irPara($('#h-emp').closest('section'));return}
+  if(k==='valor')sort={k:'valor',d:-1};if(k==='v90'){F.v=F.v==='90'?'':'90';syncInputs()}lim=50;render();irPara($('#h-tab').closest('section'));return}const r=el.closest<HTMLElement>('.row');if(r){const key=r.dataset.f as Eixo,k=r.dataset.k!,m=FK[key];F[m]=ativo(key,k)?'':k;lim=50;syncInputs();render();const again=root.querySelector<HTMLElement>(`.row[data-f="${key}"][data-k="${CSS.escape(k)}"]`);again&&again.focus();return}
  const tb=el.closest<HTMLElement>('.tb');if(tb){F.mes=F.mes===tb.dataset.mes?'':tb.dataset.mes||'';lim=50;render();const again=root.querySelector<HTMLElement>(`.tb[data-mes="${tb.dataset.mes}"]`);again&&again.focus();return}
  const mm=el.closest<HTMLElement>('[data-m]');if(mm){metric=mm.dataset.m as Medida;render();root.querySelector<HTMLElement>(`[data-m="${metric}"]`)!.focus();return}
  const ms=el.closest<HTMLElement>('[data-mais]');if(ms){const id=ms.dataset.mais!;open[id]=!open[id];render();root.querySelector<HTMLElement>(`[data-mais="${id}"]`)?.focus();return}
@@ -152,6 +154,9 @@ $('#out').onclick=e=>{const el=elDe(e);const r=el.closest<HTMLElement>('.row');i
  const th=el.closest<HTMLElement>('[data-s]');if(th){const k=th.dataset.s!;sort=sort.k===k?{k,d:-sort.d}:{k,d:k==='valor'?-1:1};lim=50;render();root.querySelector<HTMLElement>(`[data-s="${k}"]`)!.focus();return}
  const op=el.closest<HTMLElement>('[data-open]');if(op){$<Dialogo>('#dl')._id=op.dataset.open;det(op.dataset.open!,op);return}
  const tr=el.closest<HTMLElement>('tbody tr');if(tr&&!el.closest('a,button')){$<Dialogo>('#dl')._id=tr.dataset.id;det(tr.dataset.id!,tr.querySelector<HTMLElement>('.nm'))}};
+// as buscas abrem com todas as empresas e todos os clientes, os maiores primeiro
+sugerir('fQ',()=>[{nome:'Empresas detentoras',itens:agg(rows,'empresa','valor').map(x=>({texto:nm(x.k),sub:`${int(x.n)} conta${x.n>1?'s':''}${x.v?' · '+brs(x.v):''}`,peso:x.v||x.n}))}]);
+sugerir('fC',()=>[{nome:'Clientes e órgãos',itens:agg(rows,'cliente','valor').map(x=>({texto:nm(x.k),sub:`${int(x.n)} conta${x.n>1?'s':''}${x.v?' · '+brs(x.v):''}`,peso:x.v||x.n}))},{nome:'Serviços',itens:itensDe(rows,r=>r.servico)}],{aoEscolher:(it,g,c)=>{if(g==='Serviços'){F.s=it.texto;$<HTMLSelectElement>('#fS').value=it.texto}else{F.c=it.texto;c.value=it.texto}lim=50;render()}});
 syncInputs();render();
 function setRows(){rows=base.concat(man).map(r=>({...r,_q:(r.empresa+' '+nm(r.empresa)+' '+(r.cnpj||'')).toLowerCase(),_c:(r.cliente+' '+nm(r.cliente)).toLowerCase()}));render()}
 const FR: Record<string,string>={eventos:'Eventos',audiovisual:'Audiovisual',grafica:'Gráfica',publicidade:'Publicidade',cenografia:'Cenografia',conteudo:'Conteúdo',transmissao:'Transmissão',design:'Design',fotografia:'Fotografia',audio:'Áudio',ooh:'OOH',comvisual:'Comunicação visual'};

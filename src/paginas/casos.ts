@@ -4,7 +4,7 @@ import {chave} from '../lib/nomes';
 import {banco,type Colecao} from '../lib/db';
 import type {Caso} from '../lib/tipos';
 import {seletor,comId,type Dialogo} from './dom';
-import {vazio,etiqueta,confirmarNoBotao} from '../componentes';
+import {vazio,etiqueta,confirmarNoBotao,sugerir,itensDe} from '../componentes';
 
 /** Caso como gravado pela página (além do modelo base). */
 type CasoDoc = Caso & { em?: string; origem?: string };
@@ -40,6 +40,7 @@ function form(c: CasoDoc|null|undefined,btn: HTMLElement){const d=$<Dialogo>('#c
 $('#csD').addEventListener('close',()=>{const d=$<Dialogo>('#csD');(d._ret&&d._ret.isConnected?d._ret:$('#csN')).focus()});
 $('#csN').onclick=e=>form(null,e.currentTarget as HTMLElement);
 $('#csO').onclick=e=>{const b=(e.target as HTMLElement).closest<HTMLElement>('[data-ed]');if(b)form(C.find(c=>c.id===b.dataset.ed),b)};
+sugerir('csQ',()=>[{nome:'Clientes',itens:itensDe(C,c=>c.cliente)},{nome:'Agências',itens:itensDe(C,c=>c.agencia)},{nome:'Casos',itens:C.map(c=>({texto:c.titulo,sub:[c.cliente,c.ano].filter(Boolean).join(' · ')}))},{nome:'Serviços',itens:itensDe(C,c=>c.servicos||[]).map(x=>({...x,sub:`${x.peso} caso(s)`}))}],{aoEscolher:(it,g,c)=>{if(g==='Serviços'){F.s=it.texto;$<HTMLSelectElement>('#csS').value=it.texto;F.q='';c.value=''}else{F.q=it.texto;c.value=it.texto}render()}});
 $<HTMLInputElement>('#csQ').oninput=e=>{F.q=(e.target as HTMLInputElement).value;render()};$<HTMLSelectElement>('#csS').onchange=e=>{F.s=(e.target as HTMLSelectElement).value;render()};$<HTMLSelectElement>('#csP').onchange=e=>{F.p=(e.target as HTMLSelectElement).value;render()};
 render();
 (async()=>{const db=await banco();if(!db)return;const c=col=db.collection<CasoDoc>('casos');off=c.onSnapshot(s=>{C=s.docs.map(comId);render()},()=>{})})();

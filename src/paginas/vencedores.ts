@@ -4,7 +4,7 @@ import { esc, int, brl, brk, dt } from '../lib/formato';
 import { banco, lerBase, type Banco } from '../lib/db';
 import { chave } from '../lib/nomes';
 import { seletor, comId, abaNoEndereco, type Dialogo } from './dom';
-import { kpis, vazio, abrirDialogo, devolverFoco, barras, contar, painel, type Barra } from '../componentes';
+import { kpis, vazio, abrirDialogo, devolverFoco, barras, contar, painel, sugerir, irPara, type Barra } from '../componentes';
 
 // ---------------------------------------------------------------- dados
 export interface Contrato {
@@ -157,10 +157,10 @@ export function montar(root: HTMLElement): () => void {
   function topo() {
     const x = m!.meta, seg = contagemSegmentos();
     $('#vcK').innerHTML = `<div class="kpis">${kpis([
-      { rotulo: 'Contratos no escopo', valor: `<b>${int(x.noEscopo)}</b>`, nota: `${int(x.vigentes)} vigentes` },
-      { rotulo: 'Empresas vencedoras', valor: `<b>${int(x.empresas)}</b>`, nota: `${int(seg['Agência com conta pública'] || 0)} agências com conta vigente` },
-      { rotulo: 'Órgãos compradores', valor: `<b>${int(x.orgaos)}</b>`, nota: `${int(m!.orgaos.filter((o) => o.vencendo).length)} com contrato vencendo` },
-      { rotulo: 'Valor contratado', valor: `<b title="${esc(reais(x.valorTotal))}">${brk(x.valorTotal)}</b>`, nota: 'soma dos contratos no escopo' },
+      { rotulo: 'Contratos no escopo', valor: `<b>${int(x.noEscopo)}</b>`, nota: `${int(x.vigentes)} vigentes`, kpi: 'contratos', ativo: visao === 'contratos', acao: 'Ver os contratos' },
+      { rotulo: 'Empresas vencedoras', valor: `<b>${int(x.empresas)}</b>`, nota: `${int(seg['Agência com conta pública'] || 0)} agências com conta vigente`, kpi: 'empresas', ativo: visao === 'empresas', acao: 'Ver quem abordar' },
+      { rotulo: 'Órgãos compradores', valor: `<b>${int(x.orgaos)}</b>`, nota: `${int(m!.orgaos.filter((o) => o.vencendo).length)} com contrato vencendo`, kpi: 'orgaos', ativo: visao === 'orgaos', acao: 'Ver os órgãos' },
+      { rotulo: 'Valor contratado', valor: `<b title="${esc(reais(x.valorTotal))}">${brk(x.valorTotal)}</b>`, nota: 'soma dos contratos no escopo', kpi: 'precos', ativo: visao === 'precos', acao: 'Ver preços e calendário' },
     ])}</div>
     <p class="note">Fonte: ${esc(x.fonte)}. Contratos publicados de ${dt(x.periodo[0])} a ${dt(x.periodo[1])}; ${int(x.cobertura.lidos)} contratos lidos em ${int(x.cobertura.dias)} dias${x.cobertura.parciais ? ` (${x.cobertura.parciais} dia(s) com páginas que falharam)` : ''}. Gerado em ${dt(x.geradoEm)}${novos.length ? `; mais ${int(novos.length)} contrato(s) novo(s) da rotina diária` : ''}.</p>`;
   }
@@ -341,6 +341,7 @@ export function montar(root: HTMLElement): () => void {
     const b = (ev.target as HTMLElement).closest<HTMLElement>('button');
     if (!b || !root.contains(b) || D.contains(b) || !m) return;
     const d = b.dataset;
+    if (d.kpi) { abas.ir(d.kpi as Visao); topo(); irPara($('#vcPn').firstElementChild ? $('#vcPn') : $('#vcO')); return; }
     if (d.visao) { abas.ir(d.visao as Visao); root.querySelector<HTMLElement>(`[data-visao="${visao}"]`)?.focus(); return; }
     if (d.seg) { f.segmento = d.seg; limite = 60; lista(); root.querySelector<HTMLElement>(`[data-seg="${CSS.escape(d.seg)}"]`)?.focus(); return; }
     if (d.mais) { limite += Number(d.mais); lista(); return; }
@@ -362,6 +363,14 @@ export function montar(root: HTMLElement): () => void {
     limite = 60; lista();
   });
 
+  sugerir('vcQ', () => m ? [
+    { nome: 'Empresas vencedoras', itens: m.empresas.map((e) => ({ texto: e.nome, sub: [e.segmento, e.cnpjF, brk(e.valorTotal)].filter(Boolean).join(' · '), peso: e.prioridade })) },
+    { nome: 'Órgãos compradores', itens: m.orgaos.map((g) => ({ texto: g.nome, sub: [g.uf, g.esfera, `${int(g.contratos)} contrato(s)`].filter(Boolean).join(' · '), peso: g.valorTotal })) },
+  ] : [], { aoEscolher: (it, g, c) => {
+    f.busca = it.texto;
+    if (g === 'Órgãos compradores' && visao === 'empresas') abas.ir('orgaos'); else if (g === 'Empresas vencedoras' && visao === 'orgaos') abas.ir('empresas'); else { limite = 60; lista(); }
+    c = root.querySelector<HTMLInputElement>('#vcQ') || c; c.value = it.texto; irPara($('#vcO'));
+  } });
   (async () => {
     try { base = await lerBase<Mapa>('vencedores'); recalcular(); }
     catch (e) { $('#vcK').innerHTML = `<div class="lc-box"><p>Não consegui abrir o mapa de vencedores (${esc(e instanceof Error ? e.message : String(e))}).</p></div>`; }

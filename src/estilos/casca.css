@@ -38,3 +38,7 @@
 .mc .cs-atalhos th{white-space:nowrap;font-weight:400;padding-right:16px}
 .mc kbd{font:500 12px/1 var(--font-body,inherit);border:1px solid var(--line-strong);border-bottom-width:2px;border-radius:4px;padding:2px 6px;background:var(--surface-100)}
 .mc .cs-atalhos{min-width:0;width:100%}
+/* busca Ctrl K: cabeçalho de cada categoria */
+.paleta-g{margin:10px 12px 4px;font:400 11px/1.3 var(--font-text);letter-spacing:.12em;text-transform:uppercase;color:var(--ink)}
+.paleta-g:first-child{margin-top:4px}
+.paleta-g span{letter-spacing:0;text-transform:none;color:var(--ink-muted);margin-left:4px}

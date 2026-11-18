@@ -8,7 +8,7 @@ import { perguntar, ErroIA } from '../lib/ia';
 import { buscar, calcular, itemDe, rotulo, SERVICOS, type ItemProposta } from '../lib/servicos';
 import type { Alvo, Caso, Oportunidade } from '../lib/tipos';
 import { seletor, comId, abaNoEndereco, type Dialogo } from './dom';
-import { vazio, abrirDialogo, devolverFoco, confirmarNoBotao, barras, contar, painel } from '../componentes';
+import { vazio, abrirDialogo, devolverFoco, confirmarNoBotao, barras, contar, painel, irPara } from '../componentes';
 
 // ---------------------------------------------------------------- perfis e atração (da tela antiga)
 export const PERFIS = [
@@ -157,7 +157,7 @@ export function montar(root: HTMLElement): () => void {
       ${desc.length ? `<button type="button" class="chip cp-desc-chip" data-pf="__descartados" aria-pressed="${perfil === '__descartados'}">Descartados · ${int(desc.length)}</button>` : ''}
       <button type="button" class="sm" id="cpN" aria-expanded="${novo}">${novo ? 'Fechar' : 'Novo alvo'}</button></div></section>
       ${vivos.length ? painel([
-        barras('Funil por etapa', (ETAPAS as readonly string[]).map((et) => ({ rotulo: et, valor: L.filter((a) => (a.status || 'Mapeado') === et).length })), { max: 12 }),
+        barras('Funil por etapa', (ETAPAS as readonly string[]).map((et) => ({ rotulo: et, valor: L.filter((a) => (a.status || 'Mapeado') === et).length, dado: et })), { max: 12, attr: 'cpet', nota: 'clique para ir à coluna' }),
         barras('Por perfil', contar(vivos, (a) => a.perfil).map((b) => ({ ...b, rotulo: perfilDe(b.rotulo)?.curto || b.rotulo, ativo: b.dado === perfil })), { attr: 'pf', nota: 'clique para filtrar o quadro' }),
         barras('De onde vieram', contar(L, (a) => a.origem || 'Cadastro manual')),
       ], 'Resumo da captação') : ''}
@@ -418,6 +418,7 @@ Escreva só três seções em markdown, sem valores (os valores entram numa tabe
     const b = (e.target as HTMLElement).closest<HTMLElement>('button');
     if (!b || !root.contains(b) || D.contains(b)) return;
     const d = b.dataset;
+    if (d.cpet) { irPara(root.querySelector(`.lc-col[aria-label^="${CSS.escape(d.cpet)}:"]`)); return; }
     if (d.aba) { abas.ir(d.aba as Aba); $<HTMLElement>('#cp-tab-' + aba).focus(); return; }
     if (d.pf !== undefined) { perfil = b.closest('.pn') && perfil === d.pf ? '' : d.pf; render(); return; }
     if (d.reabre) { const a = A.find((x) => x.id === d.reabre); if (a && await atualizar(a.id, { status: 'Mapeado', triagem: '', motivoDescarte: '', triadoEm: agora() }, `${a.nome} voltou para Mapeado.`)) { if (!col) render(); } return; }

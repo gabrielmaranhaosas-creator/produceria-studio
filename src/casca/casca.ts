@@ -62,7 +62,12 @@ type Doc = Record<string, unknown> & { id: string };
 
 /** Resultados da busca Ctrl K: telas, serviços da tabela, alvos, licitações, frentes e itens da SWOT. */
 export function buscarTudo(q: string, d: { alvos: Doc[]; b2g: Doc[]; frentes: Doc[]; swot: Doc[] }): Achado[] {
-  if (!q.trim()) return IR;
+  // sem texto: as telas e uma amostra de cada base, por categoria, para mostrar tudo o que dá para procurar
+  if (!q.trim()) return [
+    ...[...d.alvos].filter((a) => a.status !== 'Descartado').slice(0, 6).map((a) => ({ tipo: 'Alvo', titulo: String(a.nome), sub: String(a.status || ''), href: '#captacao' })),
+    ...[...d.b2g].filter((o) => o.triagem !== 'Descartar').sort((x, y) => Number(y.score || 0) - Number(x.score || 0)).slice(0, 6).map((o) => ({ tipo: 'Licitação', titulo: String(o.objeto || '').slice(0, 100), sub: String(o.orgao || ''), href: '#b2g' })),
+    ...d.frentes.slice(0, 6).map((f) => ({ tipo: 'Frente', titulo: String(f.nome), href: '#estrategia' })),
+    ...d.swot.slice(0, 4).map((s) => ({ tipo: 'SWOT', titulo: String(s.texto), href: '#estrategia' })), ...IR];
   const r: Achado[] = IR.filter((x) => casa(q, x.titulo));
   for (const s of buscar(q, 6)) r.push({ tipo: 'Serviço', titulo: rotulo(s), sub: `ID ${s.id} · ${brl(s.ref)}`, href: '#tabela' });
   for (const a of d.alvos) if (casa(q, a.nome, a.contato, a.gatilho)) r.push({ tipo: 'Alvo', titulo: String(a.nome), sub: String(a.status || ''), href: '#captacao' });
@@ -201,7 +206,9 @@ export function iniciarCasca(raiz: HTMLElement, paginas: Record<string, Montar>,
   function resultados() {
     achados = buscarTudo($<HTMLInputElement>('#csPalQ').value, dados);
     const q = $<HTMLInputElement>('#csPalQ').value;
-    $('#csPalL').innerHTML = achados.length ? achados.map((a, i) => `<button type="button" role="option" id="csOp${i}" aria-selected="${i === sel}" class="paleta-item${i === sel ? ' on' : ''}" data-i="${i}"><span class="paleta-tipo">${esc(a.tipo)}</span><span style="min-width:0"><span class="small" style="display:block;font-weight:500">${esc(a.titulo)}</span>${a.sub ? `<span class="caption">${esc(a.sub)}</span>` : ''}</span></button>`).join('') : `<p class="caption" style="padding:16px">Nada com “${esc(q)}”.</p>`;
+    const GRUPO: Record<string, [string, number]> = { Ir: ['Telas', IR.length], Serviço: ['Serviços da tabela', 0], Alvo: ['Alvos da Captação', dados.alvos.length], Licitação: ['Licitações', dados.b2g.length], Frente: ['Frentes', dados.frentes.length], SWOT: ['Estratégia', dados.swot.length] };
+    const cab = (a: Achado, i: number) => { if (i && achados[i - 1].tipo === a.tipo) return ''; const [nome, total] = GRUPO[a.tipo] || [a.tipo, 0], n = achados.filter((x) => x.tipo === a.tipo).length; return `<p class="paleta-g" role="presentation">${esc(nome)} <span>${!q && total > n ? `${n} de ${total} · digite para achar o resto` : n}</span></p>`; };
+    $('#csPalL').innerHTML = achados.length ? achados.map((a, i) => cab(a, i) + `<button type="button" role="option" id="csOp${i}" aria-selected="${i === sel}" class="paleta-item${i === sel ? ' on' : ''}" data-i="${i}"><span class="paleta-tipo">${esc(a.tipo)}</span><span style="min-width:0"><span class="small" style="display:block;font-weight:500">${esc(a.titulo)}</span>${a.sub ? `<span class="caption">${esc(a.sub)}</span>` : ''}</span></button>`).join('') : `<p class="caption" style="padding:16px">Nada com “${esc(q)}”.</p>`;
     $('#csPalQ').setAttribute('aria-activedescendant', achados.length ? 'csOp' + sel : '');
     $(`#csOp${sel}`)?.scrollIntoView({ block: 'nearest' });
   }

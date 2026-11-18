@@ -6,7 +6,7 @@ import { hoje as hojeISO } from '../lib/datas';
 import { banco, type Colecao } from '../lib/db';
 import type { Alvo } from '../lib/tipos';
 import { seletor, elDe, mensagem, comId } from './dom';
-import { kpis, numero, vazio, barras, porMes, contar, painel } from '../componentes';
+import { kpis, numero, vazio, barras, porMes, contar, painel, sugerir, irPara, itensDe } from '../componentes';
 
 export type Prioridade = 'alta' | 'media' | 'baixa';
 export type Status = 'novo' | 'andamento' | 'feito' | 'descartado';
@@ -49,7 +49,7 @@ export function montar(root: HTMLElement): () => void {
   const hoje = hojeISO();
   let A: Alerta[] = [], alvos: Alvo[] = [], col: Colecao<Alerta> | null = null, colAlvos: Colecao<Alvo> | null = null, carregando = true;
   const offs: (() => void)[] = [];
-  const F = { s: '', t: '', q: '' };
+  const F = { s: '', t: '', q: '', k: '' };
   try { const sv = JSON.parse(localStorage.getItem('ac.filtros.v2') || 'null'); if (sv) Object.assign(F, sv); } catch { /* sem armazenamento */ }
   const guardar = () => { try { localStorage.setItem('ac.filtros.v2', JSON.stringify(F)); } catch { /* sem armazenamento */ } };
   const ehAlvo = (nome: string) => alvos.some((a) => a.id === 'al-' + slug(nome) || mesmaEmpresa(a.nome, nome));
@@ -79,15 +79,24 @@ export function montar(root: HTMLElement): () => void {
     $('#acT').innerHTML = [['', 'Todos'], ...Object.entries(TIPOS)].map(([v, t]) => `<button type="button" data-t="${v}" aria-pressed="${F.t === v}">${t}</button>`).join('');
     const qi = $<HTMLInputElement>('#acQ'); if (document.activeElement !== qi) qi.value = F.q;
     $<HTMLSelectElement>('#acS').value = F.s;
-    const abertos = A.filter((a) => !a.status || a.status === 'novo' || a.status === 'andamento');
+    // cada número do topo é um recorte: clicar mostra só aqueles alertas (e clicar de novo desfaz)
+    const d30 = new Date(Date.now() - 30 * 864e5).toISOString();
+    const RECORTE: Record<string, (a: Alerta) => boolean> = {
+      hoje: (a) => a.data === hoje && (a.status || 'novo') === 'novo',
+      alta: (a) => (!a.status || a.status === 'novo' || a.status === 'andamento') && a.prioridade === 'alta',
+      andamento: (a) => a.status === 'andamento',
+      feitos: (a) => a.status === 'feito' && (a.em || '') >= d30,
+    };
+    const n = (k: string) => int(A.filter(RECORTE[k]).length), on = (k: string) => F.k === k;
     $('#acK').innerHTML = kpis([
-      { rotulo: 'Novos hoje', valor: numero(int(A.filter((a) => a.data === hoje && (a.status || 'novo') === 'novo').length)), nota: 'alertas da rotina desta manhã' },
-      { rotulo: 'Prioridade alta', valor: numero(int(abertos.filter((a) => a.prioridade === 'alta').length)), nota: 'abertos, para agir esta semana' },
-      { rotulo: 'Em andamento', valor: numero(int(A.filter((a) => a.status === 'andamento').length)), nota: 'alguém da equipe já está nisso' },
-      { rotulo: 'Feitos em 30 dias', valor: numero(int(A.filter((a) => a.status === 'feito' && (a.em || '') >= new Date(Date.now() - 30 * 864e5).toISOString()).length)), nota: 'ações concluídas' },
+      { rotulo: 'Novos hoje', valor: numero(n('hoje')), nota: 'alertas da rotina desta manhã', kpi: 'hoje', ativo: on('hoje'), acao: 'Ver os novos de hoje' },
+      { rotulo: 'Prioridade alta', valor: numero(n('alta')), nota: 'abertos, para agir esta semana', kpi: 'alta', ativo: on('alta'), acao: 'Ver os de prioridade alta' },
+      { rotulo: 'Em andamento', valor: numero(n('andamento')), nota: 'alguém da equipe já está nisso', kpi: 'andamento', ativo: on('andamento'), acao: 'Ver os em andamento' },
+      { rotulo: 'Feitos em 30 dias', valor: numero(n('feitos')), nota: 'ações concluídas', kpi: 'feitos', ativo: on('feitos'), acao: 'Ver os feitos' },
     ]);
-    const L = filtrar(A, F);
-    const base = filtrar(A, { ...F, t: '' }), sit = (a: Alerta) => ({ novo: 'Novo', andamento: 'Em andamento', feito: 'Feito', descartado: 'Descartado' })[a.status || 'novo'];
+    const corte = (l: Alerta[]) => (F.k && RECORTE[F.k] ? l.filter(RECORTE[F.k]) : l);
+    const L = corte(filtrar(A, F.k ? { ...F, s: '' } : F));
+    const base = corte(filtrar(A, { ...F, t: '', s: F.k ? '' : F.s })), sit = (a: Alerta) => ({ novo: 'Novo', andamento: 'Em andamento', feito: 'Feito', descartado: 'Descartado' })[a.status || 'novo'];
     $('#acPn').innerHTML = A.length ? painel([
       barras('Por tipo', contar(base, (a) => a.tipo).map((b) => ({ ...b, rotulo: TIPOS[b.rotulo] || b.rotulo, ativo: b.dado === F.t })), { attr: 't', nota: 'clique para ver só o tipo' }),
       porMes('Alertas por mês', L.map((a) => a.data), 6),
@@ -125,6 +134,7 @@ export function montar(root: HTMLElement): () => void {
 
   root.addEventListener('click', (e) => {
     const el = elDe(e);
+    const kk = el.closest<HTMLElement>('[data-kpi]'); if (kk) { F.k = F.k === kk.dataset.kpi ? '' : kk.dataset.kpi || ''; render(); irPara($('#acO')); return; }
     const q = el.closest<HTMLElement>('.pn [data-q]'); if (q) { F.q = chave(F.q) === chave(q.dataset.q || '') ? '' : q.dataset.q || ''; render(); return; }
     const t = el.closest<HTMLElement>('[data-t]'); if (t) { F.t = t.closest('.pn') && F.t === t.dataset.t ? '' : t.dataset.t || ''; render(); root.querySelector<HTMLElement>(`[data-t="${F.t}"]`)?.focus(); return; }
     const b = el.closest<HTMLButtonElement>('[data-x]'); if (!b) return;
@@ -135,6 +145,12 @@ export function montar(root: HTMLElement): () => void {
   });
   $<HTMLInputElement>('#acQ').oninput = (e) => { F.q = (e.target as HTMLInputElement).value; render(); };
   $<HTMLSelectElement>('#acS').onchange = (e) => { F.s = (e.target as HTMLSelectElement).value; render(); };
+  sugerir('acQ', () => [
+    { nome: 'Tipos', itens: Object.entries(TIPOS).map(([v, t]) => ({ texto: t, valor: v, sub: `${int(A.filter((a) => a.tipo === v).length)} alerta(s)`, peso: A.filter((a) => a.tipo === v).length })) },
+    { nome: 'Anunciantes', itens: itensDe(A, (a) => (a.empresas || []).map(nomeLegivel)) },
+    { nome: 'Agências', itens: itensDe(A, (a) => (a.agencias || []).map(nomeLegivel)) },
+    { nome: 'Pessoas', itens: A.flatMap((a) => (a.pessoas || []).map((x) => ({ texto: x.nome, sub: [x.cargo, x.organizacao].filter(Boolean).join(' · ') }))) },
+  ], { aoEscolher: (it, g, c) => { if (g === 'Tipos') { F.t = it.valor || ''; F.q = ''; c.value = ''; } else { F.q = it.texto; c.value = it.texto; } render(); irPara($('#acO')); } });
   render();
   (async () => {
     const db = await banco();

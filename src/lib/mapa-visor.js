@@ -233,8 +233,26 @@
   /* ── números, ramificações, dossiê e radar ── */
   var portas = NOS.filter(function (n) { return n.nv === 'contrata'; }).length;
   var lembrar = function () { try { localStorage.setItem(LEMBRA, foraOn ? '1' : '0'); } catch (e) { /* sem armazenamento: vale só nesta visita */ } };
-  $('#num').innerHTML = [[D.total, 'pontos no mapa'], [D.alcance, 'alcançados daqui'], [D.fora, 'fora de alcance'], [D.camadas.length - 1, 'ramificações'], [abertos.length, 'abertos na reação'], [portas, 'pessoas que contratam']]
-    .map(function (x) { return '<li><b>' + x[0] + '</b><span>' + x[1] + '</span></li>'; }).join('');
+  // cada número é um botão: mostra no mapa (e no radar) exatamente o que ele conta
+  var destaque = '';
+  function nums() {
+    var esc0 = D.camadas.slice(1).filter(function (c) { return escondidas[c.ger]; }).length, soFora = esc0 === D.camadas.length - 1;
+    var on = { total: modo === 'todos' && foraOn && !destaque && !esc0, alcance: modo === 'todos' && !foraOn && !destaque && !esc0, fora: foraOn && soFora && !destaque, ram: false, abertos: modo === 'abertos' && !foraOn && !destaque, portas: destaque === 'portas' };
+    $('#num').innerHTML = [['total', D.total, 'pontos no mapa', 'Mostrar todos os pontos'], ['alcance', D.alcance, 'alcançados daqui', 'Mostrar só os alcançados a partir de ' + D.sementeNome], ['fora', D.fora, 'fora de alcance', 'Mostrar os pontos sem ligação'], ['ram', D.camadas.length - 1, 'ramificações', 'Ir para as ramificações'], ['abertos', abertos.length, 'abertos na reação', 'Mostrar só a reação aberta'], ['portas', portas, 'pessoas que contratam', 'Acender quem contrata produção']]
+      .filter(function (x) { return x[0] !== 'fora' || x[1]; })
+      .map(function (x) { return '<li><button type="button" data-num="' + x[0] + '" aria-pressed="' + !!on[x[0]] + '" title="' + esc(x[3]) + '"><b>' + x[1] + '</b><span>' + x[2] + '</span></button></li>'; }).join('');
+  }
+  function porNumero(k) {
+    if (k === 'ram') { var v = $('#voltas'); v.scrollIntoView({ behavior: 'smooth', block: 'center' }); v.classList.remove('pisca'); void v.offsetWidth; v.classList.add('pisca'); return; }
+    if (k === 'portas') { destaque = destaque === 'portas' ? '' : 'portas'; if (destaque) { modo = 'todos'; escondidas = {}; } }
+    else {
+      destaque = ''; escondidas = {}; modo = k === 'abertos' ? 'abertos' : 'todos'; foraOn = k === 'total' || k === 'fora'; lembrar();
+      if (k === 'fora') D.camadas.slice(1).forEach(function (c) { escondidas[c.ger] = true; }); // só os sem ligação, em volta do ponto de partida
+    }
+    svg.classList.toggle('destaca', destaque === 'portas'); limite = 20;
+    marcarModo(); voltas(); desenhar(); radar(); V = { x: 0, y: 0, k: 1 }; mover(true);
+    $('#vivo').textContent = { total: D.total + ' pontos no mapa', alcance: D.alcance + ' pontos alcançados', fora: D.fora + ' pontos fora de alcance', abertos: abertos.length + ' pontos abertos na reação', portas: destaque ? portas + ' pessoas que contratam acesas' : 'Destaque desfeito' }[k];
+  }
   var maxN = Math.max.apply(null, D.camadas.slice(1).map(function (c) { return c.n; }).concat([1])); // a escala é a das ramificações; a barra do fora de alcance para no fim
   function voltas() {
     $('#voltas').innerHTML = D.camadas.slice(1).map(function (c) {
@@ -265,9 +283,11 @@
   }
   var limite = 20;
   function radar() {
-    var L = abertos.filter(function (n) { return !n.x; }).sort(function (a, b) { return b.f - a.f || a.n.localeCompare(b.n, 'pt-BR'); });
+    var L = (destaque === 'portas' ? NOS.filter(function (n) { return n.nv === 'contrata'; }) : abertos.filter(function (n) { return !n.x; }))
+      .sort(function (a, b) { return forcaDe(b) - forcaDe(a) || a.n.localeCompare(b.n, 'pt-BR'); });
+    $('#radarT').textContent = destaque === 'portas' ? 'Pessoas que contratam produção · ' + L.length : 'Radar · mais fortes da reação';
     $('#radar').innerHTML = L.slice(0, limite).map(function (n) {
-      return '<li><button type="button" data-ir="' + esc(n.id) + '" aria-pressed="' + (n.id === sel) + '"><b class="n">' + n.f + '</b><span><b>' + esc(n.n) + '</b>' + (n.novo ? '<span class="tag">novo</span>' : '') + ident(n, true) + '<small>' + esc(n.fa[0] || '') + '</small></span></button></li>';
+      return '<li><button type="button" data-ir="' + esc(n.id) + '" aria-pressed="' + (n.id === sel) + '"><b class="n">' + forcaDe(n) + '</b><span><b>' + esc(n.n) + '</b>' + (n.novo ? '<span class="tag">novo</span>' : '') + ident(n, true) + '<small>' + esc(n.fa[0] || '') + '</small></span></button></li>';
     }).join('') + (L.length > limite ? '<li><button type="button" id="rmais"><b class="n">+</b><span>Mostrar mais ' + Math.min(20, L.length - limite) + ' (' + (L.length - limite) + ' restantes)</span></button></li>' : '');
   }
   // na reação aberta, se as ramificações à mostra não têm nenhum ponto aberto (5ª, 6ª, 7ª...), mostra o multiverso inteiro
@@ -285,17 +305,19 @@
       : '<p>Nenhum ponto aberto na reação nas ramificações escolhidas.</p><button type="button" data-modo="todos">Ver o multiverso inteiro</button>';
     el.hidden = false;
   }
-  function marcarModo() { document.querySelectorAll('[data-modo]').forEach(function (b) { b.setAttribute('aria-pressed', String(b.getAttribute('data-modo') === modo)); }); }
+  function marcarModo() { document.querySelectorAll('[data-modo]').forEach(function (b) { b.setAttribute('aria-pressed', String(b.getAttribute('data-modo') === modo)); }); nums(); }
 
   /* ── cliques e teclado ── */
   document.addEventListener('click', function (e) {
     var t = e.target.closest ? e.target : e.target.parentElement;
-    var ir = t.closest('[data-ir]'); if (ir) { escolher(ir.getAttribute('data-ir'), false); return; }
+    var ir = t.closest('[data-ir]'); if (ir) { $('#sug').innerHTML = ''; escolher(ir.getAttribute('data-ir'), false); return; }
+    var nb = t.closest('[data-num]'); if (nb) { porNumero(nb.getAttribute('data-num')); return; }
+    var sm = t.closest('[data-sugmais]'); if (sm) { var gg = sm.getAttribute('data-sugmais'); sugMais[gg] = !sugMais[gg]; sugerir(); $('#q').focus(); return; }
     if (t.closest('#rmais')) { limite += 20; radar(); return; }
-    if (t.closest('#fora')) { foraOn = !foraOn; lembrar(); voltas(); if (sel && por[sel].g < 0 && !foraOn) sel = ''; desenhar(); dossie(); $('#vivo').textContent = foraOn ? D.fora + ' pontos fora de alcance no mapa' : 'Fora de alcance escondidos'; return; }
+    if (t.closest('#fora')) { destaque = ''; svg.classList.remove('destaca'); foraOn = !foraOn; lembrar(); voltas(); if (sel && por[sel].g < 0 && !foraOn) sel = ''; desenhar(); dossie(); $('#vivo').textContent = foraOn ? D.fora + ' pontos fora de alcance no mapa' : 'Fora de alcance escondidos'; return; }
     var g = t.closest('[data-g]'); if (g) { var k = g.getAttribute('data-g'); escondidas[k] = !escondidas[k]; semAbertos(); voltas(); desenhar(); return; }
     if (t.closest('#vertodas')) { escondidas = {}; voltas(); desenhar(); return; }
-    var m = t.closest('[data-modo]'); if (m) { modo = m.getAttribute('data-modo'); marcarModo(); desenhar(); return; }
+    var m = t.closest('[data-modo]'); if (m) { destaque = ''; svg.classList.remove('destaca'); modo = m.getAttribute('data-modo'); marcarModo(); desenhar(); return; }
     if (t.closest('#todas')) { var on = svg.classList.toggle('todas'); t.closest('#todas').setAttribute('aria-pressed', String(on)); return; }
     if (t.closest('#tema')) { var cl = document.documentElement.getAttribute('data-tema') === 'claro'; document.documentElement.setAttribute('data-tema', cl ? 'escuro' : 'claro'); $('#tema').textContent = cl ? 'Tema claro' : 'Tema escuro'; return; }
     var no = t.closest('#tela .no'); if (no) { if (!moveu) escolher(no.getAttribute('data-id'), true); return; }
@@ -305,11 +327,25 @@
     if (e.key === 'Escape' && sel) { escolher(sel, true); return; }
     if ((e.key === 'Enter' || e.key === ' ') && e.target.classList && e.target.classList.contains('no')) { e.preventDefault(); escolher(e.target.getAttribute('data-id'), true); }
   });
-  $('#q').addEventListener('input', function (e) {
-    var q = norm(e.target.value).trim();
-    $('#sug').innerHTML = q.length < 2 ? '' : NOS.filter(function (n) { return norm(n.n).indexOf(q) >= 0; }).sort(function (a, b) { return (norm(a.n).indexOf(q) === 0 ? 0 : 1) - (norm(b.n).indexOf(q) === 0 ? 0 : 1) || b.nota - a.nota; }).slice(0, 8)
-      .map(function (n) { return '<button type="button" data-ir="' + esc(n.id) + '"><b>' + esc(n.n) + '</b>' + ident(n, true) + '</button>'; }).join('');
-  });
+  // a busca abre com o mapa inteiro, por categoria (agências, anunciantes, pessoas); ao digitar, os achados de cada uma
+  var sugMais = {};
+  function sugerir() {
+    var q = norm($('#q').value).trim(), grupos = [['agencia', 'Agências'], ['empresa', 'Anunciantes'], ['pessoa', 'Pessoas']];
+    var h = grupos.map(function (g) {
+      var todos = NOS.filter(function (n) { return n.t === g[0]; }), L = q ? todos.filter(function (n) { return norm(n.n + ' ' + (n.s || '') + ' ' + (n.o || '')).indexOf(q) >= 0; }) : todos;
+      if (!L.length) return '';
+      L = L.slice().sort(function (a, b) { return (q ? (norm(a.n).indexOf(q) === 0 ? 0 : 1) - (norm(b.n).indexOf(q) === 0 ? 0 : 1) : 0) || forcaDe(b) - forcaDe(a); });
+      var n = sugMais[g[0]] ? L.length : q ? 6 : 10, vis = L.slice(0, n);
+      return '<section class="sg-g"><h4>' + g[1] + ' <span>' + (q ? L.length + ' de ' + todos.length : todos.length) + '</span></h4>' + (q
+        ? vis.map(function (x) { return '<button type="button" class="sg-l" data-ir="' + esc(x.id) + '"><b>' + esc(x.n) + '</b>' + ident(x, true) + '</button>'; }).join('')
+        : '<div class="sg-cs">' + vis.map(function (x) { return '<button type="button" class="sg-chip" data-ir="' + esc(x.id) + '" title="' + esc(x.s || x.n) + '">' + esc(curto(x.n, 34)) + '</button>'; }).join('') + '</div>')
+        + (L.length > vis.length || sugMais[g[0]] ? '<button type="button" class="sg-mais" data-sugmais="' + g[0] + '">' + (sugMais[g[0]] ? 'Ver menos' : 'Ver todos os ' + L.length) + '</button>' : '') + '</section>';
+    }).join('');
+    $('#sug').innerHTML = '<p class="sg-t">' + (q ? 'Achados para “' + esc($('#q').value.trim()) + '”' : 'O mapa inteiro · escolha um ponto ou digite') + '</p>' + (h || '<p class="sg-t">Nada com esse nome.</p>');
+  }
+  $('#q').addEventListener('input', function () { sugMais = {}; sugerir(); });
+  $('#q').addEventListener('focus', sugerir);
+  $('#q').addEventListener('keydown', function (e) { if (e.key === 'Escape') { $('#sug').innerHTML = ''; } });
   document.addEventListener('click', function (e) { if (!e.target.closest || !e.target.closest('.busca')) $('#sug').innerHTML = ''; });
   $('#rodape').textContent = 'Gerado pelo PRODUCERia Studio em ' + dt(D.geradoEm) + '. Pontos e ligações do Big Data do mercado (notícias, Cenp, LinkedIn e as fontes de cada ponto). Cada ponto aparece na primeira ramificação em que é alcançado; a força soma quem contrata produção, conta nova ou mudança recente, encaixe do craft e ponte com a PRODUCERIA.';
 

@@ -164,3 +164,9 @@ O HTML baixado pelo botão "Baixar o mapa interativo" passa a usar o mesmo desen
 ### 18/11/2026 · Ramificações sem abertos e identidade em destaque
 - Arquivo do mapa: na vista "Só a reação aberta", da 4ª ramificação em diante não há pontos abertos. Se as ramificações deixadas à mostra não têm nenhum aberto, o mapa passa sozinho para "Multiverso inteiro" e avisa; com tudo escondido, o mapa diz isso e oferece "Mostrar todas".
 - Arquivo e Studio: radar, dossiê, busca, atalhos e leads mostram o tipo como etiqueta (Agência cheia, Anunciante com contorno, Pessoa tracejada), o cargo em negrito e a organização em destaque.
+
+## Números clicáveis e buscas que sugerem (nov/2026)
+- Todo indicador (`kpi()`) com `kpi`/`href` vira botão: filtra a lista da própria tela, troca de aba ou leva à tela certa. O ativo fica marcado ("Mostrando na lista abaixo").
+- `sugerir()` em todos os campos de busca: ao clicar, antes de digitar, mostra os dados divididos por categoria (com contagem e atalhos); ao digitar, filtra por grupo. Teclado: ↑ ↓ Enter Esc.
+- Ctrl K abre com amostras de dados (alvos, licitações, frentes) antes das telas.
+- Arquivo do multiverso: os 6 números do topo agem no mapa (alcance, fora de alcance, ramificações, abertos, pessoas que contratam) e a busca sugere Agências / Anunciantes / Pessoas.

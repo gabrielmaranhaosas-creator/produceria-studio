@@ -6,7 +6,7 @@ import { banco, lerBase, type Colecao } from '../lib/db';
 import { montarGrafo, nivelDe, notaEncaixe, NIVEIS, CRITERIOS, TIPOS_PILULA, type TipoPilula, type Pilula, type Cenario, type Nivel, type Grafo, type NoEmpresa, type NoAgencia, type PessoaMapa, type EmpresaMapa, type AgenciaMapa, type MercadoBase, type MovimentoBase } from '../lib/grafo';
 import type { Alvo } from '../lib/tipos';
 import { seletor, elDe, mensagem, comId, type Dialogo } from './dom';
-import { kpis, numero, vazio, barras, contar, painel, type Barra } from '../componentes';
+import { kpis, numero, vazio, barras, contar, painel, sugerir, irPara, type Barra } from '../componentes';
 
 type Visao = 'empresas' | 'radar' | 'agencias' | 'pessoas';
 const VISOES: [Visao, string][] = [['empresas', 'Anunciantes'], ['radar', 'Fora do radar'], ['agencias', 'Agências'], ['pessoas', 'Pessoas']];
@@ -126,10 +126,10 @@ export function montar(root: HTMLElement): () => void {
     $<HTMLSelectElement>('#bdO').value = F.o;
     const comFonte = G.ligacoes.filter((l) => l.fonte).length;
     $('#bdK').innerHTML = kpis([
-      { rotulo: 'Anunciantes', valor: numero(int(G.empresas.length)), nota: `${int(G.empresas.filter((e) => e.ranking).length)} entre os maiores investidores em mídia` },
-      { rotulo: 'Agências', valor: numero(int(G.agencias.length)), nota: `${int(G.agencias.filter((a) => a.perfil === 'rede').length)} de redes globais` },
-      { rotulo: 'Pessoas', valor: numero(int(G.pessoas.length)), nota: `${int(portas(G.pessoas))} contratam produção · ${int(G.pessoas.filter((p) => nivelDe(p) === 'aprova').length)} aprovam` },
-      { rotulo: 'Ligações', valor: numero(int(G.ligacoes.length)), nota: `${int(comFonte)} com link da fonte` },
+      { rotulo: 'Anunciantes', valor: numero(int(G.empresas.length)), nota: `${int(G.empresas.filter((e) => e.ranking).length)} entre os maiores investidores em mídia`, kpi: 'empresas', ativo: F.v === 'empresas' && !F.q, acao: 'Ver os anunciantes' },
+      { rotulo: 'Agências', valor: numero(int(G.agencias.length)), nota: `${int(G.agencias.filter((a) => a.perfil === 'rede').length)} de redes globais`, kpi: 'agencias', ativo: F.v === 'agencias' && !F.q, acao: 'Ver as agências' },
+      { rotulo: 'Pessoas', valor: numero(int(G.pessoas.length)), nota: `${int(portas(G.pessoas))} contratam produção · ${int(G.pessoas.filter((p) => nivelDe(p) === 'aprova').length)} aprovam`, kpi: 'pessoas', ativo: F.v === 'pessoas' && !F.q && !F.n, acao: 'Ver as pessoas' },
+      { rotulo: 'Ligações', valor: numero(int(G.ligacoes.length)), nota: `${int(comFonte)} com link da fonte`, href: '#investigacao', acao: 'Ver as ligações no mapa' },
     ]);
     const q = chave(F.q);
     const porNome = (x: { nome: string }, y: { nome: string }) => chave(x.nome).localeCompare(chave(y.nome));
@@ -234,6 +234,7 @@ export function montar(root: HTMLElement): () => void {
   $('#bdD').addEventListener('close', () => { const d = $<Dialogo>('#bdD'); if (d._ret && d._ret.isConnected) d._ret.focus(); });
   root.addEventListener('click', (ev) => {
     const el = elDe(ev);
+    const kk = el.closest<HTMLElement>('[data-kpi]'); if (kk) { F.v = kk.dataset.kpi as Visao; F.q = ''; F.n = ''; lim = 60; render(); irPara($('#bdPn').firstElementChild ? $('#bdPn') : $('#bdL')); return; }
     const rr = el.closest<HTMLElement>('[data-r]'); if (rr) { F.r = rr.dataset.r === 'pilulas' ? 'pilulas' : 'lista'; lim = 60; render(); root.querySelector<HTMLElement>(`[data-r="${F.r}"]`)?.focus(); return; }
     const pp = el.closest<HTMLElement>('[data-p]'); if (pp) { F.p = (pp.dataset.p || '') as TipoPilula | ''; lim = 60; render(); root.querySelector<HTMLElement>(`[data-p="${F.p}"]`)?.focus(); return; }
     const bq = el.closest<HTMLElement>('.pn [data-q]'); if (bq) { F.q = chave(F.q) === chave(bq.dataset.q || '') ? '' : bq.dataset.q || ''; lim = 60; render(); return; }
@@ -247,6 +248,17 @@ export function montar(root: HTMLElement): () => void {
   root.addEventListener('keydown', (ev) => { const g = (ev.target as Element).closest?.('svg [data-org]'); if (g && (ev.key === 'Enter' || ev.key === ' ')) { ev.preventDefault(); (g as SVGGElement).dispatchEvent(new MouseEvent('click', { bubbles: true })); } });
   $<HTMLInputElement>('#bdQ').oninput = (e) => { F.q = (e.target as HTMLInputElement).value; lim = 60; render(); };
   $<HTMLSelectElement>('#bdO').onchange = (e) => { F.o = (e.target as HTMLSelectElement).value; render(); };
+  // a busca abre com tudo o que existe, por categoria; escolher leva à visão daquela categoria
+  sugerir('bdQ', () => [
+    { nome: 'Anunciantes', itens: G.empresas.map((e) => ({ texto: nomeLegivel(e.nome), sub: [e.setor, e.grupo].filter(Boolean).join(' · ') || undefined, peso: e.pessoas.length + e.ligacoes.length + (e.ranking ? 20 : 0) })) },
+    { nome: 'Agências', itens: G.agencias.map((a) => ({ texto: nomeLegivel(a.nome), sub: [a.grupo, a.perfil, a.uf].filter(Boolean).join(' · ') || undefined, peso: a.pessoas.length + a.ligacoes.length + (a.cenp ? 20 : 0) })) },
+    { nome: 'Pessoas', itens: G.pessoas.map((x) => ({ texto: x.nome, sub: [x.cargo, nomeLegivel(x.organizacao)].filter(Boolean).join(' · '), peso: 3 - ORDEM[nivelDe(x)] })) },
+    { nome: 'Setores', itens: contar(G.empresas, (e) => e.setor).map((b) => ({ texto: b.rotulo, sub: `${int(b.valor)} anunciante(s)`, peso: b.valor })) },
+    { nome: 'Grupos de agências', itens: contar(G.agencias, (a) => a.grupo).map((b) => ({ texto: b.rotulo, sub: `${int(b.valor)} agência(s)`, peso: b.valor })) },
+  ], { aoEscolher: (it, g, campo) => {
+    F.v = g === 'Agências' || g === 'Grupos de agências' ? 'agencias' : g === 'Pessoas' ? 'pessoas' : 'empresas'; F.n = '';
+    F.q = it.texto; campo.value = it.texto; lim = 60; render(); irPara($('#bdL'));
+  } });
   render();
   lerBase<MercadoBase>('mercado').then((m) => { mercado = m; recalcular(); }).catch(() => {});
   (async () => {

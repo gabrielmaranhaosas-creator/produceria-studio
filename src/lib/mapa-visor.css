@@ -16,7 +16,10 @@ a{color:inherit}
 .eyebrow i{width:6px;height:6px;border-radius:50%;background:var(--ink);display:inline-block}
 h1{margin:0;font:400 clamp(30px,4.2vw,58px)/.95 var(--fd);letter-spacing:.01em;text-transform:uppercase;overflow-wrap:anywhere}
 .numeros{display:flex;flex-wrap:wrap;gap:8px 28px;margin:0;padding:0;list-style:none}
-.numeros li{display:flex;flex-direction:column;min-width:84px}
+.numeros li{display:flex;min-width:84px}
+.numeros button{display:flex;flex-direction:column;align-items:flex-start;gap:2px;padding:4px 0 6px;border:0;border-bottom:2px solid transparent;background:none;text-align:left;cursor:pointer;color:inherit}
+.numeros button:hover b,.numeros button:focus-visible b{text-decoration:underline;text-decoration-thickness:2px;text-underline-offset:5px}
+.numeros button[aria-pressed="true"]{border-bottom-color:var(--ink)}
 .numeros b{font:400 34px/1 var(--fd);font-variant-numeric:tabular-nums}
 .numeros span{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--mut)}
 .palco{position:relative;min-width:0;min-height:0;overflow:hidden;background:radial-gradient(circle at 50% 50%,var(--bg2),var(--bg) 70%)}
@@ -151,3 +154,18 @@ svg.entra .fio{stroke-dasharray:1200;stroke-dashoffset:1200;animation:fio .7s ea
 .dossie .sub .ident{font-size:14px}
 .dossie .sub .nv{color:var(--mut)}
 .sug .ident{margin:2px 0 0}
+
+/* número que acende: só quem ele conta fica forte */
+svg.destaca .no:not(.ct):not(.zero){opacity:.12}
+svg.destaca .fio{opacity:.12}
+.pisca{animation:pisca 1.4s ease-out}
+@keyframes pisca{0%{box-shadow:0 0 0 3px var(--ink)}100%{box-shadow:0 0 0 3px transparent}}
+/* busca por categoria */
+.sug{max-height:min(60vh,460px);padding:6px 10px 10px;z-index:5}
+.sug .sg-t{margin:4px 2px 6px;font-size:12px;color:var(--mut)}
+.sug .sg-g{padding:6px 0;border-top:1px solid var(--lin)}
+.sug .sg-g h4{margin:0 0 6px;font:400 11px/1.3 var(--ft);letter-spacing:.12em;text-transform:uppercase}
+.sug .sg-g h4 span{color:var(--mut);letter-spacing:0;margin-left:4px}
+.sug .sg-cs{display:flex;flex-wrap:wrap;gap:6px}
+.sug button.sg-chip{display:inline-block;width:auto;padding:4px 10px;border:1px solid var(--lin2);border-radius:20px;font-size:12px}
+.sug button.sg-mais{width:auto;padding:4px 2px;border:0;font-size:12px;text-decoration:underline;color:var(--mut)}

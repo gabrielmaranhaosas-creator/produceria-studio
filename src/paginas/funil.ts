@@ -4,7 +4,7 @@ import { banco, type Banco } from '../lib/db';
 import { perguntar, ErroIA, CONTEXTO } from '../lib/ia';
 import { totalOrcamento, orcamentoVigente, type Orcamento } from '../lib/servicos';
 import { seletor, comId } from './dom';
-import { kpis, vazio, confirmarNoBotao } from '../componentes';
+import { kpis, vazio, confirmarNoBotao, irPara } from '../componentes';
 
 export const EIXOS = ['Privado', 'Público', 'Internacional'] as const;
 export const ESTAGIOS = ['Identificada', 'Contato', 'Proposta', 'Negociação', 'Ganha', 'Perdida'] as const;
@@ -97,9 +97,9 @@ export function montar(root: HTMLElement): () => void {
   function topo() {
     const r = receitaOrcada(projetos), aberto = P.filter((o) => o.estagio !== 'Ganha' && o.estagio !== 'Perdida');
     $('#fnK').innerHTML = `<div class="kpis">${kpis([
-      ...EIXOS.map((e) => ({ rotulo: `Receita orçada · ${e}`, valor: `<b>${r.total ? Math.round((r.porCanal[e] / r.total) * 100) + '%' : '—'}</b>`, nota: brl(r.porCanal[e]) || 'R$ 0' })),
+      ...EIXOS.map((e) => ({ rotulo: `Receita orçada · ${e}`, kpi: 'eixo:' + e, ativo: eixo === e, acao: `Ver o funil ${e.toLowerCase()}`, valor: `<b>${r.total ? Math.round((r.porCanal[e] / r.total) * 100) + '%' : '—'}</b>`, nota: brl(r.porCanal[e]) || 'R$ 0' })),
       { rotulo: 'Maior cliente', valor: `<b${r.conc > 0.3 ? ' class="quente"' : ''}>${r.top ? Math.round(100 * r.conc) + '%' : '—'}</b>`, nota: r.top ? esc(r.top[0]) + (r.conc > 0.3 ? ' · acima de 30%: risco de dependência' : '') : 'sem orçamentos salvos' },
-      { rotulo: 'Funil aberto', valor: `<b>${int(aberto.length)}</b>`, nota: `${brl(aberto.reduce((s, o) => s + (o.valor || 0), 0)) || 'R$ 0'} estimados` },
+      { rotulo: 'Funil aberto', kpi: 'eixo:', ativo: !eixo, acao: 'Ver o funil inteiro', valor: `<b>${int(aberto.length)}</b>`, nota: `${brl(aberto.reduce((s, o) => s + (o.valor || 0), 0)) || 'R$ 0'} estimados` },
     ])}</div>`;
   }
 
@@ -136,11 +136,11 @@ export function montar(root: HTMLElement): () => void {
     const f = atual.reduce((s, v) => s + v, 0), h = meta.reduce((s, v) => s + v, 0), hA = hhi(atual), hM = hhi(meta);
     const nova = S.filter((l) => l.grupo === 'Nova').reduce((s, l) => s + (l.meta12m || 0), 0), N = Math.max(1, ...atual, ...meta);
     $('#fnMK').innerHTML = `<div class="kpis">${kpis([
-      { rotulo: 'Receita dos últimos 12 meses', valor: `<b>${f ? brl(f) : '—'}</b>`, nota: 'soma das linhas informadas' },
-      { rotulo: 'Meta para os próximos 12 meses', valor: `<b>${h ? brl(h) : '—'}</b>`, nota: f && h ? `${h >= f ? '+' : ''}${Math.round(((h - f) / f) * 100)}% sobre o atual` : '' },
-      { rotulo: 'Concentração hoje (HHI)', valor: `<b${(hA ?? 0) >= 2500 ? ' class="quente"' : ''}>${hA == null ? '—' : int(hA)}</b>`, nota: leituraHHI(hA) },
-      { rotulo: 'Concentração na meta (HHI)', valor: `<b>${hM == null ? '—' : int(hM)}</b>`, nota: leituraHHI(hM) },
-      { rotulo: 'Meta vinda de linhas novas', valor: `<b>${h ? Math.round((nova / h) * 100) + '%' : '—'}</b>`, nota: nova ? brl(nova) : '' },
+      { rotulo: 'Receita dos últimos 12 meses', kpi: 'mr', acao: 'Ver as linhas', valor: `<b>${f ? brl(f) : '—'}</b>`, nota: 'soma das linhas informadas' },
+      { rotulo: 'Meta para os próximos 12 meses', kpi: 'mr', acao: 'Ver as linhas', valor: `<b>${h ? brl(h) : '—'}</b>`, nota: f && h ? `${h >= f ? '+' : ''}${Math.round(((h - f) / f) * 100)}% sobre o atual` : '' },
+      { rotulo: 'Concentração hoje (HHI)', kpi: 'mr', acao: 'Ver as linhas', valor: `<b${(hA ?? 0) >= 2500 ? ' class="quente"' : ''}>${hA == null ? '—' : int(hA)}</b>`, nota: leituraHHI(hA) },
+      { rotulo: 'Concentração na meta (HHI)', kpi: 'mr', acao: 'Ver as linhas', valor: `<b>${hM == null ? '—' : int(hM)}</b>`, nota: leituraHHI(hM) },
+      { rotulo: 'Meta vinda de linhas novas', kpi: 'mr', acao: 'Ver as linhas', valor: `<b>${h ? Math.round((nova / h) * 100) + '%' : '—'}</b>`, nota: nova ? brl(nova) : '' },
     ])}</div>`;
     const foco = document.activeElement as HTMLElement | null, focoId = foco && $('#fnL').contains(foco) ? foco.id : '';
     $('#fnL').innerHTML = !carregado ? '<p class="note">Carregando…</p>' : S.length ? `<ul class="vc-l fn-linhas">${S.map((l) => `<li class="fn-ln"><span class="vc-c"><b>${esc(l.nome)}</b><span class="tag${l.grupo === 'Nova' ? ' w' : ''}">${esc(l.grupo)}</span></span>
@@ -157,6 +157,7 @@ export function montar(root: HTMLElement): () => void {
     const b = (ev.target as HTMLElement).closest<HTMLElement>('button');
     if (!b || !root.contains(b)) return;
     const d = b.dataset;
+    if (d.kpi) { if (d.kpi === 'mr') { irPara($('#fnL')); return; } const e = d.kpi.slice(5); eixo = eixo === e && e ? '' : e; topo(); funil(); irPara($('#fn-h').closest('section')); return; }
     if (d.eixo !== undefined) { eixo = d.eixo; funil(); return; }
     if (b.id === 'fnNova') { nova = !nova; funil(); if (nova) $<HTMLInputElement>('#fo_tit').focus(); return; }
     if (b.id === 'fnNovaX') { nova = false; funil(); $<HTMLElement>('#fnNova').focus(); return; }

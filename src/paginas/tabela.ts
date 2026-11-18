@@ -4,7 +4,7 @@ import { esc, int, brl } from '../lib/formato';
 import { banco, type Banco } from '../lib/db';
 import { SERVICOS, type Servico } from '../lib/servicos';
 import { seletor } from './dom';
-import { kpis, vazio, confirmarNoBotao } from '../componentes';
+import { kpis, vazio, confirmarNoBotao, sugerir, irPara, itensDe } from '../componentes';
 
 export const CATEGORIAS = [...new Set(SERVICOS.map((s) => s.cat))].sort((a, b) => a.localeCompare(b, 'pt-BR'));
 export const ETAPAS = ['CRIAÇÃO', 'FINALIZAÇÃO', 'ADAPTAÇÃO'];
@@ -88,10 +88,10 @@ export function montar(root: HTMLElement): () => void {
     const com = SERVICOS.filter((s) => descontos[String(s.id)]), media = com.length ? com.reduce((s, x) => s + descontos[String(x.id)], 0) / com.length : 0;
     const n = (r: string) => SERVICOS.filter((s) => situacao(s).rotulo === r).length;
     $('#tbK').innerHTML = `<div class="kpis">${kpis([
-      { rotulo: 'Serviços', valor: `<b>${int(SERVICOS.length)}</b>`, nota: `${CATEGORIAS.length} categorias` },
-      { rotulo: 'Com desconto preenchido', valor: `<b>${int(com.length)}</b>`, nota: com.length ? `média ${pctTexto(media)}%` : 'nenhum ainda' },
-      { rotulo: 'Iguais ao SINAPRO', valor: `<b>${int(n('Igual ao SINAPRO'))}</b>`, nota: `${n('Fora do SINAPRO')} fora do SINAPRO` },
-      { rotulo: 'Divergentes', valor: `<b class="quente">${int(n('Divergente · atualizar'))}</b>`, nota: 'marcados para atualizar' },
+      { rotulo: 'Serviços', kpi: 'todos', ativo: !filtrado(), acao: 'Ver todos, sem filtros', valor: `<b>${int(SERVICOS.length)}</b>`, nota: `${CATEGORIAS.length} categorias` },
+      { rotulo: 'Com desconto preenchido', kpi: 'desc', ativo: f.soComDesconto, acao: 'Ver só os com desconto', valor: `<b>${int(com.length)}</b>`, nota: com.length ? `média ${pctTexto(media)}%` : 'nenhum ainda' },
+      { rotulo: 'Iguais ao SINAPRO', kpi: 'sit:Igual ao SINAPRO', ativo: f.situacao === 'Igual ao SINAPRO', acao: 'Ver só estes', valor: `<b>${int(n('Igual ao SINAPRO'))}</b>`, nota: `${n('Fora do SINAPRO')} fora do SINAPRO` },
+      { rotulo: 'Divergentes', kpi: 'sit:Divergente · atualizar', ativo: f.situacao === 'Divergente · atualizar', acao: 'Ver só os divergentes', valor: `<b class="quente">${int(n('Divergente · atualizar'))}</b>`, nota: 'marcados para atualizar' },
     ])}</div>`;
     $('#tbVazio').innerHTML = com.length ? '' : `<div class="lc-box"><p><b>Nenhum desconto definido ainda</b></p><p class="note">Até alguém preencher, as propostas saem com o valor cheio da tabela. O jeito mais rápido: filtre uma categoria (ex.: Arte-final), digite o % em “Desconto em lote” e aplique. Depois ajuste linha a linha o que for diferente.</p></div>`;
   }
@@ -142,6 +142,16 @@ export function montar(root: HTMLElement): () => void {
   }
 
   // ---------------------------------------------------------------- eventos
+  // a busca abre com as categorias, subcategorias e serviços da tabela
+  sugerir('tbQ', () => [
+    { nome: 'Categorias', itens: itensDe(SERVICOS, (x) => x.cat).map((x) => ({ ...x, sub: `${x.peso} serviço(s)` })) },
+    { nome: 'Subcategorias', itens: itensDe(SERVICOS, (x) => x.sub, (x) => x.cat) },
+    { nome: 'Serviços', itens: SERVICOS.map((x) => ({ texto: x.esp || x.sub, valor: String(x.id), sub: `ID ${x.id} · ${x.cat} · ${x.sub}` })) },
+  ], { aoEscolher: (it, g, c) => {
+    if (g === 'Categorias') { f.cat = it.texto; f.busca = ''; c.value = ''; $<HTMLSelectElement>('#tbC').value = it.texto; }
+    else { f.busca = g === 'Serviços' ? it.valor || it.texto : it.texto; c.value = f.busca; }
+    pagina = 0; topo(); lista();
+  } });
   root.addEventListener('input', (ev) => {
     const t = ev.target as HTMLInputElement;
     if (t.id === 'tbQ') { f.busca = t.value; pagina = 0; lista(); }
@@ -165,6 +175,14 @@ export function montar(root: HTMLElement): () => void {
     if (!b || !root.contains(b)) return;
     if (b.dataset.pag !== undefined) { pagina = Number(b.dataset.pag); lista(); root.querySelector<HTMLElement>(`#tbP1 [data-pag="${pagina}"][aria-pressed]`)?.focus(); return; }
     if (b.id === 'tbAplicar') { lote(pctDe($<HTMLInputElement>('#tbL').value)); return; }
+    if (b.dataset.kpi) {
+      const k = b.dataset.kpi;
+      if (k === 'todos') Object.assign(f, { busca: '', cat: '', etapa: '', situacao: '', soComDesconto: false });
+      else if (k === 'desc') f.soComDesconto = !f.soComDesconto;
+      else { const v = k.slice(4); f.situacao = f.situacao === v ? '' : v; }
+      $<HTMLInputElement>('#tbQ').value = f.busca; $<HTMLSelectElement>('#tbC').value = f.cat; $<HTMLSelectElement>('#tbE').value = f.etapa; $<HTMLSelectElement>('#tbS').value = f.situacao;
+      $('#tbSo').setAttribute('aria-pressed', String(f.soComDesconto)); pagina = 0; topo(); lista(); irPara($('#tbN').parentElement); return;
+    }
     if (b.id === 'tbSo') { f.soComDesconto = !f.soComDesconto; b.setAttribute('aria-pressed', String(f.soComDesconto)); pagina = 0; lista(); return; }
     if (b.id === 'tbCSV') baixar();
   });

@@ -11,7 +11,7 @@ import { htmlDoMapa, fontesDaPagina } from '../lib/mapa-arquivo';
 import { baixarArquivo } from './oficina';
 import type { Alvo } from '../lib/tipos';
 import { seletor, elDe, comId, mensagem } from './dom';
-import { kpis, numero, vazio, barras, contar, painel } from '../componentes';
+import { kpis, numero, vazio, barras, contar, painel, sugerir, irPara } from '../componentes';
 
 const host = (u: string) => { try { return new URL(u).hostname.replace(/^www\./, ''); } catch { return 'fonte'; } };
 const link = (u: string | undefined, t: string) => (u && /^https?:/.test(u) ? `<a href="${esc(u)}" target="_blank" rel="noopener">${esc(t)} ↗<span class="sr"> (abre em nova aba)</span></a>` : '');
@@ -104,10 +104,10 @@ export function montar(root: HTMLElement): () => void {
     const portas = L.filter((x) => x.no.nivel === 'contrata').length, gat = L.filter((x) => x.no.recente).length;
     const orgsU = [...U.nos.values()].filter((n) => n.tipo !== 'pessoa' && n.tipo !== 'origem').length, pesU = [...U.nos.values()].filter((n) => n.tipo === 'pessoa').length;
     $('#ivK').innerHTML = kpis([
-      { rotulo: 'Pontos no mapa', valor: numero(String(U.nos.size - 1)), nota: `${orgsU} organizações e ${pesU} pessoas, de todas as fontes` },
-      { rotulo: 'Possibilidades na reação', valor: numero(String(L.length)), nota: `em ${R.geracoes.length - 1} ${pl(R.geracoes.length - 1, 'ramificação', 'ramificações')} · ${M.fora} fora de alcance` },
-      { rotulo: 'Portas que contratam', valor: numero(String(portas)), nota: `${pl(portas, 'pessoa que pede', 'pessoas que pedem')} orçamento de produção` },
-      { rotulo: 'Gatilhos recentes', valor: numero(String(gat)), nota: `${pl(gat, 'conta nova ou mudança', 'contas novas ou mudanças')} nos últimos 120 dias` },
+      { rotulo: 'Pontos no mapa', valor: numero(String(U.nos.size - 1)), nota: `${orgsU} organizações e ${pesU} pessoas, de todas as fontes`, kpi: 'mv', acao: 'Ver o tamanho do multiverso' },
+      { rotulo: 'Possibilidades na reação', kpi: 'radar', acao: 'Ver no radar', valor: numero(String(L.length)), nota: `em ${R.geracoes.length - 1} ${pl(R.geracoes.length - 1, 'ramificação', 'ramificações')} · ${M.fora} fora de alcance` },
+      { rotulo: 'Portas que contratam', kpi: 'pessoa', ativo: lf === 'pessoa', acao: 'Ver as pessoas no radar', valor: numero(String(portas)), nota: `${pl(portas, 'pessoa que pede', 'pessoas que pedem')} orçamento de produção` },
+      { rotulo: 'Gatilhos recentes', kpi: 'hoje', acao: 'Ver o que chegou', valor: numero(String(gat)), nota: `${pl(gat, 'conta nova ou mudança', 'contas novas ou mudanças')} nos últimos 120 dias` },
     ]);
     $('#ivR').innerHTML = rastroIds.map((id, i) => { const n = no(id); return n ? `${i ? '<span class="iv-seta" aria-hidden="true">→</span>' : ''}<button type="button" class="chip sm" data-s="${esc(id)}" aria-current="${id === R.semente}">${esc(curto(n.nome, 28))}</button>` : ''; }).join('');
     if (U.nos.size <= 1) {
@@ -517,6 +517,12 @@ export function montar(root: HTMLElement): () => void {
     const s = el.closest<HTMLElement>('[data-s]'); if (s) { ev.preventDefault(); $<HTMLInputElement>('#ivQ').value = ''; $('#ivS').innerHTML = ''; partir(s.dataset.s || ''); return; }
     if (el.closest('[data-fechar]')) { const v = sel; escolher(sel); root.querySelector<HTMLElement>(`.iv-quadro [data-n="${CSS.escape(v)}"]`)?.focus(); return; }
     if (el.closest('[data-rmais]')) { lim += 10; radar(leads(U, R)); return; }
+    const kk = el.closest<HTMLElement>('[data-kpi]'); if (kk) {
+      const k = kk.dataset.kpi;
+      if (k === 'mv') { irPara($('#ivMv')); return; }
+      if (k === 'hoje') { const h = $('#ivH'); irPara(h.hidden ? $('#ivMv') : h); return; }
+      lf = k === 'pessoa' && lf !== 'pessoa' ? 'pessoa' : ''; lim = 10; $('#ivLF').querySelectorAll<HTMLElement>('[data-lf]').forEach((b) => b.setAttribute('aria-pressed', String((b.dataset.lf || '') === lf))); radar(leads(U, R)); render(); irPara($('#ivLT').parentElement); return;
+    }
     const f = el.closest<HTMLElement>('[data-lf]'); if (f) { lf = f.dataset.lf || ''; lim = 10; $('#ivLF').querySelectorAll<HTMLElement>('[data-lf]').forEach((b) => b.setAttribute('aria-pressed', String(b === f))); radar(leads(U, R)); return; }
     const k = el.closest<HTMLElement>('[data-ab]'); if (k) { ab = Number(k.dataset.ab) || 1; $('#ivA').querySelectorAll<HTMLElement>('[data-ab]').forEach((b) => b.setAttribute('aria-pressed', String(b === k))); reabrir(); return; }
     const b = el.closest<HTMLElement>('[data-n]'); if (!b || !root.contains(b)) return;
@@ -527,10 +533,11 @@ export function montar(root: HTMLElement): () => void {
   });
   const tecla = (ev: KeyboardEvent) => { if (ev.key === 'Escape' && sel && !(ev.target as HTMLElement).closest?.('#ivQ')) { const v = sel; escolher(sel); root.querySelector<HTMLElement>(`.iv-quadro [data-n="${CSS.escape(v)}"]`)?.focus(); } };
   document.addEventListener('keydown', tecla);
-  $<HTMLInputElement>('#ivQ').oninput = (e) => {
-    const l = buscarNo(U, (e.target as HTMLInputElement).value);
-    $('#ivS').innerHTML = l.map((n) => `<button type="button" role="listitem" data-s="${esc(n.id)}"><b>${esc(n.nome)}</b>${ident(n)}</button>`).join('');
-  };
+  // a busca abre com todo o mapa, por categoria; escolher um nome parte a reação dele
+  sugerir('ivQ', () => {
+    const G0 = (t: string) => [...U.nos.values()].filter((n) => n.tipo === t).map((n) => ({ texto: n.nome, valor: n.id, sub: n.tipo === 'pessoa' ? [n.sub, n.org].filter(Boolean).join(' · ') : n.sub.split(' · ').filter((x) => x && !/^(Agência|Anunciante|Organização)$/.test(x)).join(' · ') || undefined, peso: n.nota + (novos.has(n.id) ? 50 : 0) }));
+    return [{ nome: 'Agências', itens: G0('agencia') }, { nome: 'Anunciantes', itens: G0('empresa') }, { nome: 'Pessoas', itens: G0('pessoa') }];
+  }, { titulo: 'Todo o mapa · escolha um ponto para partir dele', aoEscolher: (it, _g, c) => { c.value = ''; $('#ivS').innerHTML = ''; partir(it.valor || ''); } });
   root.addEventListener('input', (ev) => {
     const t = ev.target as HTMLInputElement; if (!t.closest?.('[data-form-lig]')) return;
     if (t.name === 'fonte') rasc.fonte = t.value;

@@ -51,7 +51,7 @@ ${estilo}</style>
   <section><span class="lab">Ramificações · clique para mostrar ou esconder</span><ol class="camadas" id="voltas"></ol>
    <p class="leg"><span><svg viewBox="-7 -7 14 14"><circle r="5" fill="currentColor"></circle></svg>agência</span><span><svg viewBox="-7 -7 14 14"><circle r="5" fill="none" stroke="currentColor" stroke-width="1.4"></circle></svg>anunciante</span><span><svg viewBox="-7 -7 14 14"><circle r="3" fill="currentColor"></circle></svg>pessoa</span><span><svg viewBox="-7 -7 14 14"><circle r="5" fill="none" stroke="currentColor" stroke-dasharray="2 2"></circle></svg>extinta</span><span><svg viewBox="-7 -2 14 4"><line x1="-7" x2="7" stroke="currentColor"></line></svg>barra preta: aberto na reação</span></p></section>
   <section class="dossie" id="dossie" aria-live="polite"></section>
-  <section><span class="lab">Radar · mais fortes da reação</span><ol class="radar" id="radar"></ol></section>
+  <section><span class="lab" id="radarT">Radar · mais fortes da reação</span><ol class="radar" id="radar"></ol></section>
   <p class="rodape" id="rodape"></p>
  </aside>
 </div>
