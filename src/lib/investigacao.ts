@@ -315,3 +315,82 @@ export function novidades(U: Universo, movs: MovDia[], foco = ''): Novidades {
   const semente = orgs.filter((id) => !U.nos.get(id)?.extinta).sort((x, y) => peso(y) - peso(x))[0];
   return { diaP, diaM, pessoas, orgs, trocas, semente };
 }
+
+/* ───────────────────────── O multiverso ─────────────────────────
+ * O tamanho real da investigação: a partir do ponto de partida, todas as ramificações até onde as ligações alcançam,
+ * sem o corte por força da reação. Cada ponto alcançado fica numa ramificação só (a primeira em que aparece), com um pai
+ * (o vizinho mais forte da ramificação anterior), e daí sai a árvore ordenada que o quadro e o arquivo desenham.
+ */
+export interface Camada { ger: number; ids: string[]; empresas: number; agencias: number; pessoas: number; extintas: number; abertos: number }
+export interface Multiverso { semente: string; camadas: Camada[]; pai: Map<string, { id: string; rotulo: string }>; alcance: number; fora: number; total: number }
+
+export function multiverso(U: Universo, semente: string, R?: Reacao): Multiverso {
+  const abertos = new Set((R?.geracoes || []).flat().map((r) => r.id));
+  const visto = new Set([semente]), pai = new Map<string, { id: string; rotulo: string }>();
+  const camadas: Camada[] = [], conta = (g: number, ids: string[]): Camada => {
+    const c: Camada = { ger: g, ids, empresas: 0, agencias: 0, pessoas: 0, extintas: 0, abertos: 0 };
+    for (const id of ids) { const n = U.nos.get(id)!; if (n.extinta) c.extintas++; if (n.tipo === 'pessoa') c.pessoas++; else if (n.tipo === 'agencia') c.agencias++; else if (n.tipo === 'empresa') c.empresas++; if (abertos.has(id)) c.abertos++; }
+    return c;
+  };
+  camadas.push(conta(0, [semente]));
+  for (let g = 1, fila = [semente]; fila.length && g < 40; g++) {
+    const prox: string[] = [];
+    for (const id of fila) {
+      const ext = U.nos.get(id)?.extinta && id !== semente;
+      for (const a of U.adj.get(id) || []) {
+        if (visto.has(a.b) || a.b === ORIGEM || (ext && a.rotulo !== 'virou')) continue;
+        visto.add(a.b); prox.push(a.b); pai.set(a.b, { id, rotulo: a.rotulo });
+      }
+    }
+    if (!prox.length) break;
+    // dentro da ramificação: na ordem dos pais (assim os fios não se cruzam) e, sob o mesmo pai, do mais forte ao mais fraco
+    const ordem = new Map(fila.map((id, i) => [id, i]));
+    prox.sort((x, y) => (ordem.get(pai.get(x)!.id)! - ordem.get(pai.get(y)!.id)!) || (U.nos.get(y)!.nota - U.nos.get(x)!.nota) || U.nos.get(x)!.nome.localeCompare(U.nos.get(y)!.nome, 'pt-BR'));
+    camadas.push(conta(g, prox)); fila = prox;
+  }
+  // total: os pontos do mapa sem o ponto zero; fora: os que nenhuma ligação alcança a partir daqui
+  const total = U.nos.size - 1, alcance = visto.size - 1;
+  return { semente, camadas, pai, alcance, fora: Math.max(0, total - alcance - (semente === ORIGEM ? 0 : 1)), total };
+}
+
+/**
+ * As ramificações da reação na ordem do desenho: cada ponto logo depois dos irmãos que vêm do mesmo pai, e os grupos na
+ * ordem dos pais na ramificação anterior. Dentro do grupo, do mais forte ao mais fraco.
+ */
+export function ordenarReacao(R: Reacao): Ramo[][] {
+  const out: Ramo[][] = [R.geracoes[0] || []];
+  for (let g = 1; g < R.geracoes.length; g++) {
+    const ordem = new Map(out[g - 1].map((r, i) => [r.id, i]));
+    const chefe = (r: Ramo) => Math.min(...r.pais.map((p) => ordem.get(p.id) ?? 1e9));
+    out.push(R.geracoes[g].map((r) => ({ ...r, pais: [...r.pais].sort((a, b) => (ordem.get(a.id) ?? 1e9) - (ordem.get(b.id) ?? 1e9)) }))
+      .sort((x, y) => chefe(x) - chefe(y) || y.forca - x.forca));
+  }
+  return out;
+}
+
+/** Os dados do arquivo do mapa: o multiverso inteiro a partir do ponto de partida, com a reação aberta marcada. */
+export interface MapaArquivo {
+  geradoEm: string; semente: string; sementeNome: string; total: number; alcance: number; fora: number;
+  camadas: { ger: number; n: number; empresas: number; agencias: number; pessoas: number; abertos: number }[];
+  nos: { id: string; t: TipoNo; n: string; s: string; o?: string; nv?: Nivel; x?: 1; nota: number; g: number; p?: string; r?: string; f?: number; fa: string[]; fo: string[]; novo?: 1; alvo?: 1 }[];
+  extras: [string, string, string][];
+}
+export function dadosDoArquivo(U: Universo, R: Reacao, M: Multiverso, o: { geradoEm: string; novos?: Set<string> }): MapaArquivo {
+  const forca = new Map(R.geracoes.flat().map((r) => [r.id, r.forca]));
+  const ger = new Map<string, number>(); M.camadas.forEach((c) => c.ids.forEach((id) => ger.set(id, c.ger)));
+  const nos: MapaArquivo['nos'] = [];
+  for (const c of M.camadas) for (const id of c.ids) {
+    const n = U.nos.get(id)!, p = M.pai.get(id);
+    nos.push({ id, t: n.tipo, n: n.nome, s: n.sub, ...(n.org && n.tipo === 'pessoa' ? { o: n.org } : {}), ...(n.nivel && n.tipo === 'pessoa' ? { nv: n.nivel } : {}), ...(n.extinta ? { x: 1 as const } : {}),
+      nota: n.nota, g: c.ger, ...(p ? { p: p.id, r: p.rotulo } : {}), ...(forca.has(id) ? { f: forca.get(id) } : {}), fa: n.fatos.slice(0, 4), fo: [...new Set(n.fontes)].filter((u) => /^https?:/.test(u)).slice(0, 3),
+      ...(o.novos?.has(id) ? { novo: 1 as const } : {}), ...(n.alvo ? { alvo: 1 as const } : {}) });
+  }
+  // as outras ligações entre pontos alcançados (além da árvore), para acender ao escolher um ponto
+  const extras: [string, string, string][] = [], visto = new Set<string>();
+  for (const id of ger.keys()) for (const a of U.adj.get(id) || []) {
+    if (!ger.has(a.b) || M.pai.get(a.b)?.id === id || M.pai.get(id)?.id === a.b) continue;
+    const k = id < a.b ? id + '|' + a.b : a.b + '|' + id; if (visto.has(k)) continue; visto.add(k); extras.push([id, a.b, a.rotulo]);
+  }
+  return { geradoEm: o.geradoEm, semente: M.semente, sementeNome: U.nos.get(M.semente)?.nome || '', total: M.total, alcance: M.alcance, fora: M.fora,
+    camadas: M.camadas.map((c) => ({ ger: c.ger, n: c.ids.length, empresas: c.empresas, agencias: c.agencias, pessoas: c.pessoas, abertos: c.abertos })), nos, extras };
+}

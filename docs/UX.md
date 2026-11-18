@@ -105,3 +105,11 @@ Investigação viva, fase 1 (18/11/2026): o mapa passa a mostrar o que a coleta 
 - Os pontos novos ganham a etiqueta "novo", com um anel que pulsa 3 vezes. A etiqueta some ao abrir o dossiê e a lembrança fica no navegador. O fio até um ponto novo fica em tinta, e o radar ganhou o filtro "Novos".
 - Ao mudar o ponto de partida, a reação entra em cascata, uma ramificação por vez, e os fios se desenham. Quem pede menos movimento no sistema vê tudo parado.
 - A linha do tempo "Chegadas por dia", de 7 ou 30 dias, mostra em barras as pessoas gravadas e em selos as trocas noticiadas. Clicar num dia põe o dia em foco: faixa, etiquetas e filtro passam a mostrar o que chegou nele.
+
+### Multiverso ordenado e mapa para baixar (18/11/2026)
+
+- **Quadro em ordem:** cada ramificação segue a ordem dos pais. Os filhos de um mesmo ponto ficam juntos, sob a linha "de AlmapBBDO", "de Localiza"…, e os fios correm quase retos em vez de se cruzarem. Quando um ponto chega por mais de um caminho, o fio principal fica forte e os outros ficam claros até o ponto ser escolhido. O título de cada coluna mostra "abertos de alcançáveis" (ex.: 14 de 117).
+- **Tamanho do multiverso:** seção abaixo dos controles com uma barra por ramificação até onde as ligações alcançam (sem o corte da reação): abertos em preto, alcançáveis em cinza, e a linha "Fora de alcance" com os pontos que não têm ligação com o ponto de partida. Com a base de 18/11, a partir da PRODUCERIA: 221 dos 532 pontos em 6 ramificações (31, 117, 32, 21, 17 e 3) e 311 fora de alcance.
+- **Baixar o mapa interativo:** gera um HTML único (cerca de 260 KB, sem rede, com as fontes da casa) com o multiverso inteiro em árvore radial: o ponto de partida no centro, uma volta por ramificação, cada ponto num arco proporcional ao que ele abre. Zoom pela roda ou pinça, arrasto, busca, dossiê com caminho, fatos e fontes, radar dos mais fortes, ramificações que se escondem, "Só a reação aberta", "Todas as ligações" e tema claro ou escuro. Pontos e rótulos mantêm o tamanho na tela em qualquer zoom.
+
+Lógica em `multiverso`, `ordenarReacao` e `dadosDoArquivo` (`src/lib/investigacao.ts`, testadas em `tests/multiverso.test.ts`); o arquivo em `src/lib/mapa-arquivo.ts`, com o visor em `src/lib/mapa-visor.js` e `mapa-visor.css`.

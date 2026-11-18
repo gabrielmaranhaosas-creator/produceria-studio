@@ -18,7 +18,7 @@ export async function baixarArquivo(nome: string, data: string | Blob | Uint8Arr
     return r && r.status === 'saved' ? 'Arquivo salvo: ' + nome : '';
   } catch (e) {
     const c = (e as { code?: string })?.code;
-    return c === 'declined' ? '' : c === 'rate_limited' ? 'Já há um download aguardando confirmação.' : c === 'too_large' ? 'Arquivo grande demais para este download: baixe por partes.' : 'Não foi possível gerar o arquivo agora.';
+    return c === 'declined' ? '' : c === 'rate_limited' ? 'Já há um download aguardando confirmação.' : c === 'too_large' ? 'Arquivo grande demais para este download: baixe por partes.' : c === 'extension_not_enabled' || c === 'rejected_extension' ? 'Este tipo de arquivo não está liberado para download aqui.' : 'Não foi possível gerar o arquivo agora.';
   }
 }
 /** "Folder A4 dobrado" → "folder-a4-dobrado" */
