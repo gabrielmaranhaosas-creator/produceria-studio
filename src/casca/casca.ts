@@ -1,4 +1,4 @@
-// Casca própria do Studio: menu lateral (Oficina, Comercial, Gestão), rotas por hash, busca Ctrl K, avisos,
+// Casca própria do Studio: menu lateral (Comercial e Gestão), rotas por hash, busca Ctrl K, avisos,
 // tema e aviso de conexão. Substitui o shell React do legado; cada tela é montada pelo registro de páginas.
 import logo from './logo.svg?raw';
 import { esc, brl } from '../lib/formato';
@@ -12,18 +12,17 @@ import type { Montar } from '../paginas/dom';
 export interface Item { h: string; l: string; rotas: string[] }
 export interface Nicho { id: string; l: string; home: string; itens: Item[] }
 export const NICHOS: Nicho[] = [
-  { id: 'oficina', l: 'Oficina', home: 'atelie', itens: [{ h: 'atelie', l: 'Ateliê', rotas: ['atelie'] }, { h: 'desdobra', l: 'Desdobra de KV', rotas: ['desdobra'] }, { h: 'retoque', l: 'Retoque', rotas: ['retoque'] }, { h: 'entrega', l: 'Conferência e entrega', rotas: ['entrega'] }, { h: 'ferramentas', l: 'Bancada', rotas: ['ferramentas'] }, { h: 'grafica', l: 'Gráfica', rotas: ['grafica'] }, { h: 'plugins', l: 'Plugins', rotas: ['plugins'] }, { h: 'agentes', l: 'Agentes', rotas: ['agentes'] }] },
   { id: 'comercial', l: 'Comercial', home: 'central', itens: [{ h: 'central', l: 'Central de notícias', rotas: ['central'] }, { h: 'alertas', l: 'Alertas comerciais', rotas: ['alertas'] }, { h: 'bigdata', l: 'Big Data do mercado', rotas: ['bigdata'] }, { h: 'investigacao', l: 'Investigação', rotas: ['investigacao'] }, { h: 'agenda', l: 'Agenda de contatos', rotas: ['agenda'] }, { h: 'captacao', l: 'Captação', rotas: ['captacao'] }, { h: 'mercado', l: 'Contas e agências', rotas: ['mercado'] }, { h: 'b2g', l: 'Licitações', rotas: ['b2g'] }, { h: 'vencedores', l: 'Vencedores', rotas: ['vencedores'] }, { h: 'contas', l: 'Mapa de contas', rotas: ['contas'] }, { h: 'estrategia', l: 'Estratégia e funil', rotas: ['estrategia', 'funil'] }] },
   { id: 'gestao', l: 'Gestão', home: 'rotinas', itens: [{ h: 'rotinas', l: 'Rotinas do Claude', rotas: ['rotinas'] }, { h: 'tabela', l: 'Tabela de serviços', rotas: ['tabela'] }, { h: 'biblioteca', l: 'Biblioteca', rotas: ['biblioteca'] }, { h: 'casos', l: 'Casos', rotas: ['casos'] }, { h: 'lixeira', l: 'Lixeira', rotas: ['lixeira'] }, { h: 'ajustes', l: 'Ajustes e dados', rotas: ['ajustes'] }] },
 ];
 /** Rota → página registrada. */
 export const PAGINA: Record<string, string> = {
   painel: 'inicio', central: 'central', alertas: 'alertas', bigdata: 'bigdata', investigacao: 'investigacao', agenda: 'agenda', casos: 'casos', captacao: 'captacao', mercado: 'mercado', b2g: 'licitacoes', vencedores: 'vencedores',
-  contas: 'contas', estrategia: 'estrategia', funil: 'funil', rotinas: 'rotinas', tabela: 'tabela', ajustes: 'ajustes', ferramentas: 'bancada', grafica: 'grafica',
-  plugins: 'plugins', agentes: 'agentes', biblioteca: 'biblioteca', lixeira: 'lixeira', atelie: 'atelie', desdobra: 'desdobra', entrega: 'entrega', retoque: 'retoque',
+  contas: 'contas', estrategia: 'estrategia', funil: 'funil', rotinas: 'rotinas', tabela: 'tabela', ajustes: 'ajustes',
+  biblioteca: 'biblioteca', lixeira: 'lixeira',
   sid: 'sid',
 };
-const APELIDOS: Record<string, string> = { oficina: 'atelie', checar: 'entrega', diversificacao: 'funil', mapa: 'funil', frentes: 'estrategia', swot: 'estrategia', ia: 'estrategia', agencias: 'mercado', personas: 'agentes', receitas: 'funil' };
+const APELIDOS: Record<string, string> = { diversificacao: 'funil', mapa: 'funil', frentes: 'estrategia', swot: 'estrategia', ia: 'estrategia', agencias: 'mercado', receitas: 'funil' };
 /** Cabeçalho das telas do Comercial que não trazem o próprio. */
 export const CABECALHOS: Record<string, { e: string; t: string; d: string }> = {
   alertas: { e: 'Comercial · Alertas', t: 'Alertas comerciais', d: 'O que mudou no mercado publicitário e o que a Produceria faz a respeito: contas, verbas, pessoas e negócios B2B, cada alerta com as pessoas envolvidas, a ação comercial proposta e a fonte. Chega todo dia de manhã, para o Sid.' },
@@ -51,9 +50,9 @@ export function rotaDe(hash: string): string {
 export const nichoDe = (rota: string) => NICHOS.find((n) => n.itens.some((i) => i.rotas.includes(rota)));
 
 const IR = [
-  ['Início · o que fazer agora', 'painel'], ['Oficina · ateliê e ferramentas da casa', 'atelie'], ['Desdobra de KV · todos os formatos', 'desdobra'], ['Retoque · ajustes, ampliação, especialistas', 'retoque'], ['Checar arquivo · ppi, CMYK, nome', 'entrega/checar'], ['Nomes e pastas do job', 'entrega/nomes'], ['Montar entrega · zip com manifesto', 'entrega/entrega'], ['Bancada · orçar desdobramento, revisão', 'ferramentas'], ['Central de notícias e leads', 'central'], ['Alertas comerciais · ação do dia', 'alertas'], ['Big Data · anunciantes, agências e pessoas', 'bigdata'], ['Investigação · reação em cadeia da prospecção', 'investigacao'], ['Agenda · quem contatar hoje', 'agenda'],
+  ['Início · o que fazer agora', 'painel'], ['Central de notícias e leads', 'central'], ['Alertas comerciais · ação do dia', 'alertas'], ['Big Data · anunciantes, agências e pessoas', 'bigdata'], ['Investigação · reação em cadeia da prospecção', 'investigacao'], ['Agenda · quem contatar hoje', 'agenda'],
   ['Casos da casa (portfólio)', 'casos'], ['Captação de novos negócios', 'captacao'], ['Contas e agências do mercado', 'mercado'], ['Vencedores de licitações', 'vencedores'],
-  ['Funil comercial', 'funil'], ['Gráfica · ficha técnica e fechamento', 'grafica'], ['Plugins · Photoshop, Magnific, Firefly', 'plugins'], ['Licitações', 'b2g'],
+  ['Funil comercial', 'funil'], ['Licitações', 'b2g'], ['Biblioteca · marcas, masters e specs', 'biblioteca'],
   ['Estratégia · SWOT', 'estrategia'], ['Rotinas do Claude · rodar, pausar', 'rotinas'], ['Tabela de serviços', 'tabela'], ['Lixeira · restaurar o que foi apagado', 'lixeira'], ['Ajustes e dados', 'ajustes'], ['Atalhos de teclado', '?'],
 ].map(([titulo, h]) => ({ tipo: 'Ir', titulo, href: '#' + h }));
 const sem = (s: unknown) => String(s ?? '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
@@ -108,7 +107,7 @@ export function iniciarCasca(raiz: HTMLElement, paginas: Record<string, Montar>,
   <div class="paleta-fundo" id="csPal" hidden><div class="paleta" role="dialog" aria-modal="true" aria-label="Buscar e ir"><input class="paleta-inp" id="csPalQ" placeholder="Buscar serviço, alvo, licitação, frente… ou ir para uma tela" aria-label="Buscar" aria-controls="csPalL" role="combobox" aria-expanded="true" autocomplete="off"><div class="paleta-lista" role="listbox" id="csPalL"></div><div class="paleta-pe caption">↑↓ escolher · Enter abrir · Esc fechar</div></div></div>`;
   const $ = <T extends HTMLElement = HTMLElement>(s: string) => raiz.querySelector(s) as T;
   const main = $('#conteudo'), rail = $('#csRail'), D = $<DialogoComRetorno>('#csAvD');
-  let desmontar: (() => void) | void | null = null, rotaAtual = '', nicho = (() => { try { return localStorage.getItem('studio.nicho') || 'oficina'; } catch { return 'oficina'; } })();
+  let desmontar: (() => void) | void | null = null, rotaAtual = '', nicho = (() => { try { return localStorage.getItem('studio.nicho') || 'comercial'; } catch { return 'comercial'; } })();
   let db: Banco | null = null, avisos: Doc[] = [], visto = lerVisto(), soMeus = false, meuNome = '', inicio = new Date().toISOString(), toastT: ReturnType<typeof setTimeout> | null = null;
   const vistos = new Set<string>();
   const dados = { alvos: [] as Doc[], b2g: [] as Doc[], frentes: [] as Doc[], swot: [] as Doc[] };

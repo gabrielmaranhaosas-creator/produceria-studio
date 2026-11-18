@@ -23,7 +23,7 @@ const perfilDe = (id?: string) => PERFIS.find((p) => p.id === id);
 const ATRACAO = [
   { t: 'Case Black Box (Ouro Industry Craft, Cannes 2019)', d: 'Página e post contando o making of da produção gráfica. Prova pública que nenhum concorrente local tem.', passo: 'Reunir imagens e créditos e publicar o case' },
   { t: 'Diagnóstico de desdobramento grátis', d: 'A agência manda um KV; a Produceria devolve 3 formatos e um relatório de craft (rodadas, ajustes pegos). Porta de entrada barata e mensurável.', passo: 'Definir limite (3 formatos, 48 h) e roteiro do relatório' },
-  { t: 'Guia de fechamento de arquivo', d: 'O checklist da Oficina vira material educativo para agências e in-houses: gera conversa com quem fecha arquivo mal.', passo: 'Diagramar o guia e oferecer no LinkedIn' },
+  { t: 'Guia de fechamento de arquivo', d: 'O checklist de fechamento da casa vira material educativo para agências e in-houses: gera conversa com quem fecha arquivo mal.', passo: 'Diagramar o guia e oferecer no LinkedIn' },
   { t: 'Série "craft em 60 segundos"', d: 'Antes e depois de retoque, fechamento e acabamento. Mostra o trabalho invisível.', passo: 'Escolher 6 jobs autorizados e gravar' },
   { t: 'Relatório de craft trimestral para clientes', d: 'Gerado pelo Studio: versões, rodadas, aprovação na 1ª, ajustes evitados. Sustenta renovação e reajuste.', passo: 'Enviar o primeiro relatório à conta principal' },
 ];

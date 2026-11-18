@@ -17,7 +17,6 @@ import funil from './estilos/funil.css?inline';
 import estrategia from './estilos/estrategia.css?inline';
 import tabela from './estilos/tabela.css?inline';
 import gestao from './estilos/gestao.css?inline';
-import oficina from './estilos/oficina.css?inline';
 import sid from './estilos/sid.css?inline';
 import painel from './estilos/painel.css?inline';
 import investigacao from './estilos/investigacao.css?inline';
@@ -38,17 +37,9 @@ import * as pEstrategia from './paginas/estrategia';
 import * as pTabela from './paginas/tabela';
 import * as pRotinas from './paginas/rotinas';
 import * as pAjustes from './paginas/ajustes';
-import * as pBancada from './paginas/bancada';
-import * as pGrafica from './paginas/grafica';
-import * as pPlugins from './paginas/plugins';
 import * as pBiblioteca from './paginas/biblioteca';
-import * as pAgentes from './paginas/agentes';
 import * as pInicio from './paginas/inicio';
 import * as pLixeira from './paginas/lixeira';
-import * as pAtelie from './paginas/atelie';
-import * as pDesdobra from './paginas/desdobra';
-import * as pEntrega from './paginas/entrega';
-import * as pRetoque from './paginas/retoque';
 import casca from './estilos/casca.css?inline';
 import { iniciarCasca } from './casca/casca';
 
@@ -72,24 +63,16 @@ const paginas: Record<string, Montar> = {
   tabela: pTabela.montar,
   rotinas: pRotinas.montar,
   ajustes: pAjustes.montar,
-  bancada: pBancada.montar,
-  grafica: pGrafica.montar,
-  plugins: pPlugins.montar,
   biblioteca: pBiblioteca.montar,
-  agentes: pAgentes.montar,
   inicio: pInicio.montar,
   lixeira: pLixeira.montar,
-  atelie: pAtelie.montar,
-  desdobra: pDesdobra.montar,
-  entrega: pEntrega.montar,
-  retoque: pRetoque.montar,
 };
 
 function estilos() {
   if (document.getElementById('studio-src-css')) return;
   const el = document.createElement('style');
   el.id = 'studio-src-css';
-  el.textContent = base + central + agenda + licitacoes + captacao + vencedores + mercado + funil + estrategia + tabela + gestao + oficina + sid + painel + investigacao + casca;
+  el.textContent = base + central + agenda + licitacoes + captacao + vencedores + mercado + funil + estrategia + tabela + gestao + sid + painel + investigacao + casca;
   document.head.appendChild(el);
 }
 

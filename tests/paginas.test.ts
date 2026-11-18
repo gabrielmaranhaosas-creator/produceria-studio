@@ -785,15 +785,15 @@ describe('Casca própria', () => {
   it('rotas, apelidos e nicho de cada tela', async () => {
     const { rotaDe, nichoDe, PAGINA } = await import('../src/casca/casca');
     expect(rotaDe('#b2g')).toBe('b2g'); expect(PAGINA.b2g).toBe('licitacoes');
-    expect(rotaDe('#swot')).toBe('estrategia'); expect(rotaDe('#personas')).toBe('agentes');
+    expect(rotaDe('#swot')).toBe('estrategia'); expect(rotaDe('#personas')).toBe('painel'); expect(rotaDe('#grafica')).toBe('painel');
     expect(rotaDe('#projetos/abc')).toBe('painel'); expect(rotaDe('')).toBe('painel');
-    expect(nichoDe('funil')?.id).toBe('comercial'); expect(nichoDe('grafica')?.id).toBe('oficina'); expect(nichoDe('tabela')?.id).toBe('gestao');
+    expect(nichoDe('funil')?.id).toBe('comercial'); expect(nichoDe('grafica')).toBeUndefined(); expect(nichoDe('casos')?.id).toBe('gestao'); expect(nichoDe('tabela')?.id).toBe('gestao');
   });
 
   it('busca Ctrl K acha telas, serviços, alvos e licitações', async () => {
     const { buscarTudo } = await import('../src/casca/casca');
     const d = { alvos: [{ id: 'a', nome: 'Agência Outdoor Brasil', status: 'Mapeado' }], b2g: [{ id: 'b', objeto: 'Locação de outdoor', orgao: 'Prefeitura' }], frentes: [], swot: [] };
-    expect(buscarTudo('', d).length).toBe(27);
+    expect(buscarTudo('', d).length).toBe(19);
     const r = buscarTudo('outdoor', d);
     expect(r.some((x) => x.tipo === 'Serviço')).toBe(true);
     expect(r.find((x) => x.tipo === 'Alvo')?.href).toBe('#captacao');

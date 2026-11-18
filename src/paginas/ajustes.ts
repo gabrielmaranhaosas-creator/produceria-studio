@@ -39,7 +39,7 @@ export function montar(root: HTMLElement): () => void {
   <section aria-labelledby="aj-i"><div class="ph"><h2 class="d d-sub" id="aj-i">IA</h2><span class="tag w" id="ajIA">Verificando</span></div>
     <p class="measure">A leitura de editais, as análises go/no-go, as abordagens, as propostas, a SWOT e os diagnósticos consultam o Claude com a conta de quem está usando. Não há chave de API para configurar: a primeira consulta pede autorização.</p></section>
   <section aria-labelledby="aj-s"><div class="ph"><h2 class="d d-sub" id="aj-s">Sobre</h2></div><div class="measure aj-sobre">
-    <p>O PRODUCERia Studio é a mesa interna do hub: Oficina (bancada, gráfica, plugins, agentes, biblioteca, casos), Comercial (central de notícias, agenda, captação, contas e agências, licitações, vencedores, mapa de contas, estratégia e funil) e Gestão (rotinas do Claude, tabela de serviços, ajustes).</p>
+    <p>O PRODUCERia Studio é a mesa interna do hub: Comercial (central de notícias, alertas, big data, investigação, agenda, captação, contas e agências, licitações, vencedores, mapa de contas, estratégia e funil) e Gestão (rotinas do Claude, tabela de serviços, biblioteca, casos, lixeira, ajustes).</p>
     <p>Preços: a planilha “Com Desconto” do Luciano (valores SINAPRO), ${int(SERVICOS.length)} serviços, com o desconto % de cada um editável em Gestão › Tabela de serviços. Licitações: PNCP, varrido toda madrugada pela rotina do Claude.</p>
     <p>Regras da casa: nada de dado inventado (o que é hipótese vem marcado); a automação só preenche campo vazio e nunca sobrescreve o que a equipe definiu; o Studio não envia e-mail, não compra mídia e não aprova gasto.</p></div></section>
 </div>`;
