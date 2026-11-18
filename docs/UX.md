@@ -170,3 +170,8 @@ O HTML baixado pelo botão "Baixar o mapa interativo" passa a usar o mesmo desen
 - `sugerir()` em todos os campos de busca: ao clicar, antes de digitar, mostra os dados divididos por categoria (com contagem e atalhos); ao digitar, filtra por grupo. Teclado: ↑ ↓ Enter Esc.
 - Ctrl K abre com amostras de dados (alvos, licitações, frentes) antes das telas.
 - Arquivo do multiverso: os 6 números do topo agem no mapa (alcance, fora de alcance, ramificações, abertos, pessoas que contratam) e a busca sugere Agências / Anunciantes / Pessoas.
+
+### 18/11/2026 · Multiverso como narrativa de venda
+- A venda começa pelo problema: o arquivo do multiverso abre o painel com "Por que este mapa existe" (problema → tratamento → solução), com os números tirados dos próprios dados do arquivo.
+- Tratamento = os quatro mapeamentos (perfil de cliente ideal, stakeholders, conexões, sinais de compra). Solução = forecasting, inteligência comercial e eficiência do time.
+- A planilha do multiverso ganhou na frente as abas Narrativa, Funil e forecast (premissas editáveis: ticket médio e chance por etapa, marcadas como ponto de partida), Perfil ideal, Stakeholders e Sinais de compra.

@@ -253,6 +253,25 @@
     marcarModo(); voltas(); desenhar(); radar(); V = { x: 0, y: 0, k: 1 }; mover(true);
     $('#vivo').textContent = { total: D.total + ' pontos no mapa', alcance: D.alcance + ' pontos alcançados', fora: D.fora + ' pontos fora de alcance', abertos: abertos.length + ' pontos abertos na reação', portas: destaque ? portas + ' pessoas que contratam acesas' : 'Destaque desfeito' }[k];
   }
+  /* a narrativa de venda: começa pelo problema, mostra o tratamento (os quatro mapeamentos) e termina na solução */
+  (function () {
+    var conta = function (f) { return NOS.filter(f).length; }, tem = function (re) { return function (n) { return (n.fa || []).some(function (x) { return re.test(x); }); }; };
+    var ags = conta(function (n) { return n.t === 'agencia'; }), emp = conta(function (n) { return n.t === 'empresa'; }), pes = conta(function (n) { return n.t === 'pessoa'; });
+    var pontes = conta(tem(/ponte/i)), novas = conta(tem(/^Conta nova/)), trocas = conta(tem(/^Mudou de agência/)), radar = conta(function (n) { return n.alvo; });
+    var fmt = function (v) { return Number(v).toLocaleString('pt-BR'); };
+    var passo = function (t, h, li) { return '<div class="np"><b>' + t + '</b><p>' + h + '</p>' + (li ? '<ul>' + li.map(function (x) { return '<li><span>' + x[0] + '</span>' + x[1] + '</li>'; }).join('') + '</ul>' : '') + '</div>'; };
+    $('#narrc').innerHTML =
+      passo('1 · Problema', 'A PRODUCERIA não tem um funil de vendas com receita previsível: clientes novos não entram de forma organizada, então não dá para projetar o crescimento da receita.') +
+      passo('2 · Tratamento', 'Investigamos por que o funil não existe e mapeamos:', [
+        ['Perfil de cliente ideal', 'agência independente, conta pública, in-house enxuta, rede e EUA, cada um com dor, gatilho e porta de entrada'],
+        ['Stakeholders', fmt(ags) + ' agências, ' + fmt(emp) + ' anunciantes e ' + fmt(pes) + ' pessoas, ' + fmt(portas) + ' delas contratam produção'],
+        ['Conexões', fmt(D.alcance) + ' pontos ao alcance de ' + esc(D.sementeNome) + ' em ' + (D.camadas.length - 1) + ' ramificações, ' + fmt(pontes) + ' com ponte do time, ' + fmt(D.fora) + ' ainda fora de alcance'],
+        ['Sinais de compra', fmt(novas) + ' contas novas e ' + fmt(trocas) + ' trocas de agência recentes, somados na nota de cada ponto']]) +
+      passo('3 · Solução', 'Com o multiverso, o time resolve:', [
+        ['Forecasting', 'funil de ' + fmt(D.total) + ' pontos → ' + fmt(D.alcance) + ' ao alcance → ' + fmt(abertos.length) + ' abertos → ' + fmt(radar) + ' alvos do radar no mapa; a planilha do multiverso projeta a receita'],
+        ['Inteligência comercial', 'clique num ponto: quem é, por que importa e o caminho até ' + esc(D.sementeNome)],
+        ['Eficiência do time', 'o radar ordena por onde começar, com a ponte certa para cada conversa']]);
+  })();
   var maxN = Math.max.apply(null, D.camadas.slice(1).map(function (c) { return c.n; }).concat([1])); // a escala é a das ramificações; a barra do fora de alcance para no fim
   function voltas() {
     $('#voltas').innerHTML = D.camadas.slice(1).map(function (c) {

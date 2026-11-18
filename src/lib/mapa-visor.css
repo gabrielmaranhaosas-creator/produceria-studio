@@ -89,6 +89,17 @@ svg.entra .fio{stroke-dasharray:1200;stroke-dashoffset:1200;animation:fio .7s ea
 .painel{border-left:1px solid var(--lin);overflow:auto;min-height:0;display:flex;flex-direction:column}
 .painel section{padding:18px 20px;border-bottom:1px solid var(--lin)}
 .lab{display:block;font:400 11px/1.4 var(--ft);letter-spacing:.14em;text-transform:uppercase;color:var(--mut);margin:0 0 8px}
+.narr{padding:16px 20px;border-bottom:1px solid var(--lin)}
+.narr summary{cursor:pointer;margin:0;list-style:none}
+.narr summary::-webkit-details-marker{display:none}
+.narr summary::after{content:' +';color:var(--mut)}
+.narr[open] summary::after{content:' −'}
+.narr .np{margin-top:12px}
+.narr .np b{display:block;font-size:13px}
+.narr .np p{margin:4px 0 0;font-size:12px;line-height:1.45;color:var(--mut)}
+.narr ul{list-style:none;margin:6px 0 0;padding:0;display:grid;gap:5px;font-size:12px;line-height:1.4}
+.narr li span{display:block;color:var(--ink);font-weight:500}
+.narr li{color:var(--mut)}
 .camadas{list-style:none;margin:0;padding:0;display:grid;gap:6px}
 .camadas button{display:grid;grid-template-columns:110px minmax(0,1fr) 34px;align-items:center;gap:10px;width:100%;padding:3px 0;border:0;background:none;text-align:left;font-size:12px}
 .camadas button[aria-pressed="false"]{opacity:.4}
