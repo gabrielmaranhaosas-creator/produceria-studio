@@ -793,7 +793,7 @@ describe('Casca própria', () => {
   it('busca Ctrl K acha telas, serviços, alvos e licitações', async () => {
     const { buscarTudo } = await import('../src/casca/casca');
     const d = { alvos: [{ id: 'a', nome: 'Agência Outdoor Brasil', status: 'Mapeado' }], b2g: [{ id: 'b', objeto: 'Locação de outdoor', orgao: 'Prefeitura' }], frentes: [], swot: [] };
-    expect(buscarTudo('', d).length).toBe(26);
+    expect(buscarTudo('', d).length).toBe(27);
     const r = buscarTudo('outdoor', d);
     expect(r.some((x) => x.tipo === 'Serviço')).toBe(true);
     expect(r.find((x) => x.tipo === 'Alvo')?.href).toBe('#captacao');

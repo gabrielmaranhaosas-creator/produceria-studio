@@ -45,3 +45,54 @@ Percurso feito tela a tela no Studio montado com os dados reais (exportação do
 
 - Levar o mesmo painel para Agenda e Funil, se a equipe sentir falta.
 - Medir no claude.ai o tempo da primeira abertura de Vencedores (a leitura em blocos depende do banco, não da página).
+
+## Investigação: reação em cadeia da prospecção (17/11/2026)
+
+Tela em Comercial, logo abaixo do Big Data (`#investigacao`), no estilo de um mural de investigação (fundo escuro, fichas de papel, fios vermelhos, carimbo "Extinta"). Não é um retrato da equipe: é o mapa da prospecção, que parte de um ponto e abre ramificações até chegar a empresas, agências e pessoas que ainda não estão no radar.
+
+- **Universo:** junta numa rede só tudo o que o Big Data sabe. Contas e movimentações (`base_mercado` e `movimentos`), anunciantes e agências (`mapa_empresas`, `mapa_agencias`, com critérios do "fora do radar"), quem trabalha onde e por onde passou (`mapa_pessoas`, campo `trajetoria`), a extinta e a herdeira (`perfil: 'extinta'`, `sucessora`) e as pontes da PRODUCERIA (`conexao` com "Ponte PRODUCERIA" e notas que citam a equipe). Quando o cargo de alguém cita uma conta do mapa ("Gerente de Projetos – Natura & Avon"), a pessoa também liga a essa conta.
+- **Ponto zero e ramificações:** a PRODUCERIA abre as casas onde temos ponte. Cada ramificação seguinte traz os vizinhos ainda não vistos: clientes da agência, outras agências do cliente, quem trabalha lá, a herdeira da extinta. Só os ramos mais fortes seguem abrindo (10, 14 e 18 por ramificação, ou o dobro em "Ampla"), com no máximo 60% de pessoas para a reação continuar abrindo casas.
+- **Força:** cada ponto tem uma nota de possibilidade de negócio, sempre explicada por fatos com fonte: contrata produção, conta nova ou mudança de agência nos últimos 120 dias, encaixe do craft, grande anunciante, agência independente, portas que contratam, ponte com a PRODUCERIA. A força soma ainda quantos caminhos chegam no ponto e desconta a distância.
+- **Partir de qualquer ponto:** busca por nome ou "Abrir a reação a partir daqui" no dossiê; o rastro guarda os pontos de partida.
+- **Radar de prospecção:** ranking da reação com o caminho de cada ponto, filtros (empresas e agências, pessoas, "sem ponte ainda") e o botão "Pôr no radar", que cria o alvo na Captação (coluna Mapeado) com o caminho e os gatilhos.
+- **Gráficos:** mais fortes, possibilidades por ramificação, por tipo e por gatilho. O rastro das agências extintas continua no fim da tela.
+- No celular as colunas empilham e os fios saem; o dossiê mostra o caminho.
+
+Lógica em `src/lib/investigacao.ts` (`montarUniverso`, `reacao`, `caminho`, `leads`; testada em `tests/investigacao.test.ts`), tela em `src/paginas/investigacao.ts`, visual em `src/estilos/investigacao.css`. Com a base de 17/11: 571 pontos no mapa (349 organizações, 222 pessoas); a partir da PRODUCERIA, 32 possibilidades em 3 ramificações.
+
+### Coleta da reação no LinkedIn (17/11/2026)
+
+Primeira rodada de coleta seguindo as ramificações, só leitura no LinkedIn (sem convite, seguir ou mensagem): busca de pessoas filtrada pela empresa atual, ficando só com quem pede ou aprova produção (produção, RTV, art buyer, atendimento, projetos, operações; nos anunciantes, marketing, marca, trade e conteúdo). Perfis ocultos, estagiários, mídia, criação e quem está hoje em outra casa ficam de fora. Cada pessoa entra em `mapa_pessoas` com o link do perfil como fonte.
+
+- 1ª ramificação: 34 pessoas em Artplan, Lola\TBWA, AlmapBBDO, Suno United Creators, WMcCann e VML.
+- 2ª ramificação: 19 pessoas em Heineken, Localiza, Petrobras, Bling e Natura e Avon.
+- Resultado: o mapa passou de 571 para 624 pontos, e o radar "sem ponte ainda" ganhou portas que contratam em Heineken e Localiza.
+- Resto da 1ª ramificação: 18 pessoas em YouDare, Fbiz e Publicis Production. DeBrito não devolveu ninguém de produção ou atendimento; Philip Morris não tem página própria com filtro de empresa e a busca por palavra não achou ninguém; Nova/SB não tem página no LinkedIn.
+- 3ª ramificação: 4 pessoas na Ogilvy (produção, RTVC e atendimento) e 5 em marketing e marca na QuintoAndar.
+- Resultado: 648 pontos. Abrindo a reação na Fbiz, a cadeia chega à QuintoAndar; abrindo na Ogilvy, chega à Petrobras.
+- 4ª ramificação: 12 pessoas em Brasilcap (comunicação), Cacau Show (trade marketing), Keeta (marca e marketing) e WT.AG (produção gráfica e atendimento). Leo Burnett, We e Governo de São Paulo ficaram sem nome: a Leo não tem página com filtro de empresa, "We" é um nome ambíguo demais para a busca, e no governo a compra passa por licitação, que tem tela própria.
+- Resultado: 661 pontos. A cadeia PRODUCERIA → Suno → Keeta → WT.AG chega a quem atende a Keeta; Cacau Show e Brasilcap ficam na 5ª, e aparecem quando a reação parte delas.
+
+O quadro passou a abrir 4 ramificações (17/11/2026): a 4ª coluna mostra até 14 ramos no modo Essencial (25 no Ampla). Para os cartões não espremerem, o quadro tem largura mínima de uns 186px por ramificação e rola de lado quando a tela é estreita. No celular as colunas continuam empilhadas. Com a base de hoje, a partir da PRODUCERIA são 50 possibilidades em 4 ramificações, e a 4ª traz Cacau Show, WT.AG, We e quem atende a Keeta.
+
+## Visualização: telas que cabem na tela (17/11/2026)
+
+Diagnóstico feito a partir de uma gravação de tela da Investigação e de um passeio pelas telas do Comercial, medindo quantas telas de rolagem cada uma ocupa (a 1440×860):
+
+- Investigação: 8,8 telas. O quadro era uma parede escura de 2.600px com colunas de alturas desiguais (a 4ª ramificação descia sozinha sobre um fundo vazio), e o dossiê abria embaixo do quadro, longe do clique: quem clicava num cartão não via o resultado. O tema de mural (faixa zebrada amarela e preta, fios vermelhos, papel envelhecido) destoava do resto do Studio, que é monocromático.
+- Captação: 9,8 telas. A coluna "Mapeado" do quadro de etapas empilhava 37 cartões (7.500px) enquanto as outras ficavam vazias.
+- Contas e agências: 15,7 telas. As 148 movimentações apareciam todas de uma vez.
+
+O que mudou:
+
+- Investigação na identidade do Studio: só preto, cinzas, linhas e off-white, sem a faixa zebrada nem o vermelho. Cartões brancos e compactos (tipo, nome, cargo, um gatilho e a força); agência tem filete preto, anunciante filete cinza, extinta tracejada e riscada.
+- O quadro ocupa uma tela e rola por dentro, para baixo e para os lados, com o título de cada ramificação preso no topo.
+- O dossiê abre ao lado do quadro, junto do clique, com botão de fechar (e Esc). Em telas médias e no celular ele sobe como uma folha presa ao pé da tela.
+- O radar de prospecção mostra 10 possibilidades por vez, com "Mostrar mais".
+- Os quadros de etapas (Captação, Licitações e Funil) passaram a ter colunas que rolam por dentro, com o título da etapa preso no topo.
+- Contas e agências mostra 30 movimentações (ou agências) por vez, com "Mostrar mais".
+- Resultado: Investigação de 8,8 para 4,6 telas, Captação de 9,8 para 1,9 e Contas e agências de 15,7 para 5,7.
+
+Oficina e Gestão (18/11/2026), com a mesma medida: nenhuma tela passa de 2,6 telas de rolagem no computador, nenhuma usa cor fora da paleta e nenhuma rola de lado no celular. No celular, Gráfica (5,8 telas) e Plugins (5,4) são as mais longas, por serem formulários e fichas; ficam como estão. Ateliê e Agentes somem do menu na cópia de consulta de propósito, por dependerem da IA.
+
+Biblioteca e Casos passaram da Oficina para a Gestão (18/11/2026): saem das abas da Oficina e do bloco da Oficina no Início, entram no menu da Gestão entre a Tabela de serviços e a Lixeira, com o rótulo "Gestão · Biblioteca" e "Gestão · Casos". A Oficina deve virar um projeto próprio mais adiante.

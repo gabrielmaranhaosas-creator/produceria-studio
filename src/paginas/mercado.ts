@@ -87,10 +87,10 @@ export function montar(root: HTMLElement): () => void {
   const $ = seletor(root);
   const D = $<Dialogo>('#mkD');
   let base: Mercado | null = null, m: Mercado | null = null, novos: Movimento[] = [], db: Banco | null = null, alvos: { nome: string }[] = [];
-  let visao: Visao = 'movimentos';
+  let visao: Visao = 'movimentos', lim = 30;
   const f: Filtros = { busca: '', periodo: 'todos', soCriacao: false };
   const offs: (() => void)[] = [];
-  const abas = abaNoEndereco<Visao>(['movimentos', 'agencias', 'anunciantes', 'abordar'], 'movimentos', (a) => { visao = a; if (m) { filtros(); lista(); } });
+  const abas = abaNoEndereco<Visao>(['movimentos', 'agencias', 'anunciantes', 'abordar'], 'movimentos', (a) => { visao = a; lim = 30; if (m) { filtros(); lista(); } });
   visao = abas.inicial;
   const avisar = (t: string) => { $('#mkLive').textContent = t; };
   devolverFoco(D, () => $<HTMLElement>('#mkF [aria-pressed=true]'));
@@ -123,6 +123,8 @@ export function montar(root: HTMLElement): () => void {
 
   const como = (s: Situacao, titulo?: string) => { const x = SITUACOES[s]; return `<section class="lc-box vc-como"><span class="lab">${esc(titulo || x.quando)}</span><p>${esc(x.porque)}</p><ol>${x.passos.map((p) => `<li>${esc(p)}</li>`).join('')}</ol></section>`; };
 
+  /** Lista longa em blocos: mostra `lim` itens e um botão para o próximo bloco. */
+  const mais = (n: number) => (n > lim ? `<p class="mais"><button type="button" class="ghost" data-mkmais>Mostrar mais ${int(Math.min(30, n - lim))} (${int(n - lim)} restantes)</button></p>` : '');
   function lista() {
     const o = $('#mkO');
     if (!m) return;
@@ -137,9 +139,9 @@ export function montar(root: HTMLElement): () => void {
         barras('Tipo de agência', contar(L, (x) => tipo.get(x.agencia)?.tipo || 'Sem tipo'), { nota: 'na lista atual' }),
       ], 'Resumo das movimentações');
       o.innerHTML = `<div class="acts"><span class="note">${int(L.length)} movimentação(ões), da mais nova para a mais antiga. Quem acabou de ganhar conta é o melhor momento de abordar.</span><button type="button" class="ghost sm" id="mkCSV">Baixar (.csv)</button></div>
-      ${L.length ? `<ul class="vc-l">${L.map((x) => `<li class="mk-mv"><span class="note num mk-data">${quando(x.data)}</span>
+      ${L.length ? `<ul class="vc-l">${L.slice(0, lim).map((x) => `<li class="mk-mv"><span class="note num mk-data">${quando(x.data)}</span>
         <span class="vc-c"><span><b>${esc(x.anunciante)}</b> → ${tipo.has(x.agencia) ? `<button type="button" class="lnk" data-ag="${esc(x.agencia)}">${esc(x.agencia)}</button>` : esc(x.agencia)}${x.anterior ? `<span class="note"> · antes: ${esc(x.anterior)}</span>` : ''}</span><span class="note">${esc(x.escopo || '')}</span></span>
-        <span class="vc-num">${recente(x.data, 90) ? '<span class="tag ok">agora</span>' : x.tipo && x.tipo !== 'conquista' ? `<span class="note">${esc(x.tipo)}</span>` : ''}${fonteLink(x.fonte)}</span></li>`).join('')}</ul>`
+        <span class="vc-num">${recente(x.data, 90) ? '<span class="tag ok">agora</span>' : x.tipo && x.tipo !== 'conquista' ? `<span class="note">${esc(x.tipo)}</span>` : ''}${fonteLink(x.fonte)}</span></li>`).join('')}</ul>${mais(L.length)}`
         : vazio({ titulo: 'Nenhuma movimentação com esses filtros', texto: 'Aumente o período ou desmarque "Só criação e full service".' })}`;
     } else if (visao === 'agencias') {
       const L = filtrarAgencias(m, f);
@@ -149,9 +151,9 @@ export function montar(root: HTMLElement): () => void {
         barras('Por estado', contar(L, (a) => a.uf || 'Sem UF')),
       ], 'Resumo das agências');
       o.innerHTML = `<p class="note">${int(L.length)} agência(s), em ordem de prioridade: conquista recente, posição no ranking Cenp-Meios 2025 e sede em SP.</p>
-      ${L.length ? `<ul class="vc-l">${L.map((a) => `<li><button type="button" class="vc-linha" data-ag="${esc(a.nome)}"><span class="vc-prio num" title="Prioridade (0 a 100)">${a.prioridade}</span>
+      ${L.length ? `<ul class="vc-l">${L.slice(0, lim).map((a) => `<li><button type="button" class="vc-linha" data-ag="${esc(a.nome)}"><span class="vc-prio num" title="Prioridade (0 a 100)">${a.prioridade}</span>
         <span class="vc-c"><b>${esc(a.nome)}${a.publica ? '<span class="note"> · também tem conta pública</span>' : ''}</b><span class="note">${a.cenp ? `${a.cenp}º no Cenp-Meios 2025` : 'fora do top 30 do Cenp'}${a.uf ? ' · ' + esc(a.uf) : ''} · ${esc(a.contas.slice(0, 3).map((c) => c.anunciante).join(', ') || 'sem conta nova registrada')}</span></span>
-        <span class="vc-num"><b class="num">${a.contas.length} conta(s)</b><span class="note">${a.ultima ? 'última ' + quando(a.ultima) : '—'}</span></span></button></li>`).join('')}</ul>`
+        <span class="vc-num"><b class="num">${a.contas.length} conta(s)</b><span class="note">${a.ultima ? 'última ' + quando(a.ultima) : '—'}</span></span></button></li>`).join('')}</ul>${mais(L.length)}`
         : vazio({ titulo: 'Nenhuma agência com esses filtros', texto: 'Tire a busca ou desmarque "Só criação e full service".' })}`;
     } else if (visao === 'anunciantes') {
       pn.innerHTML = painel([barras('Investimento em mídia em 2025 (como publicado)', m.anunciantes.map((a) => ({ rotulo: a.nome, valor: a.valor2025, nota: `${a.variacao > 0 ? '+' : ''}${a.variacao}% sobre 2024` })), { max: 20 })], 'Ranking dos anunciantes');
@@ -223,14 +225,15 @@ export function montar(root: HTMLElement): () => void {
     if (b.dataset.visao) { abas.ir(b.dataset.visao as Visao); root.querySelector<HTMLElement>(`[data-visao="${visao}"]`)?.focus(); return; }
     if (b.dataset.ag) { const a = m.agencias.find((x) => x.nome === b.dataset.ag); if (a) abrirAgencia(a, b); return; }
     if (b.id === 'mkCSV') baixar();
+    if (b.dataset.mkmais != null) { const y = scrollY; lim += 30; lista(); scrollTo(0, y); }
   });
-  root.addEventListener('input', (ev) => { const t = ev.target as HTMLInputElement; if (t.id === 'mkQ') { f.busca = t.value; lista(); } });
+  root.addEventListener('input', (ev) => { const t = ev.target as HTMLInputElement; if (t.id === 'mkQ') { f.busca = t.value; lim = 30; lista(); } });
   root.addEventListener('change', (ev) => {
     const t = ev.target as HTMLInputElement;
     if (t.id === 'mkP') f.periodo = t.value as Filtros['periodo'];
     else if (t.id === 'mkC') f.soCriacao = t.checked;
     else return;
-    lista();
+    lim = 30; lista();
   });
 
   (async () => {

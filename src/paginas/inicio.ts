@@ -24,7 +24,7 @@ export function passos(pipeline: Doc[], alvos: Doc[], b2g: Doc[]): Passo[] {
   ].sort((a, b) => a.d.localeCompare(b.d));
 }
 
-const OFICINA: [string, string, string][] = [['ferramentas', 'Bancada', 'Desdobramento pela tabela, revisão de texto, checagem de peça e cotações.'], ['grafica', 'Gráfica', 'Ficha técnica, fechamento de arquivo e pacote do job.'], ['plugins', 'Plugins', 'Photoshop, Magnific, Firefly.'], ['agentes', 'Agentes', 'Especialistas da casa para pensar junto.'], ['biblioteca', 'Biblioteca', 'Guias de marca, regras de cliente e referências.']];
+const OFICINA: [string, string, string][] = [['ferramentas', 'Bancada', 'Desdobramento pela tabela, revisão de texto, checagem de peça e cotações.'], ['grafica', 'Gráfica', 'Ficha técnica, fechamento de arquivo e pacote do job.'], ['plugins', 'Plugins', 'Photoshop, Magnific, Firefly.'], ['agentes', 'Agentes', 'Especialistas da casa para pensar junto.']];
 const VENDA: [string, string, string][] = [['#captacao', 'Abordar um alvo', 'A Oficina vira argumento: casos e provas entram na mensagem.'], ['#estrategia', 'Proposta-base de oferta', 'Transforma uma capacidade da Oficina em oferta vendável.'], ['#b2g', 'Avaliar licitação', 'GO / NO-GO cruzando o edital com o que a Oficina entrega.'], ['#tabela', 'Tabela de serviços', 'Preços que sustentam qualquer orçamento.']];
 
 export function montar(root: HTMLElement): () => void {
