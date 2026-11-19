@@ -8,7 +8,7 @@ import { perguntar, ErroIA } from '../lib/ia';
 import { buscar, calcular, itemDe, rotulo, SERVICOS, type ItemProposta } from '../lib/servicos';
 import type { Alvo, Caso, Oportunidade } from '../lib/tipos';
 import { seletor, comId, abaNoEndereco, type Dialogo } from './dom';
-import { vazio, abrirDialogo, devolverFoco, confirmarNoBotao, barras, contar, painel, irPara } from '../componentes';
+import { vazio, abrirDialogo, devolverFoco, confirmarNoBotao, barras, contar, painel, irPara, barrasFaceta, filtrarFacetas, etiquetasFiltro, cliqueFaceta, type Facetas } from '../componentes';
 
 // ---------------------------------------------------------------- perfis e atração (da tela antiga)
 export const PERFIS = [
@@ -72,6 +72,7 @@ export function montar(root: HTMLElement): () => void {
   let A: AlvoDoc[] = [], B: Oportunidade[] = [], C: Caso[] = [], funil: { id: string; titulo?: string }[] = [];
   let descontos: Record<string, number> = {};
   let col: Colecao<AlvoDoc> | null = null, db: Awaited<ReturnType<typeof banco>> = null;
+  const fc: Facetas = {}, CO = { origem: (a: AlvoDoc) => a.origem || 'Cadastro manual' };
   let carregando = true, perfil = '', novo = false, aba: Aba = 'alvos', ultimoAberto = '';
   const expandidas = new Set<string>();
   const offs: (() => void)[] = [];
@@ -142,7 +143,7 @@ export function montar(root: HTMLElement): () => void {
     const venc = vivos.filter((a) => vencido(a)).length;
     const conversa = vivos.filter((a) => ['Abordado', 'Conversa', 'Proposta'].includes(a.status || '')).length;
     const clientes = vivos.filter((a) => a.status === 'Cliente').length;
-    const L = ordenar(vivos.filter((a) => !perfil || a.perfil === perfil));
+    const L0 = ordenar(vivos.filter((a) => !perfil || a.perfil === perfil)), L = filtrarFacetas(L0, fc, CO);
     const form = novo ? `<form class="cp-novo" id="cpNovo" novalidate><div class="det fm">
       <div class="f"><label for="n_nome">Empresa *</label><input id="n_nome" required></div>
       <div class="f"><label for="n_perfil">Perfil</label><select id="n_perfil">${PERFIS.map((p) => `<option value="${p.id}"${(perfil || 'independente') === p.id ? ' selected' : ''}>${p.nome}</option>`).join('')}</select></div>
@@ -159,8 +160,8 @@ export function montar(root: HTMLElement): () => void {
       ${vivos.length ? painel([
         barras('Funil por etapa', (ETAPAS as readonly string[]).map((et) => ({ rotulo: et, valor: L.filter((a) => (a.status || 'Mapeado') === et).length, dado: et })), { max: 12, attr: 'cpet', nota: 'clique para ir à coluna' }),
         barras('Por perfil', contar(vivos, (a) => a.perfil).map((b) => ({ ...b, rotulo: perfilDe(b.rotulo)?.curto || b.rotulo, ativo: b.dado === perfil })), { attr: 'pf', nota: 'clique para filtrar o quadro' }),
-        barras('De onde vieram', contar(L, (a) => a.origem || 'Cadastro manual')),
-      ], 'Resumo da captação') : ''}
+        barrasFaceta('De onde vieram', 'origem', L0, fc, CO),
+      ], 'Resumo da captação') + etiquetasFiltro(fc, { origem: 'Origem' }) : ''}
       ${form}
       ${carregando ? '<p class="note">Carregando alvos…</p>' : perfil === '__descartados' ? descartados(desc) : L.length ? quadro(L) : vazio({ titulo: perfil ? 'Nenhum alvo neste perfil' : 'Nenhum alvo ainda', texto: 'Em Achar novos, use os sinais, cole um texto ou adicione à mão.', acao: '<button type="button" class="ghost sm" data-aba="achar">Achar novos</button>' })}`;
   }
@@ -417,6 +418,7 @@ Escreva só três seções em markdown, sem valores (os valores entram numa tabe
   root.addEventListener('click', async (e) => {
     const b = (e.target as HTMLElement).closest<HTMLElement>('button');
     if (!b || !root.contains(b) || D.contains(b)) return;
+    if (cliqueFaceta(b, fc)) { render(); return; }
     const d = b.dataset;
     if (d.cpet) { irPara(root.querySelector(`.lc-col[aria-label^="${CSS.escape(d.cpet)}:"]`)); return; }
     if (d.aba) { abas.ir(d.aba as Aba); $<HTMLElement>('#cp-tab-' + aba).focus(); return; }

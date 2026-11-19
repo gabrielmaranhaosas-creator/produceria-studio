@@ -4,7 +4,7 @@ import { esc, int, brk, dt } from '../lib/formato';
 import { banco, lerBase, type Banco } from '../lib/db';
 import { chave } from '../lib/nomes';
 import { seletor, comId, abaNoEndereco, type Dialogo } from './dom';
-import { kpis, vazio, abrirDialogo, devolverFoco, barras, porMes, contar, painel, sugerir, irPara, itensDe } from '../componentes';
+import { kpis, vazio, abrirDialogo, devolverFoco, barras, porMes, contar, painel, sugerir, irPara, itensDe, barrasFaceta, filtrarFacetas, etiquetasFiltro, cliqueFaceta, type Facetas } from '../componentes';
 
 export interface Conta { data: string; anunciante: string; escopo: string; fonte: string; tipo: string; anterior: string }
 export interface Perda { data: string; anunciante: string; para: string; fonte: string }
@@ -88,9 +88,14 @@ export function montar(root: HTMLElement): () => void {
   const D = $<Dialogo>('#mkD');
   let base: Mercado | null = null, m: Mercado | null = null, novos: Movimento[] = [], db: Banco | null = null, alvos: { nome: string }[] = [];
   let visao: Visao = 'movimentos', lim = 30;
+  const fc: Facetas = {};
+  const limparFc = () => { for (const k of Object.keys(fc)) delete fc[k]; };
+  const MESES = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'];
+  const nomeMes = (k: string) => `${MESES[+k.slice(5) - 1]}/${k.slice(0, 4)}`;
+  const NOMES = { mes: 'Mês', tipo: 'Tipo', uf: 'Estado' };
   const f: Filtros = { busca: '', periodo: 'todos', soCriacao: false };
   const offs: (() => void)[] = [];
-  const abas = abaNoEndereco<Visao>(['movimentos', 'agencias', 'anunciantes', 'abordar'], 'movimentos', (a) => { visao = a; lim = 30; if (m) { filtros(); lista(); } });
+  const abas = abaNoEndereco<Visao>(['movimentos', 'agencias', 'anunciantes', 'abordar'], 'movimentos', (a) => { visao = a; lim = 30; limparFc(); if (m) { filtros(); lista(); } });
   visao = abas.inicial;
   const avisar = (t: string) => { $('#mkLive').textContent = t; };
   devolverFoco(D, () => $<HTMLElement>('#mkF [aria-pressed=true]'));
@@ -132,24 +137,28 @@ export function montar(root: HTMLElement): () => void {
     const pn = $('#mkPn');
     pn.innerHTML = '';
     if (visao === 'movimentos') {
-      const L = filtrarMovimentos(m, f);
+      const T = filtrarMovimentos(m, f);
+      const CM = { mes: (x: (typeof T)[number]) => (x.data.length > 6 ? x.data.slice(0, 7) : ''), tipo: (x: (typeof T)[number]) => tipo.get(x.agencia)?.tipo || 'Sem tipo' };
+      const L = filtrarFacetas(T, fc, CM);
       pn.innerHTML = painel([
-        porMes('Movimentações por mês', L.map((x) => x.data).filter((d) => d.length > 4)),
+        porMes('Movimentações por mês', filtrarFacetas(T, fc, CM, 'mes').map((x) => x.data).filter((d) => d.length > 4), 12, fc.mes ? `${nomeMes(fc.mes)} · clique de novo para tirar` : 'clique num mês para filtrar', { campo: 'mes', ativo: fc.mes }),
         barras('Agências que mais ganharam conta', contar(L, (x) => x.agencia), { attr: 'ag', nota: 'clique para ver a agência' }),
-        barras('Tipo de agência', contar(L, (x) => tipo.get(x.agencia)?.tipo || 'Sem tipo'), { nota: 'na lista atual' }),
-      ], 'Resumo das movimentações');
+        barrasFaceta('Tipo de agência', 'tipo', T, fc, CM),
+      ], 'Resumo das movimentações') + etiquetasFiltro(fc, NOMES, { mes: nomeMes });
       o.innerHTML = `<div class="acts"><span class="note">${int(L.length)} movimentação(ões), da mais nova para a mais antiga. Quem acabou de ganhar conta é o melhor momento de abordar.</span><button type="button" class="ghost sm" id="mkCSV">Baixar (.csv)</button></div>
       ${L.length ? `<ul class="vc-l">${L.slice(0, lim).map((x) => `<li class="mk-mv"><span class="note num mk-data">${quando(x.data)}</span>
         <span class="vc-c"><span><b>${esc(x.anunciante)}</b> → ${tipo.has(x.agencia) ? `<button type="button" class="lnk" data-ag="${esc(x.agencia)}">${esc(x.agencia)}</button>` : esc(x.agencia)}${x.anterior ? `<span class="note"> · antes: ${esc(x.anterior)}</span>` : ''}</span><span class="note">${esc(x.escopo || '')}</span></span>
         <span class="vc-num">${recente(x.data, 90) ? '<span class="tag ok">agora</span>' : x.tipo && x.tipo !== 'conquista' ? `<span class="note">${esc(x.tipo)}</span>` : ''}${fonteLink(x.fonte)}</span></li>`).join('')}</ul>${mais(L.length)}`
         : vazio({ titulo: 'Nenhuma movimentação com esses filtros', texto: 'Aumente o período ou desmarque "Só criação e full service".' })}`;
     } else if (visao === 'agencias') {
-      const L = filtrarAgencias(m, f);
+      const T = filtrarAgencias(m, f);
+      const CA = { tipo: (a: (typeof T)[number]) => a.tipo || 'Sem tipo', uf: (a: (typeof T)[number]) => a.uf || 'Sem UF' };
+      const L = filtrarFacetas(T, fc, CA);
       pn.innerHTML = painel([
         barras('Mais contas conquistadas', L.map((a) => ({ rotulo: a.nome, valor: a.contas.length, dado: a.nome })).sort((a, b) => b.valor - a.valor), { attr: 'ag', nota: 'clique para ver a agência' }),
-        barras('Por tipo', contar(L, (a) => a.tipo || 'Sem tipo')),
-        barras('Por estado', contar(L, (a) => a.uf || 'Sem UF')),
-      ], 'Resumo das agências');
+        barrasFaceta('Por tipo', 'tipo', T, fc, CA),
+        barrasFaceta('Por estado', 'uf', T, fc, CA),
+      ], 'Resumo das agências') + etiquetasFiltro(fc, NOMES);
       o.innerHTML = `<p class="note">${int(L.length)} agência(s), em ordem de prioridade: conquista recente, posição no ranking Cenp-Meios 2025 e sede em SP.</p>
       ${L.length ? `<ul class="vc-l">${L.slice(0, lim).map((a) => `<li><button type="button" class="vc-linha" data-ag="${esc(a.nome)}"><span class="vc-prio num" title="Prioridade (0 a 100)">${a.prioridade}</span>
         <span class="vc-c"><b>${esc(a.nome)}${a.publica ? '<span class="note"> · também tem conta pública</span>' : ''}</b><span class="note">${a.cenp ? `${a.cenp}º no Cenp-Meios 2025` : 'fora do top 30 do Cenp'}${a.uf ? ' · ' + esc(a.uf) : ''} · ${esc(a.contas.slice(0, 3).map((c) => c.anunciante).join(', ') || 'sem conta nova registrada')}</span></span>
@@ -222,7 +231,8 @@ export function montar(root: HTMLElement): () => void {
   root.addEventListener('click', (ev) => {
     const b = (ev.target as HTMLElement).closest<HTMLElement>('button');
     if (!b || !root.contains(b) || D.contains(b) || !m) return;
-    if (b.dataset.kpi) { const [v, p] = b.dataset.kpi.split(':'); if (v === 'mv') { f.periodo = p as Filtros['periodo']; abas.ir('movimentos'); } else abas.ir('agencias'); filtros(); topo(); lim = 30; lista(); irPara($('#mkO')); return; }
+    if (cliqueFaceta(b, fc)) { lim = 30; lista(); return; }
+    if (b.dataset.kpi) { limparFc(); const [v, p] = b.dataset.kpi.split(':'); if (v === 'mv') { f.periodo = p as Filtros['periodo']; abas.ir('movimentos'); } else abas.ir('agencias'); filtros(); topo(); lim = 30; lista(); irPara($('#mkO')); return; }
     if (b.dataset.visao) { abas.ir(b.dataset.visao as Visao); root.querySelector<HTMLElement>(`[data-visao="${visao}"]`)?.focus(); return; }
     if (b.dataset.ag) { const a = m.agencias.find((x) => x.nome === b.dataset.ag); if (a) abrirAgencia(a, b); return; }
     if (b.id === 'mkCSV') baixar();

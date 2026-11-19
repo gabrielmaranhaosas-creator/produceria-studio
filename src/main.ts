@@ -20,6 +20,7 @@ import gestao from './estilos/gestao.css?inline';
 import sid from './estilos/sid.css?inline';
 import painel from './estilos/painel.css?inline';
 import investigacao from './estilos/investigacao.css?inline';
+import disparos from './estilos/disparos.css?inline';
 import * as pCentral from './paginas/central';
 import * as pAlertas from './paginas/alertas';
 import * as pSid from './paginas/sid';
@@ -30,6 +31,7 @@ import * as pCasos from './paginas/casos';
 import * as pContas from './paginas/mapa-contas';
 import * as pLicitacoes from './paginas/licitacoes';
 import * as pCaptacao from './paginas/captacao';
+import * as pDisparos from './paginas/disparos';
 import * as pVencedores from './paginas/vencedores';
 import * as pMercado from './paginas/mercado';
 import * as pFunil from './paginas/funil';
@@ -56,6 +58,7 @@ const paginas: Record<string, Montar> = {
   contas: pContas.montar,
   licitacoes: pLicitacoes.montar,
   captacao: pCaptacao.montar,
+  disparos: pDisparos.montar,
   vencedores: pVencedores.montar,
   mercado: pMercado.montar,
   funil: pFunil.montar,
@@ -72,7 +75,7 @@ function estilos() {
   if (document.getElementById('studio-src-css')) return;
   const el = document.createElement('style');
   el.id = 'studio-src-css';
-  el.textContent = base + central + agenda + licitacoes + captacao + vencedores + mercado + funil + estrategia + tabela + gestao + sid + painel + investigacao + casca;
+  el.textContent = base + central + agenda + licitacoes + captacao + vencedores + mercado + funil + estrategia + tabela + gestao + sid + painel + investigacao + disparos + casca;
   document.head.appendChild(el);
 }
 

@@ -6,7 +6,7 @@ import { banco, lerBase, type Colecao } from '../lib/db';
 import { montarGrafo, nivelDe, notaEncaixe, NIVEIS, CRITERIOS, TIPOS_PILULA, type TipoPilula, type Pilula, type Cenario, type Nivel, type Grafo, type NoEmpresa, type NoAgencia, type PessoaMapa, type EmpresaMapa, type AgenciaMapa, type MercadoBase, type MovimentoBase } from '../lib/grafo';
 import type { Alvo } from '../lib/tipos';
 import { seletor, elDe, mensagem, comId, type Dialogo } from './dom';
-import { kpis, numero, vazio, barras, contar, painel, sugerir, irPara, type Barra } from '../componentes';
+import { kpis, numero, vazio, barras, contar, painel, sugerir, irPara, barrasFaceta, filtrarFacetas, etiquetasFiltro, cliqueFaceta, type Barra, type Facetas, type Campos } from '../componentes';
 
 type Visao = 'empresas' | 'radar' | 'agencias' | 'pessoas';
 const VISOES: [Visao, string][] = [['empresas', 'Anunciantes'], ['radar', 'Fora do radar'], ['agencias', 'Agências'], ['pessoas', 'Pessoas']];
@@ -81,8 +81,14 @@ export function montar(root: HTMLElement): () => void {
   let mercado: MercadoBase | null = null, cen: Cenario[] = [], movs: MovimentoBase[] = [], emp: EmpresaMapa[] = [], ags: AgenciaMapa[] = [], pes: PessoaMapa[] = [], alvos: Alvo[] = [];
   let G: Grafo = montarGrafo({}), colAlvos: Colecao<Alvo> | null = null, lim = 60;
   const offs: (() => void)[] = [];
-  const F: { v: Visao; q: string; o: string; n: Nivel | ''; r: 'lista' | 'pilulas'; p: TipoPilula | '' } = { v: 'empresas', q: '', o: 'relevancia', n: '', r: 'lista', p: '' };
+  const F: { v: Visao; q: string; o: string; n: Nivel | ''; r: 'lista' | 'pilulas'; p: TipoPilula | ''; fc: Facetas } = { v: 'empresas', q: '', o: 'relevancia', n: '', r: 'lista', p: '', fc: {} };
   try { const sv = JSON.parse(localStorage.getItem('bd.filtros') || 'null'); if (sv) Object.assign(F, sv); } catch { /* sem armazenamento */ }
+  if (!F.fc || typeof F.fc !== 'object') F.fc = {};
+  // facetas de cada visão: cada gráfico filtra a lista pelo seu campo
+  const CE: Campos<NoEmpresa> = { setor: (e) => e.setor || 'Sem setor', agencia: (e) => [...new Set(e.ligacoes.map((l) => nomeLegivel(l.agencia)))], nivel: (e) => [...new Set(e.pessoas.map((p) => rotuloNivel(nivelDe(p))))] };
+  const CA: Campos<NoAgencia> = { grupo: (a) => a.grupo || 'Independente', uf: (a) => a.uf || 'Sem UF', perfil: (a) => a.perfil || 'Sem perfil', cliente: (a) => [...new Set(a.ligacoes.map((l) => nomeLegivel(l.empresa)))] };
+  const CP: Campos<PessoaMapa> = { area: (p) => p.area || 'Sem área', org: (p) => nomeLegivel(p.organizacao), uf: (p) => (p as { uf?: string }).uf || '' };
+  const NOMES: Record<string, string> = { setor: 'setor', agencia: 'agência', nivel: 'quem tem', grupo: 'grupo', uf: 'estado', perfil: 'perfil', cliente: 'cliente', area: 'área', org: 'organização' };
   const ehAlvo = (nome: string) => alvos.some((a) => a.id === 'al-' + slug(nome) || mesmaEmpresa(a.nome, nome));
 
   const recalcular = () => { G = montarGrafo({ mercado, movimentos: movs, empresas: emp, agencias: ags, pessoas: pes }); render(); };
@@ -140,18 +146,20 @@ export function montar(root: HTMLElement): () => void {
     const porSetor = (L: NoEmpresa[]) => { const sem = L.filter((e) => !e.setor).length; return barras('Por setor', busca(contar(L, (e) => e.setor)), { attr: 'q', nota: `clique para filtrar${sem ? ` · ${int(sem)} de ${int(L.length)} ainda sem setor no Big Data` : ''}`, vazio: 'Nenhuma empresa com setor informado.' }); };
     const nAg = (e: NoEmpresa) => new Set(e.ligacoes.map((l) => l.agencia)).size;
     if (F.v === 'empresas') {
-      const L = ordem(G.empresas.filter((e) => !q || chave([e.nome, e.setor, e.grupo, ...e.ligacoes.map((l) => l.agencia), ...e.pessoas.map((p) => p.nome)].join(' ')).includes(q)));
-      pn = [porSetor(L),
+      const L0 = ordem(G.empresas.filter((e) => !q || chave([e.nome, e.setor, e.grupo, ...e.ligacoes.map((l) => l.agencia), ...e.pessoas.map((p) => p.nome)].join(' ')).includes(q))), L = filtrarFacetas(L0, F.fc, CE);
+      pn = [barrasFaceta('Por setor', 'setor', L0, F.fc, CE),
+        barrasFaceta('Agências que atendem', 'agencia', L0, F.fc, CE),
+        barrasFaceta('Quem já está mapeado', 'nivel', L0, F.fc, CE, { nota: F.fc.nivel ? undefined : 'anunciantes com pessoas de cada nível; clique para filtrar' }),
         barras('Mais agências ligadas', L.map((e) => ({ rotulo: nomeLegivel(e.nome), valor: nAg(e), dado: e.k })).sort((a, b) => b.valor - a.valor), { attr: 'e', nota: 'clique para abrir' }),
         barras('Mais portas de entrada', L.map((e) => ({ rotulo: nomeLegivel(e.nome), valor: portas(e.pessoas), dado: e.k })).sort((a, b) => b.valor - a.valor), { attr: 'e', nota: 'pessoas que contratam produção' })];
       n = L.length; html = L.length ? `<ul class="bd-l">${L.slice(0, lim).map(linhaEmpresa).join('')}</ul>` : '';
     } else if (F.v === 'radar') {
-      const base = G.empresas.filter((e) => e.radar && (!q || chave([e.nome, e.setor, e.radar.porque, ...(e.radar.servicos || []), ...e.ligacoes.map((l) => l.agencia), ...e.pessoas.map((p) => p.nome)].join(' ')).includes(q)));
+      const base0 = G.empresas.filter((e) => e.radar && (!q || chave([e.nome, e.setor, e.radar.porque, ...(e.radar.servicos || []), ...e.ligacoes.map((l) => l.agencia), ...e.pessoas.map((p) => p.nome)].join(' ')).includes(q))), base = filtrarFacetas(base0, F.fc, CE);
       const L = F.o === 'relevancia' ? [...base].sort((x, y) => notaEncaixe(y.radar) - notaEncaixe(x.radar) || porNome(x, y)) : ordem(base);
       const P = L.flatMap((e) => (e.radar?.pilulas || []).map((x) => ({ x, e })));
       pn = [barras('Maior encaixe do craft', [...L].sort((x, y) => notaEncaixe(y.radar) - notaEncaixe(x.radar)).map((e) => ({ rotulo: nomeLegivel(e.nome), valor: notaEncaixe(e.radar), dado: e.k })), { attr: 'e', nota: 'nota de 0 a 100; clique para abrir' }),
-        porSetor(L),
-        barras('Pílulas por tipo', contar(P, (y) => (TIPOS_PILULA.find((t) => t[0] === y.x.tipo) || [y.x.tipo, y.x.tipo])[1]))];
+        barrasFaceta('Por setor', 'setor', base0, F.fc, CE),
+        barras('Pílulas por tipo', contar(P, (y) => y.x.tipo).map((b) => ({ ...b, rotulo: (TIPOS_PILULA.find((t) => t[0] === b.rotulo) || [b.rotulo, b.rotulo])[1], ativo: F.r === 'pilulas' && F.p === b.dado })), { attr: 'p', nota: 'clique para ver as pílulas do tipo' })];
       const PF = P.filter((y) => !F.p || y.x.tipo === F.p);
       const modo = `<div class="pills bd-modo" role="group" aria-label="Mostrar"><button type="button" data-r="lista" aria-pressed="${F.r === 'lista'}">Empresas por encaixe <span class="note">${int(L.length)}</span></button><button type="button" data-r="pilulas" aria-pressed="${F.r === 'pilulas'}">Pílulas de ação <span class="note">${int(P.length)}</span></button></div>`;
       const topo = (q ? '' : faixaCenario(cen)) + modo;
@@ -166,23 +174,24 @@ export function montar(root: HTMLElement): () => void {
           + (L.length ? `<ul class="bd-l">${L.slice(0, lim).map(linhaRadar).join('')}</ul>` : vazio({ titulo: F.q ? 'Nada com essa busca' : 'Nenhuma empresa na varredura ainda', texto: 'A rotina da Central faz a varredura toda quarta-feira e grava aqui as empresas com fonte.' }));
       }
     } else if (F.v === 'agencias') {
-      const L = ordem(G.agencias.filter((a) => !q || chave([a.nome, a.grupo, ...a.ligacoes.map((l) => l.empresa), ...a.pessoas.map((p) => p.nome)].join(' ')).includes(q)));
+      const L0 = ordem(G.agencias.filter((a) => !q || chave([a.nome, a.grupo, a.uf, ...a.ligacoes.map((l) => l.empresa), ...a.pessoas.map((p) => p.nome)].join(' ')).includes(q))), L = filtrarFacetas(L0, F.fc, CA);
       pn = [barras('Mais clientes ligados', L.map((a) => ({ rotulo: nomeLegivel(a.nome), valor: new Set(a.ligacoes.map((l) => l.empresa)).size, dado: a.k })).sort((x, y) => y.valor - x.valor), { attr: 'a', nota: 'clique para abrir' }),
-        barras('Por grupo', busca(contar(L, (a) => a.grupo || 'Independente')), { attr: 'q', nota: 'clique para filtrar' }),
-        barras('Por estado', contar(L, (a) => a.uf || 'Sem UF'))];
+        barrasFaceta('Por grupo', 'grupo', L0, F.fc, CA),
+        barrasFaceta('Por estado', 'uf', L0, F.fc, CA),
+        barrasFaceta('Clientes que mais aparecem', 'cliente', L0, F.fc, CA)];
       n = L.length; html = L.length ? `<ul class="bd-l">${L.slice(0, lim).map(linhaAgencia).join('')}</ul>` : '';
     } else {
-      const L = [...G.pessoas].filter((p) => (!F.n || nivelDe(p) === F.n) && (!q || chave([p.nome, p.cargo, p.organizacao, p.area, p.campanha].join(' ')).includes(q)))
+      const L0 = [...G.pessoas].filter((p) => (!F.n || nivelDe(p) === F.n) && (!q || chave([p.nome, p.cargo, p.organizacao, p.area, p.campanha].join(' ')).includes(q))), L = filtrarFacetas(L0, F.fc, CP)
         .sort((x, y) => F.o === 'recente' ? (y.data || '').localeCompare(x.data || '') : F.o === 'nome' ? chave(x.nome).localeCompare(chave(y.nome)) : ORDEM[nivelDe(x)] - ORDEM[nivelDe(y)] || chave(x.organizacao).localeCompare(chave(y.organizacao)));
       n = L.length;
       pn = [barras('Por nível', contar(L, (p) => nivelDe(p)).map((b) => ({ ...b, rotulo: rotuloNivel(b.dado as Nivel), ativo: b.dado === F.n })), { attr: 'n', nota: 'clique para filtrar' }),
-        barras('Organizações com mais pessoas', contar(L, (p) => p.organizacao).map((b) => ({ ...b, rotulo: nomeLegivel(b.rotulo) })), { attr: 'org', nota: 'clique para abrir' }),
-        barras('Por área', contar(L, (p) => p.area || 'Sem área'))];
+        barrasFaceta('Organizações com mais pessoas', 'org', L0, F.fc, CP),
+        barrasFaceta('Por área', 'area', L0, F.fc, CP)];
       const pills = `<div class="pills bd-niveis" role="group" aria-label="Nível">${[['', 'Todos os níveis'], ...NIVEIS.map(([v, t]) => [v, t])].map(([v, t]) => `<button type="button" data-n="${v}" aria-pressed="${F.n === v}">${t} <span class="note">${int(v ? G.pessoas.filter((p) => nivelDe(p) === v).length : G.pessoas.length)}</span></button>`).join('')}</div>
       <p class="note bd-dica">${esc(F.n ? (NIVEIS.find((x) => x[0] === F.n) || NIVEIS[0])[2] : 'Comece por quem contrata produção: são as pessoas que pedem orçamento e mandam o job. A alta liderança abre portas, mas raramente escolhe o fornecedor.')}</p>`;
       html = pills + (L.length ? `<ul class="bd-l">${L.slice(0, lim).map(linhaPessoa).join('')}</ul>` : vazio({ titulo: 'Ninguém neste nível ainda', texto: 'A rotina diária procura essas pessoas nas fichas técnicas das campanhas e nas notícias.' }));
     }
-    $('#bdPn').innerHTML = n ? painel(pn, 'Resumo') : '';
+    $('#bdPn').innerHTML = (n || Object.keys(F.fc).length ? painel(pn, 'Resumo') : '') + etiquetasFiltro(F.fc, NOMES);
     $('#bdL').innerHTML = html ? html + (n > lim ? `<p class="mais"><button type="button" class="ghost" id="bdM">Mostrar mais ${int(Math.min(60, n - lim))} (${int(n - lim)} restantes)</button></p>` : '')
       : vazio({ titulo: F.q ? 'Nada com essa busca' : F.v === 'pessoas' ? 'Nenhuma pessoa mapeada ainda' : 'Base vazia', texto: F.q ? 'Tente parte do nome ou limpe a busca.' : 'A rotina diária da Central grava aqui, todo dia, quem decide em cada anunciante e agência, sempre com a fonte.' });
     $('#bdLive').textContent = `${int(n)} resultados.`;
@@ -234,12 +243,13 @@ export function montar(root: HTMLElement): () => void {
   $('#bdD').addEventListener('close', () => { const d = $<Dialogo>('#bdD'); if (d._ret && d._ret.isConnected) d._ret.focus(); });
   root.addEventListener('click', (ev) => {
     const el = elDe(ev);
-    const kk = el.closest<HTMLElement>('[data-kpi]'); if (kk) { F.v = kk.dataset.kpi as Visao; F.q = ''; F.n = ''; lim = 60; render(); irPara($('#bdPn').firstElementChild ? $('#bdPn') : $('#bdL')); return; }
+    if (cliqueFaceta(el, F.fc)) { lim = 60; render(); return; }
+    const kk = el.closest<HTMLElement>('[data-kpi]'); if (kk) { F.v = kk.dataset.kpi as Visao; F.q = ''; F.n = ''; F.fc = {}; lim = 60; render(); irPara($('#bdPn').firstElementChild ? $('#bdPn') : $('#bdL')); return; }
     const rr = el.closest<HTMLElement>('[data-r]'); if (rr) { F.r = rr.dataset.r === 'pilulas' ? 'pilulas' : 'lista'; lim = 60; render(); root.querySelector<HTMLElement>(`[data-r="${F.r}"]`)?.focus(); return; }
-    const pp = el.closest<HTMLElement>('[data-p]'); if (pp) { F.p = (pp.dataset.p || '') as TipoPilula | ''; lim = 60; render(); root.querySelector<HTMLElement>(`[data-p="${F.p}"]`)?.focus(); return; }
+    const pp = el.closest<HTMLElement>('[data-p]'); if (pp) { const doPainel = !!pp.closest('.pn'); F.p = (doPainel && F.r === 'pilulas' && F.p === pp.dataset.p ? '' : pp.dataset.p || '') as TipoPilula | ''; if (doPainel) F.r = 'pilulas'; lim = 60; render(); root.querySelector<HTMLElement>(`[data-p="${F.p}"]`)?.focus(); return; }
     const bq = el.closest<HTMLElement>('.pn [data-q]'); if (bq) { F.q = chave(F.q) === chave(bq.dataset.q || '') ? '' : bq.dataset.q || ''; lim = 60; render(); return; }
     const nv = el.closest<HTMLElement>('[data-n]'); if (nv) { F.n = (nv.closest('.pn') && F.n === nv.dataset.n ? '' : nv.dataset.n || '') as Nivel | ''; lim = 60; render(); root.querySelector<HTMLElement>(`[data-n="${F.n}"]`)?.focus(); return; }
-    const v = el.closest<HTMLElement>('[data-v]'); if (v) { F.v = v.dataset.v as Visao; lim = 60; render(); root.querySelector<HTMLElement>(`[data-v="${F.v}"]`)?.focus(); return; }
+    const v = el.closest<HTMLElement>('[data-v]'); if (v) { if (F.v !== v.dataset.v) F.fc = {}; F.v = v.dataset.v as Visao; lim = 60; render(); root.querySelector<HTMLElement>(`[data-v="${F.v}"]`)?.focus(); return; }
     if (el.id === 'bdM') { lim += 60; render(); return; }
     const org = el.closest<HTMLElement>('[data-org]'); if (org) { const dd = $<Dialogo>('#bdD'); if (dd.open) dd.close(); abrirOrg(org.dataset.org || '', org); return; }
     const be = el.closest<HTMLElement>('[data-e]'); if (be) { const e = G.empresas.find((x) => x.k === be.dataset.e); if (e) detalhe(e, 'e', be); return; }

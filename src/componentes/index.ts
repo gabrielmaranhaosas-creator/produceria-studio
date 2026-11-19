@@ -118,7 +118,7 @@ export function barras(titulo: string, itens: Barra[], o: OpcoesBarras = {}): st
 }
 
 /** Colunas por mês (os últimos `meses`, do mais antigo ao mais recente) a partir de datas AAAA-MM-DD. */
-export function porMes(titulo: string, datas: string[], meses = 12, nota?: string): string {
+export function porMes(titulo: string, datas: string[], meses = 12, nota?: string, fc?: { campo: string; ativo?: string }): string {
   const MES = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'];
   const d = new Date(), chaves: string[] = [];
   for (let i = meses - 1; i >= 0; i--) { const x = new Date(d.getFullYear(), d.getMonth() - i, 1); chaves.push(`${x.getFullYear()}-${String(x.getMonth() + 1).padStart(2, '0')}`); }
@@ -126,7 +126,8 @@ export function porMes(titulo: string, datas: string[], meses = 12, nota?: strin
   for (const s of datas) if (s) n[s.slice(0, 7)] = (n[s.slice(0, 7)] || 0) + 1;
   const topo = Math.max(...chaves.map((k) => n[k] || 0), 1);
   const total = chaves.reduce((s, k) => s + (n[k] || 0), 0);
-  return `<figure class="pn-c"><figcaption>${esc(titulo)}<small>${esc(nota || `${total.toLocaleString('pt-BR')} nos últimos ${meses} meses`)}</small></figcaption><ol class="pn-m">${chaves.map((k) => `<li title="${MES[+k.slice(5) - 1]}/${k.slice(2, 4)}: ${n[k] || 0}"><span class="pn-v">${n[k] || ''}</span><i style="height:${Math.round((100 * (n[k] || 0)) / topo)}%"></i><span class="pn-x">${MES[+k.slice(5) - 1]}</span></li>`).join('')}</ol></figure>`;
+  return `<figure class="pn-c"><figcaption>${esc(titulo)}<small>${esc(nota || `${total.toLocaleString('pt-BR')} nos últimos ${meses} meses`)}</small></figcaption><ol class="pn-m${fc ? ' fc' : ''}">${chaves.map((k) => { const t = `${MES[+k.slice(5) - 1]}/${k.slice(2, 4)}: ${n[k] || 0}`, miolo = `<span class="pn-v">${n[k] || ''}</span><i style="height:${Math.round((100 * (n[k] || 0)) / topo)}%"></i><span class="pn-x">${MES[+k.slice(5) - 1]}</span>`;
+    return fc && n[k] ? `<li><button type="button" data-fc="${esc(fc.campo)}|${k}" aria-pressed="${fc.ativo === k}" title="${t} · ${fc.ativo === k ? 'clique para tirar o filtro' : 'clique para filtrar'}">${miolo}</button></li>` : `<li title="${t}">${miolo}</li>`; }).join('')}</ol></figure>`;
 }
 
 /** Conta itens por classe (uma ou várias por item) e devolve as barras do maior para o menor. */
@@ -137,6 +138,43 @@ export function contar<T>(lista: T[], classe: (x: T) => string | string[] | unde
     for (const k of (Array.isArray(c) ? c : [c])) if (k) m.set(k, (m.get(k) || 0) + peso(x));
   }
   return [...m].sort((a, b) => b[1] - a[1]).map(([rotulo, valor]) => ({ rotulo, valor, dado: rotulo }));
+}
+
+/* ───────────────────────── Filtros por faceta ─────────────────────────
+ * Todo gráfico de barras pode filtrar a lista da tela: clicar numa barra liga o filtro, clicar de novo desliga, e os
+ * filtros ligados aparecem como etiquetas acima da lista (cada uma fecha com um clique; "Limpar" tira todos). Cada
+ * gráfico de uma faceta conta sobre a lista filtrada pelas OUTRAS facetas, para as barras mostrarem as alternativas.
+ */
+export type Facetas = Record<string, string>;
+export type Campos<T> = Record<string, (x: T) => string | string[] | undefined | null>;
+const valoresDe = <T>(f: Campos<T>[string], x: T) => { const v = f(x); return (Array.isArray(v) ? v : [v]).filter(Boolean).map(String); };
+/** A lista que passa em todas as facetas ligadas (menos `exceto`, para o gráfico da própria faceta). */
+export function filtrarFacetas<T>(L: T[], F: Facetas, campos: Campos<T>, exceto = ''): T[] {
+  const ativos = Object.entries(F).filter(([c, v]) => v && c !== exceto && campos[c]);
+  return ativos.length ? L.filter((x) => ativos.every(([c, v]) => valoresDe(campos[c], x).includes(v))) : L;
+}
+/** Gráfico de barras que filtra: conta `campo` na lista (sem a própria faceta) e marca a barra ligada. */
+export function barrasFaceta<T>(titulo: string, campo: string, L: T[], F: Facetas, campos: Campos<T>, o: OpcoesBarras & { rotulo?: (v: string) => string; peso?: (x: T) => number } = {}): string {
+  const base = filtrarFacetas(L, F, campos, campo);
+  const itens = contar(base, (x) => valoresDe(campos[campo], x), o.peso).map((b) => ({ ...b, rotulo: o.rotulo ? o.rotulo(b.rotulo) : b.rotulo, dado: `${campo}|${b.dado}`, ativo: F[campo] === b.dado }));
+  // a barra ligada sempre aparece, mesmo fora das primeiras
+  const max = o.max ?? 8, lig = itens.findIndex((b) => b.ativo);
+  if (lig >= max) itens.splice(max - 1, 0, itens.splice(lig, 1)[0]);
+  return barras(titulo, itens, { ...o, attr: 'fc', nota: o.nota ?? (F[campo] ? 'clique de novo para tirar o filtro' : 'clique para filtrar') });
+}
+/** Etiquetas dos filtros ligados, acima da lista. `nomes` dá o rótulo de cada faceta. */
+export function etiquetasFiltro(F: Facetas, nomes: Record<string, string>, fmt: Record<string, (v: string) => string> = {}): string {
+  const l = Object.entries(F).filter(([c, v]) => v && nomes[c]);
+  if (!l.length) return '';
+  return `<div class="fc-et" role="group" aria-label="Filtros ligados"><span class="lab">Filtrando</span>${l.map(([c, v]) => `<button type="button" class="chip sm fc-chip" data-fcx="${esc(c)}" aria-label="Tirar o filtro ${esc(nomes[c])}: ${esc(fmt[c] ? fmt[c](v) : v)}"><span class="note">${esc(nomes[c])}</span> ${esc(fmt[c] ? fmt[c](v) : v)} <span aria-hidden="true">×</span></button>`).join('')}${l.length > 1 ? '<button type="button" class="lnk" data-fcx="*">Limpar filtros</button>' : ''}</div>`;
+}
+/** Trata o clique numa barra de faceta ou numa etiqueta; devolve true se mudou algo. */
+export function cliqueFaceta(el: Element, F: Facetas): boolean {
+  const b = el.closest<HTMLElement>('[data-fc]');
+  if (b) { const [c, ...r] = (b.dataset.fc || '').split('|'), v = r.join('|'); if (F[c] === v) delete F[c]; else F[c] = v; return true; }
+  const x = el.closest<HTMLElement>('[data-fcx]');
+  if (x) { const c = x.dataset.fcx || ''; if (c === '*') for (const k of Object.keys(F)) delete F[k]; else delete F[c]; return true; }
+  return false;
 }
 
 /** Bloco do painel: até três gráficos lado a lado, com título opcional. */

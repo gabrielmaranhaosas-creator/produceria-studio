@@ -10,8 +10,9 @@ import { montarUniverso, reacao, caminho, leads, buscarNo, linhagem, novidades, 
 import { htmlDoMapa, fontesDaPagina } from '../lib/mapa-arquivo';
 import { baixarArquivo } from './oficina';
 import type { Alvo } from '../lib/tipos';
+import { contatoDaOrg, levarPara, focoPendente, FOCO_MV, type ContatoOrg } from '../lib/comercial';
 import { seletor, elDe, comId, mensagem } from './dom';
-import { kpis, numero, vazio, barras, contar, painel, sugerir, irPara } from '../componentes';
+import { kpis, numero, vazio, barras, painel, sugerir, irPara, barrasFaceta, filtrarFacetas, etiquetasFiltro, cliqueFaceta, type Facetas } from '../componentes';
 
 const host = (u: string) => { try { return new URL(u).hostname.replace(/^www\./, ''); } catch { return 'fonte'; } };
 const link = (u: string | undefined, t: string) => (u && /^https?:/.test(u) ? `<a href="${esc(u)}" target="_blank" rel="noopener">${esc(t)} ↗<span class="sr"> (abre em nova aba)</span></a>` : '');
@@ -26,36 +27,41 @@ const ROT_MISSAO: Record<Missao['tipo'], string> = { juntar: 'Juntar', trajetori
 
 export function montar(root: HTMLElement): () => void {
   root.innerHTML = `<div class="wrap iv">
- <section class="iv-hoje" id="ivH" aria-label="O que chegou no mapa" hidden></section>
  <section class="kpis" id="ivK" aria-label="Tamanho da reação"></section>
  <section class="iv-ctl" aria-label="Ponto de partida">
   <div class="iv-eq"><span class="lab">Rastro</span><div class="iv-rastro" id="ivR"></div></div>
-  <div class="f iv-busca"><label for="ivQ">Partir de outro ponto</label><input id="ivQ" type="search" placeholder="Empresa, agência ou pessoa" autocomplete="off" aria-controls="ivS"><div class="iv-sug" id="ivS" role="list"></div></div>
+  <div class="f iv-busca"><label for="ivQ">Buscar no multiverso</label><input id="ivQ" type="search" placeholder="Digite um nome: o mapa vai até ele" autocomplete="off" aria-controls="ivS"><div class="iv-sug" id="ivS" role="list"></div></div>
   <div class="iv-opc">
    <div class="seg sm" id="ivV" role="group" aria-label="Visão do mapa"><button type="button" data-visao="multiverso" aria-pressed="true">Multiverso</button><button type="button" data-visao="colunas" aria-pressed="false">Colunas</button></div>
-   <div class="seg sm" id="ivA" role="group" aria-label="Abertura dos ramos"><button type="button" data-ab="1" aria-pressed="true" title="Os pontos mais fortes de cada ramificação">Essencial</button><button type="button" data-ab="2" aria-pressed="false" title="Quase o dobro de pontos por ramificação">Ampla</button></div>
+   <div class="seg sm" id="ivA" role="group" aria-label="Abertura dos ramos"><button type="button" data-ab="1" aria-pressed="true" title="Os pontos mais fortes de cada ramificação">Essencial</button><button type="button" data-ab="2" aria-pressed="false" title="Quase o dobro de pontos por ramificação">Ampla</button><button type="button" data-ab="3" aria-pressed="false" title="Todos os pontos alcançáveis, sem corte">Tudo</button></div>
    <button type="button" class="iv-fo" id="ivFo" data-fora aria-pressed="false" title="Mostrar no multiverso os pontos sem ligação com o ponto de partida">Fora de alcance <b class="num" id="ivFoN"></b></button>
   </div>
   <button type="button" class="iv-baixar" id="ivB" data-baixar>Baixar o mapa interativo</button>
  </section>
- <section class="iv-mv" id="ivMv" aria-labelledby="ivMvT"></section>
- <section class="iv-pon" id="ivPt" aria-labelledby="ivPtT"></section>
  <p class="note iv-dica" id="ivDica"></p>
  <div class="iv-mesa" id="ivMesa">
   <div class="iv-rd" id="ivRd" role="region" aria-label="Multiverso: o ponto de partida no centro, uma volta por ramificação"><svg class="iv-rd-s" id="ivRdS" role="group" aria-label="Pontos da reação"><g id="ivRdG"></g></svg>
    <div class="iv-rd-z" role="group" aria-label="Zoom"><button type="button" data-zoom="1.4" aria-label="Aproximar">+</button><button type="button" data-zoom="0.7" aria-label="Afastar">−</button><button type="button" data-zoom="0" aria-label="Ver a reação inteira">⌂</button></div>
-   <ul class="iv-rd-leg" aria-label="Legenda"><li><i class="ag"></i>agência</li><li><i class="em"></i>anunciante</li><li><i class="pe"></i>pessoa</li><li><i class="ct"></i>contrata produção</li></ul></div>
+   <div class="iv-rd-leg" role="group" aria-label="Mostrar no mapa"><span class="iv-rd-lt">Mostrar</span><button type="button" data-tf="ag" aria-pressed="true"><i class="ag"></i>agências</button><button type="button" data-tf="em" aria-pressed="true"><i class="em"></i>anunciantes</button><button type="button" data-tf="pe" aria-pressed="true"><i class="pe"></i>pessoas</button><button type="button" data-tf="ct" aria-pressed="true"><i class="ct"></i>contratam produção</button></div>
+   <div class="iv-tip" id="ivTip" role="tooltip" hidden></div></div>
   <div class="iv-rolo" id="ivRolo" tabindex="0" role="region" aria-label="Quadro da reação em cadeia, rola por dentro"><section class="iv-quadro" id="ivQd"></section></div>
   <aside class="iv-ficha" id="ivFi" aria-live="polite" aria-label="Dossiê do ponto escolhido"></aside>
  </div>
  <p class="sr" id="ivLive" aria-live="polite"></p>
- <section aria-labelledby="ivLT"><h2 class="iv-h" id="ivLT">Radar de prospecção</h2><p class="note">As possibilidades de negócio desta reação, da mais forte para a mais fraca. A força soma a nota do ponto (quem contrata produção, conta que acabou de mudar, encaixe do craft, ponte com a PRODUCERIA), quantos caminhos chegam nele e a distância do ponto de partida.</p><div class="seg sm" id="ivLF" role="group" aria-label="Mostrar no radar"><button type="button" data-lf="" aria-pressed="true">Tudo</button><button type="button" data-lf="novo" aria-pressed="false">Novos</button><button type="button" data-lf="org" aria-pressed="false">Empresas e agências</button><button type="button" data-lf="pessoa" aria-pressed="false">Pessoas</button><button type="button" data-lf="nova" aria-pressed="false">Sem ponte ainda</button></div><ol class="iv-radar" id="ivL"></ol><p class="iv-radar-mais" id="ivLM"></p></section>
+ <section class="iv-hoje" id="ivH" aria-label="O que chegou no mapa" hidden></section>
+ <section class="iv-mv" id="ivMv" aria-labelledby="ivMvT"></section>
+ <section class="iv-pon" id="ivPt" aria-labelledby="ivPtT"></section>
+ <section aria-labelledby="ivLT"><h2 class="iv-h" id="ivLT">Radar de prospecção</h2><p class="note">As possibilidades de negócio desta reação, da mais forte para a mais fraca. A força soma a nota do ponto (quem contrata produção, conta que acabou de mudar, encaixe do craft, ponte com a PRODUCERIA), quantos caminhos chegam nele e a distância do ponto de partida.</p><div class="seg sm" id="ivLF" role="group" aria-label="Mostrar no radar"><button type="button" data-lf="" aria-pressed="true">Tudo</button><button type="button" data-lf="novo" aria-pressed="false">Novos</button><button type="button" data-lf="org" aria-pressed="false">Empresas e agências</button><button type="button" data-lf="pessoa" aria-pressed="false">Pessoas</button><button type="button" data-lf="nova" aria-pressed="false">Sem ponte ainda</button></div><div id="ivLE"></div><ol class="iv-radar" id="ivL"></ol><p class="iv-radar-mais" id="ivLM"></p></section>
  <section aria-labelledby="ivGT"><h2 class="iv-h" id="ivGT">Gráficos da reação</h2><div id="ivG"></div></section>
  <section aria-labelledby="ivXT"><h2 class="iv-h" id="ivXT">Rastro das agências extintas</h2><p class="note">Agência que fechou ou mudou de nome não é beco sem saída: a reação segue para a casa que herdou contas e equipe.</p><div id="ivLn"></div></section>
 </div>`;
   const $ = seletor(root);
   let mercado: MercadoBase | null = null, movs: MovimentoBase[] = [], emp: (EmpresaMapa & OrgInv)[] = [], ags: (AgenciaMapa & OrgInv)[] = [], pes: PessoaInv[] = [], alvos: Alvo[] = [];
   let U: Universo = montarUniverso({ empresas: [], agencias: [], pessoas: [], orgsInv: [] });
+  const fcR: Facetas = {};
+  const gat = (f: string) => /^Conta nova|^Mudou de agência/.test(f) ? 'Conta nova ou mudança' : /^Encaixe/.test(f) ? 'Encaixe do craft' : /^Contrata/.test(f) ? 'Quem contrata produção' : /ponte/i.test(f) ? 'Ponte com a PRODUCERIA' : /maior anunciante/.test(f) ? 'Grande anunciante' : /Independente/.test(f) ? 'Agência independente' : '';
+  type Ld = ReturnType<typeof leads>[number];
+  const CR = { tipo: (x: Ld) => (x.no.tipo === 'pessoa' ? 'Pessoa · ' + (ROT[x.no.nivel || ''] || '') : TIPO[x.no.tipo]), gat: (x: Ld) => [...new Set(x.no.fatos.map(gat).filter(Boolean))], ger: (x: Ld) => GER[x.ger] || '' };
   let R: Reacao = reacao(U, ORIGEM), M: Multiverso = multiverso(U, ORIGEM, R), G: Reacao['geracoes'] = ordenarReacao(R), sel = '', ab = 1, lf = '', lim = 10, rastroIds: string[] = [ORIGEM], colAlvos: Colecao<Alvo> | null = null;
   const offs: (() => void)[] = [];
   // pontes: ligações registradas no Studio, a aba do painel e o rascunho do formulário (sobrevive às atualizações)
@@ -73,6 +79,14 @@ export function montar(root: HTMLElement): () => void {
   let foraOn = (() => { try { return localStorage.getItem(FORA) === '1'; } catch { return false; } })();
   const foraSet = () => new Set(foraOn && visao === 'multiverso' ? M.foraIds : []);
   const pos = new Map<string, { x: number; y: number; a: number; g: number; r: number }>();
+  // filtros por tipo (a legenda liga e desliga) e contatos publicados (coleção contatos), para o dossiê e o cartão do ponto
+  const TIPOS_OFF = 'studio.iv.tipos';
+  const tf = new Set<string>((() => { try { const v = JSON.parse(localStorage.getItem(TIPOS_OFF) || '[]'); return Array.isArray(v) ? v.map(String) : []; } catch { return []; } })());
+  let contatos: ContatoOrg[] = [], pend = focoPendente(FOCO_MV), pendAte = Date.now() + 20000, hov = '';
+  const chaveTipo = (n: NoU) => (n.tipo === 'agencia' ? 'ag' : n.tipo === 'empresa' ? 'em' : n.tipo === 'pessoa' ? (n.nivel === 'contrata' ? 'ct' : 'pe') : '');
+  const linkedinDe = (n: NoU) => n.fontes.find((u) => /linkedin\.com\/(in|company)\//i.test(u)) || (n.tipo !== 'pessoa' ? [...ags, ...emp].find((o) => o.nome === n.nome)?.linkedin : undefined) || contatoDaOrg(contatos, n.tipo === 'pessoa' ? undefined : n.nome)?.linkedin;
+  /** E-mails publicados que alcançam o ponto: os da própria organização ou, para pessoa, os da empresa onde trabalha. */
+  const emailsDe = (n: NoU) => { const c = contatoDaOrg(contatos, n.tipo === 'pessoa' ? n.org : n.nome); return { c, emails: (c?.emails || []).filter((e) => !/imprensa/.test(e.tipo) || n.tipo !== 'pessoa') }; };
   const VISTO = 'studio.iv.visto';
   const visto = new Set<string>((() => { try { const v = JSON.parse(localStorage.getItem(VISTO) || '[]'); return Array.isArray(v) ? v.map(String) : []; } catch { return []; } })());
   const guardar = () => { try { localStorage.setItem(VISTO, JSON.stringify([...visto].slice(-3000))); } catch { /* sem armazenamento: vale só nesta visita */ } };
@@ -144,7 +158,7 @@ export function montar(root: HTMLElement): () => void {
     $('#ivRd').hidden = !m; $('#ivRolo').hidden = m; $('#ivMesa').classList.toggle('mv', m);
     const fo = $('#ivFo'); fo.hidden = !m; fo.setAttribute('aria-pressed', String(foraOn));
     $('#ivV').querySelectorAll<HTMLElement>('[data-visao]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.visao === visao)));
-    $('#ivDica').textContent = m ? 'Clique num ponto para acender o caminho e abrir o dossiê. Arraste para andar; pinça, Ctrl + rolar ou os botões aproximam.' : 'Clique num ponto para acender o caminho até ele e ver o dossiê ao lado. O quadro rola por dentro, para baixo e para os lados.';
+    $('#ivDica').textContent = m ? 'Passe o mouse num ponto para ver quem é e com quem se liga. Clique abre o dossiê com contatos e ações; duplo clique faz a reação partir dele. Arraste para andar; pinça, Ctrl + rolar ou os botões aproximam. A legenda liga e desliga cada tipo.' : 'Clique num ponto para acender o caminho até ele e ver o dossiê ao lado. O quadro rola por dentro, para baixo e para os lados.';
   }
 
   /** O Multiverso: a semente no centro e uma volta (elipse) por ramificação; cada ponto perto de quem o trouxe. */
@@ -192,10 +206,10 @@ export function montar(root: HTMLElement): () => void {
       const x = { id, forca: forcaR.get(id) ?? 0 }, n = no(x.id), q = pos.get(x.id); if (!n || !q) continue;
       const dir = Math.cos(q.a) >= 0 || q.g === 0, cls = n.tipo === 'origem' ? 'zero' : n.tipo === 'pessoa' ? `pe${n.nivel === 'contrata' ? ' ct' : ''}` : n.tipo === 'agencia' ? 'ag' : 'em';
       const lab = q.g === 0 ? `<text class="mv-l mostra fixo" x="${q.x}" y="${q.y + q.r + 16}" text-anchor="middle">${esc(n.tipo === 'origem' ? 'PRODUCERIA' : curto(n.nome, 30))}</text>` : `<text class="mv-l" x="${(q.x + (dir ? q.r + 5 : -q.r - 5)).toFixed(1)}" y="${(q.y + 4).toFixed(1)}" text-anchor="${dir ? 'start' : 'end'}">${esc(curto(n.nome, 28))}</text>`;
-      nos += `<g class="mv-n ${cls}${q.g < 0 ? ' longe' : ''}${n.extinta ? ' ext' : ''}${novo(x.id) ? ' novo' : ''}${n.alvo ? ' alvo' : ''}" data-n="${esc(x.id)}" tabindex="0" role="button" aria-label="${esc(`${n.nome}, ${TIPO[n.tipo]}${n.tipo === 'pessoa' && n.sub ? ', ' + n.sub : ''}${q.g < 0 ? ', fora de alcance' : q.g ? ', ' + GER[q.g] + ', força ' + x.forca : ''}`)}" style="--g:${q.g}">${novo(x.id) ? `<circle class="mv-pulso" cx="${q.x}" cy="${q.y}" r="${q.r + 4}"></circle>` : ''}<circle class="mv-c" cx="${q.x}" cy="${q.y}" r="${q.r}"></circle>${lab}</g>`;
+      nos += `<g data-t="${chaveTipo(n)}" class="mv-n ${cls}${q.g < 0 ? ' longe' : ''}${n.extinta ? ' ext' : ''}${novo(x.id) ? ' novo' : ''}${n.alvo ? ' alvo' : ''}" data-n="${esc(x.id)}" tabindex="0" role="button" aria-label="${esc(`${n.nome}, ${TIPO[n.tipo]}${n.tipo === 'pessoa' && n.sub ? ', ' + n.sub : ''}${q.g < 0 ? ', fora de alcance' : q.g ? ', ' + GER[q.g] + ', força ' + x.forca : ''}`)}" style="--g:${q.g}">${novo(x.id) ? `<circle class="mv-pulso" cx="${q.x}" cy="${q.y}" r="${q.r + 4}"></circle>` : ''}<circle class="mv-c" cx="${q.x}" cy="${q.y}" r="${q.r}"></circle>${lab}</g>`;
     }
     g0.innerHTML = `<g class="mv-aneis">${h}</g><g class="mv-fios">${fios}</g><g class="mv-nos">${nos}</g>`;
-    mover(false); rotulos();
+    filtrar(); mover(false); rotulos();
   }
   /** Aplica zoom e arraste. */
   function mover(suave: boolean) {
@@ -203,6 +217,55 @@ export function montar(root: HTMLElement): () => void {
     g0.classList.toggle('suave', suave);
     g0.style.transform = `translate(${vx}px,${vy}px) scale(${vk})`; g0.style.setProperty('--k', String(vk));
   }
+  /** Esconde os tipos desligados na legenda (e os fios que ficam sem ponta). */
+  function filtrar() {
+    root.querySelectorAll<HTMLElement>('#ivRd [data-tf]').forEach((b) => b.setAttribute('aria-pressed', String(!tf.has(b.dataset.tf || ''))));
+    const fora = new Set<string>();
+    root.querySelectorAll<SVGGElement>('#ivRdG .mv-n').forEach((g) => { const o = tf.has(g.dataset.t || '') && g.dataset.n !== sel; g.classList.toggle('oculto', o); if (o) fora.add(g.dataset.n || ''); });
+    root.querySelectorAll<SVGPathElement>('#ivRdG .mv-f').forEach((f) => f.classList.toggle('oculto', fora.has(f.dataset.de || '') || fora.has(f.dataset.para || '')));
+  }
+  /** Passar o mouse num ponto: acende ele, os vizinhos e os fios, e mostra o cartão com quem é e como chegar. */
+  function pairar(id: string, ev?: PointerEvent) {
+    const rd = $('#ivRd'), tip = $('#ivTip');
+    if (id === hov && ev) { posTip(ev); return; }
+    hov = id;
+    root.querySelectorAll('#ivRdG .hv').forEach((e) => e.classList.remove('hv'));
+    rd.classList.toggle('hov', !!id);
+    if (!id) { tip.hidden = true; return; }
+    const viz = new Set([id]);
+    root.querySelectorAll<SVGPathElement>('#ivRdG .mv-f').forEach((f) => { const de = f.dataset.de || '', pa = f.dataset.para || ''; if (de === id || pa === id) { f.classList.add('hv'); viz.add(de); viz.add(pa); } });
+    viz.forEach((v) => root.querySelector(`#ivRdG [data-n="${CSS.escape(v)}"]`)?.classList.add('hv'));
+    const n = no(id); if (!n) { tip.hidden = true; return; }
+    const r = ramos().get(id), { emails } = emailsDe(n), li = linkedinDe(n);
+    const onde = n.tipo === 'origem' ? 'Ponto zero' : r ? GER[r.ger] || r.ger + 'ª ramificação' : 'Fora de alcance';
+    const quem = n.tipo === 'pessoa' ? [n.sub, n.org].filter(Boolean).join(' · ') : n.sub.split(' · ').filter((x) => x && !/^(Agência|Anunciante|Organização)$/.test(x)).join(' · ');
+    tip.innerHTML = `<span class="iv-tip-k">${esc(TIPO[n.tipo])} · ${esc(onde)}${r && r.ger ? ` · força ${r.forca}` : ''}</span><b>${esc(n.nome)}</b>${quem ? `<span>${esc(curto(quem, 70))}</span>` : ''}${n.tipo !== 'origem' ? `<span class="iv-tip-c">${emails.length ? `✉ ${emails.length} e-mail${emails.length > 1 ? 's' : ''}${n.tipo === 'pessoa' ? ' da empresa' : ''}` : 'sem e-mail publicado'}${li ? ' · LinkedIn' : ''} · ${viz.size - 1} ${pl(viz.size - 1, 'ligação', 'ligações')} no mapa</span>` : ''}<span class="iv-tip-a">Clique abre o dossiê · duplo clique parte daqui</span>`;
+    tip.hidden = false; if (ev) posTip(ev);
+  }
+  function posTip(ev: PointerEvent) {
+    const tip = $('#ivTip'), B = $('#ivRd').getBoundingClientRect(), w = tip.offsetWidth, h = tip.offsetHeight;
+    let x = ev.clientX - B.left + 16, y = ev.clientY - B.top + 16;
+    if (x + w > B.width - 8) x = ev.clientX - B.left - w - 16; if (y + h > B.height - 8) y = ev.clientY - B.top - h - 16;
+    tip.style.transform = `translate(${Math.max(8, x)}px,${Math.max(8, y)}px)`;
+  }
+  /** Leva o mapa até um ponto: abre a volta que falta (Tudo ou fora de alcance), escolhe e centraliza. */
+  function localizar(id: string) {
+    if (!U.nos.has(id)) return;
+    if (visao === 'multiverso' && !pos.has(id)) {
+      if (M.foraIds.includes(id)) { foraOn = true; try { localStorage.setItem(FORA, '1'); } catch { /* sem armazenamento */ } aplicarVisao(); render(); }
+      else if (M.camadas.some((c) => c.ids.includes(id)) && ab !== 3) { ab = 3; marcarAb(); reabrir(); }
+    }
+    if (visao === 'multiverso' && !pos.has(id)) { partir(id); return; }
+    if (visao !== 'multiverso' && !ramos().has(id)) { partir(id); return; }
+    const t = no(id)?.tipo === 'pessoa' ? (no(id)!.nivel === 'contrata' ? 'ct' : 'pe') : no(id)?.tipo === 'agencia' ? 'ag' : 'em';
+    if (tf.delete(t)) guardarTipos();
+    if (sel !== id) escolher(id); else { acender(); ficha(); }
+    const q = pos.get(id);
+    if (q && visao === 'multiverso') { const area = innerWidth > 1180 ? mvW - 400 : mvW; vk = Math.max(vk, 1.6); vx = area / 2 - q.x * vk; vy = mvH / 2 - q.y * vk; mover(true); clearTimeout(tRot); tRot = window.setTimeout(rotulos, 380); }
+    $('#ivMesa').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+  const guardarTipos = () => { try { localStorage.setItem(TIPOS_OFF, JSON.stringify([...tf])); } catch { /* sem armazenamento */ } };
+  const marcarAb = () => $('#ivA').querySelectorAll<HTMLElement>('[data-ab]').forEach((b) => b.setAttribute('aria-pressed', String(Number(b.dataset.ab) === ab)));
   /** Mostra os nomes que cabem sem encavalar: caminho aceso primeiro, depois os mais fortes. */
   function rotulos() {
     if (visao !== 'multiverso' || !pos.size) return;
@@ -246,7 +309,7 @@ export function montar(root: HTMLElement): () => void {
     const viz = acesos(), up = sel ? subida() : null;
     root.querySelectorAll<SVGGElement>('#ivRdG .mv-n').forEach((g) => { const id = g.dataset.n || ''; g.classList.toggle('on', id === sel); g.classList.toggle('apaga', !!viz && !viz.has(id)); g.setAttribute('aria-pressed', String(id === sel)); });
     root.querySelectorAll<SVGPathElement>('#ivRdG .mv-f').forEach((f) => { const de = f.dataset.de || '', pa = f.dataset.para || ''; const lig = !!up && (de === sel || (up.has(de) && up.has(pa))); f.classList.toggle('acesa', lig); f.classList.toggle('apaga', !!viz && !lig); });
-    rotulos();
+    filtrar(); rotulos();
   }
   /** Traz o ponto escolhido e o que acende com ele para a parte do palco que o dossiê não cobre. */
   function enquadrar() {
@@ -425,14 +488,25 @@ export function montar(root: HTMLElement): () => void {
     ${cam.length > 1 ? `<div><span class="lab">Caminho</span><p class="iv-cam">${cam.map((c, i) => `${i ? `<span class="iv-seta" aria-hidden="true">→</span><span class="iv-rot" title="${esc(c.rotulo)}">${esc(curto(c.rotulo, 34))}</span>` : ''}${chip(c.id)}`).join(' ')}</p></div>` : ''}
     ${r && r.pais.length > 1 ? `<p class="note">${r.pais.length} caminhos chegam aqui: ${r.pais.map((p) => esc(no(p.id)?.nome || '')).join(', ')}.</p>` : ''}
     ${viz.length ? `<div><span class="lab">Ligações no Big Data (${viz.length})</span><p class="iv-cam">${viz.slice(0, 10).map((a) => chip(a.b, ` <span class="iv-rot">${esc(curto(a.rotulo, 26))}</span>`)).join(' ')}${viz.length > 10 ? ` <span class="note">e mais ${viz.length - 10}</span>` : ''}</p></div>` : ''}
+    ${n.tipo !== 'origem' ? contatoHtml(n) : ''}
     ${n.fontes.length ? `<p class="note"><span class="lab">Fontes</span> ${[...new Set(n.fontes)].slice(0, 5).map((u) => link(u, host(u))).filter(Boolean).join(' · ')}</p>` : ''}
-    <div class="iv-acoes">${sel !== R.semente ? `<button type="button" data-s="${esc(sel)}">Abrir a reação a partir daqui</button>` : ''}${n.tipo !== 'origem' && !n.extinta ? (n.alvo ? '<a class="tag ok" href="#captacao">Já está no radar da Captação</a>' : `<button type="button" class="ghost" data-alvo="${esc(sel)}">Pôr no radar da Captação</button>`) : ''}${n.tipo !== 'origem' && ligDe !== sel ? `<button type="button" class="ghost" data-ligar="${esc(sel)}">Registrar ligação</button>` : ''}<a class="lnk" href="#bigdata">Ver no Big Data</a></div>${ligDe === sel && n.tipo !== 'origem' ? formLigacao(n) : ''}</article>`;
+    <div class="iv-acoes">${n.tipo !== 'origem' && !n.extinta ? `<button type="button" data-mesa="${esc(sel)}">Escrever pela Mesa comercial</button>` : ''}${sel !== R.semente ? `<button type="button" class="${n.tipo !== 'origem' && !n.extinta ? 'ghost' : ''}" data-s="${esc(sel)}">Abrir a reação a partir daqui</button>` : ''}${n.tipo !== 'origem' && !n.extinta ? (n.alvo ? '<a class="tag ok" href="#captacao">Já está no radar da Captação</a>' : `<button type="button" class="ghost" data-alvo="${esc(sel)}">Pôr no radar da Captação</button>`) : ''}${n.tipo !== 'origem' && ligDe !== sel ? `<button type="button" class="ghost" data-ligar="${esc(sel)}">Registrar ligação</button>` : ''}<a class="lnk" href="#bigdata">Ver no Big Data</a></div>${ligDe === sel && n.tipo !== 'origem' ? formLigacao(n) : ''}</article>`;
+  }
+
+  /** Contato publicado do ponto: e-mails com a página de origem, LinkedIn e site. */
+  function contatoHtml(n: NoU) {
+    const { c, emails } = emailsDe(n), li = linkedinDe(n), site = n.tipo !== 'pessoa' ? c?.site : '';
+    const lis = emails.map((e) => `<li><a href="mailto:${esc(e.email)}">${esc(e.email)}</a> <span class="note">${esc(n.tipo === 'pessoa' ? 'da empresa · ' + e.tipo : e.tipo)}${e.fonte ? ` · ${link(e.fonte, 'fonte')}` : ''}</span></li>`).join('');
+    const extra = [li ? link(li, 'LinkedIn') : '', site ? link(site, host(site)) : ''].filter(Boolean).join(' · ');
+    return `<div class="iv-cto"><span class="lab">Contato</span>${lis ? `<ul class="iv-cto-l">${lis}</ul>` : `<p class="note">Sem e-mail publicado${n.tipo === 'pessoa' ? ' (nem da empresa)' : ''}. ${li ? 'O caminho é o LinkedIn.' : 'Registre uma ligação ou busque o contato.'}</p>`}${extra ? `<p class="iv-cto-x">${extra}</p>` : ''}</div>`;
   }
 
   function radar(L: ReturnType<typeof leads>) {
     const diretas = new Set((U.adj.get(ORIGEM) || []).map((a) => a.b)), semPonte = (x: (typeof L)[number]) => !diretas.has(x.id) && !x.no.fatos.some((f) => /ponte/i.test(f));
     if (lf === 'novo') { const rm = ramos(); L = [...novos].map((id) => ({ id, no: no(id)!, forca: rm.get(id)?.forca ?? no(id)?.nota ?? 0, pais: [], ger: rm.get(id)?.ger ?? 0 })).filter((x) => x.no && !x.no.extinta && x.no.tipo !== 'origem').sort((a, b) => b.forca - a.forca); }
     else L = L.filter((x) => !lf || (lf === 'pessoa' ? x.no.tipo === 'pessoa' : lf === 'org' ? x.no.tipo !== 'pessoa' : semPonte(x)));
+    L = filtrarFacetas(L, fcR, CR);
+    $('#ivLE').innerHTML = etiquetasFiltro(fcR, { tipo: 'Tipo', gat: 'Gatilho', ger: 'Ramificação' });
     const resto = L.length - lim;
     $('#ivLM').innerHTML = resto > 0 ? `<button type="button" class="ghost" data-rmais>Mostrar mais ${Math.min(10, resto)} (${resto} restantes)</button>` : '';
     $('#ivL').innerHTML = L.length ? L.slice(0, lim).map((x) => {
@@ -442,12 +516,12 @@ export function montar(root: HTMLElement): () => void {
   }
 
   function graficos(L: ReturnType<typeof leads>, total: number) {
-    const gat = (f: string) => /^Conta nova|^Mudou de agência/.test(f) ? 'Conta nova ou mudança' : /^Encaixe/.test(f) ? 'Encaixe do craft' : /^Contrata/.test(f) ? 'Quem contrata produção' : /ponte/i.test(f) ? 'Ponte com a PRODUCERIA' : /maior anunciante/.test(f) ? 'Grande anunciante' : /Independente/.test(f) ? 'Agência independente' : '';
+    const base = filtrarFacetas(L, fcR, CR, 'ger');
     $('#ivG').innerHTML = painel([
       barras('Mais fortes da reação', L.slice(0, 8).map((x) => ({ rotulo: x.no.nome, valor: x.forca, dado: x.id })), { attr: 'n', nota: 'clique para acender o caminho' }),
-      barras('Possibilidades por ramificação', R.geracoes.slice(1).map((g, i) => ({ rotulo: GER[i + 1], valor: g.filter((r) => !no(r.id)?.extinta).length })), { nota: `${total - 1} pontos abertos` }),
-      barras('Por tipo', contar(L, (x) => (x.no.tipo === 'pessoa' ? 'Pessoa · ' + (ROT[x.no.nivel || ''] || '') : TIPO[x.no.tipo])), { nota: 'empresas, agências e pessoas' }),
-      barras('Gatilhos', contar(L.flatMap((x) => x.no.fatos.map(gat).filter(Boolean).map((g) => ({ g }))), (y) => y.g), { nota: 'por que cada ponto entrou no radar' }),
+      barras('Possibilidades por ramificação', R.geracoes.slice(1).map((_, i) => ({ rotulo: GER[i + 1], valor: base.filter((x) => x.ger === i + 1).length, dado: 'ger|' + GER[i + 1], ativo: fcR.ger === GER[i + 1] })).filter((b) => b.valor), { attr: 'fc', nota: fcR.ger ? 'clique de novo para tirar o filtro' : `${total - 1} pontos abertos · clique para filtrar o radar` }),
+      barrasFaceta('Por tipo', 'tipo', L, fcR, CR, { nota: fcR.tipo ? 'clique de novo para tirar o filtro' : 'clique para filtrar o radar' }),
+      barrasFaceta('Gatilhos', 'gat', L, fcR, CR, { nota: fcR.gat ? 'clique de novo para tirar o filtro' : 'por que cada ponto entrou no radar · clique para filtrar' }),
     ], 'Gráficos da reação');
   }
 
@@ -456,13 +530,15 @@ export function montar(root: HTMLElement): () => void {
     $('#ivLn').innerHTML = ext.length ? `<ol class="iv-ln">${ext.map((o) => { const l = linhagem(o, ags); return `<li><div class="iv-trilha">${l.map((y, i) => { const id = [...U.nos.values()].find((n) => n.nome === y.nome)?.id || ''; return `<button type="button" class="iv-et${y.perfil === 'extinta' ? ' ext' : ' viva'}" ${id ? `data-s="${esc(id)}"` : 'disabled'}>${esc(y.nome)}${y.perfil === 'extinta' ? '<i>extinta</i>' : i ? '<i>hoje</i>' : ''}</button>`; }).join('<span class="iv-seta" aria-hidden="true">→</span>')}</div></li>`; }).join('')}</ol>` : '<p class="note">Nenhuma agência marcada como extinta no Big Data.</p>';
   }
 
-  const reabrir = () => { lim = 10; R = reacao(U, rastroIds[rastroIds.length - 1], LIMITES.map((l) => Math.round(l * (ab === 2 ? 1.8 : 1)))); G = ordenarReacao(R); M = multiverso(U, R.semente, R); if (sel && !ramos().has(sel)) sel = ''; render(); };
+  const reabrir = () => { lim = 10; R = reacao(U, rastroIds[rastroIds.length - 1], LIMITES.map((l) => Math.round(l * (ab === 2 ? 1.8 : ab === 3 ? 1000 : 1)))); G = ordenarReacao(R); M = multiverso(U, R.semente, R); if (sel && !ramos().has(sel)) sel = ''; render(); };
   const recalcular = () => {
     const G = montarGrafo({ mercado, movimentos: movs, empresas: emp, agencias: ags, pessoas: pes.filter((p) => p.nome && p.organizacao) as PessoaMapa[] });
     U = montarUniverso({ empresas: G.empresas, agencias: G.agencias, pessoas: pes, orgsInv: [...ags, ...emp], alvos, ligacoes: ligs });
     rastroIds = rastroIds.filter((id) => U.nos.has(id)); if (!rastroIds.length) rastroIds = [ORIGEM];
     // a tela sempre abre pela PRODUCERIA; a troca de conta do dia fica a um clique, na faixa "Hoje no mapa"
     reabrir();
+    // veio de outra tela com um ponto em foco (ex.: "Ver no multiverso" da Mesa comercial)
+    if (pend && U.nos.has(pend)) { const id = pend; pend = ''; requestAnimationFrame(() => localizar(id)); } else if (pend && Date.now() > pendAte) pend = '';
   };
   let tRe = 0;
   const agendar = () => { clearTimeout(tRe); tRe = window.setTimeout(recalcular, 60); };
@@ -510,6 +586,7 @@ export function montar(root: HTMLElement): () => void {
     const vb = el.closest<HTMLElement>('[data-visao]'); if (vb) { visao = vb.dataset.visao === 'colunas' ? 'colunas' : 'multiverso'; try { localStorage.setItem(MODO, visao); } catch { /* sem armazenamento */ } aplicarVisao(); render(); return; }
     const zb = el.closest<HTMLElement>('[data-zoom]'); if (zb) { const f = Number(zb.dataset.zoom); if (f) zoom(f, mvW / 2, mvH / 2, true); else { vk = 1; vx = 0; vy = 0; mover(true); clearTimeout(tRot); tRot = window.setTimeout(rotulos, 380); } return; }
     if (arrastou) { arrastou = false; return; }
+    if (el.closest('#ivG [data-fc], #ivLE [data-fcx]') && cliqueFaceta(el, fcR)) { lim = 10; render(); if (el.closest('#ivG')) $('#ivLT').scrollIntoView({ behavior: 'smooth', block: 'start' }); return; }
     const d = el.closest<HTMLElement>('[data-dia]'); if (d) { const v = d.dataset.dia || ''; foco = foco === v ? '' : v; if (lf === 'novo') lim = 10; render(); $('#ivLive').textContent = foco ? `Dia em foco: ${dt(foco)}` : 'De volta ao mais recente'; return; }
     const j = el.closest<HTMLElement>('[data-jan]'); if (j) { janela = Number(j.dataset.jan) || 30; hoje(); return; }
     if (el.closest('[data-novos]')) { lf = 'novo'; lim = 10; $('#ivLF').querySelectorAll<HTMLElement>('[data-lf]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.lf === 'novo'))); radar(leads(U, R)); $('#ivLT').scrollIntoView({ behavior: 'smooth', block: 'start' }); return; }
@@ -524,7 +601,9 @@ export function montar(root: HTMLElement): () => void {
       lf = k === 'pessoa' && lf !== 'pessoa' ? 'pessoa' : ''; lim = 10; $('#ivLF').querySelectorAll<HTMLElement>('[data-lf]').forEach((b) => b.setAttribute('aria-pressed', String((b.dataset.lf || '') === lf))); radar(leads(U, R)); render(); irPara($('#ivLT').parentElement); return;
     }
     const f = el.closest<HTMLElement>('[data-lf]'); if (f) { lf = f.dataset.lf || ''; lim = 10; $('#ivLF').querySelectorAll<HTMLElement>('[data-lf]').forEach((b) => b.setAttribute('aria-pressed', String(b === f))); radar(leads(U, R)); return; }
-    const k = el.closest<HTMLElement>('[data-ab]'); if (k) { ab = Number(k.dataset.ab) || 1; $('#ivA').querySelectorAll<HTMLElement>('[data-ab]').forEach((b) => b.setAttribute('aria-pressed', String(b === k))); reabrir(); return; }
+    const k = el.closest<HTMLElement>('[data-ab]'); if (k) { ab = Number(k.dataset.ab) || 1; marcarAb(); vk = 1; vx = 0; vy = 0; reabrir(); return; }
+    const tb = el.closest<HTMLElement>('[data-tf]'); if (tb) { const t = tb.dataset.tf || ''; if (!tf.delete(t)) tf.add(t); guardarTipos(); filtrar(); rotulos(); $('#ivLive').textContent = `${tb.textContent?.trim()}: ${tf.has(t) ? 'escondidos' : 'no mapa'}`; return; }
+    const em = el.closest<HTMLElement>('[data-mesa]'); if (em) { levarPara('disparos', em.dataset.mesa || ''); return; }
     const b = el.closest<HTMLElement>('[data-n]'); if (!b || !root.contains(b)) return;
     ev.preventDefault(); const id = b.dataset.n || '';
     if (!ramos().has(id) && !(b.closest('#ivRd') && foraSet().has(id)) && !b.closest('#ivPt, #ivFi')) { partir(id); return; }
@@ -537,7 +616,7 @@ export function montar(root: HTMLElement): () => void {
   sugerir('ivQ', () => {
     const G0 = (t: string) => [...U.nos.values()].filter((n) => n.tipo === t).map((n) => ({ texto: n.nome, valor: n.id, sub: n.tipo === 'pessoa' ? [n.sub, n.org].filter(Boolean).join(' · ') : n.sub.split(' · ').filter((x) => x && !/^(Agência|Anunciante|Organização)$/.test(x)).join(' · ') || undefined, peso: n.nota + (novos.has(n.id) ? 50 : 0) }));
     return [{ nome: 'Agências', itens: G0('agencia') }, { nome: 'Anunciantes', itens: G0('empresa') }, { nome: 'Pessoas', itens: G0('pessoa') }];
-  }, { titulo: 'Todo o mapa · escolha um ponto para partir dele', aoEscolher: (it, _g, c) => { c.value = ''; $('#ivS').innerHTML = ''; partir(it.valor || ''); } });
+  }, { titulo: 'Todo o mapa · escolha um ponto e o mapa vai até ele', aoEscolher: (it, _g, c) => { c.value = ''; $('#ivS').innerHTML = ''; localizar(it.valor || ''); } });
   root.addEventListener('input', (ev) => {
     const t = ev.target as HTMLInputElement; if (!t.closest?.('[data-form-lig]')) return;
     if (t.name === 'fonte') rasc.fonte = t.value;
@@ -571,6 +650,11 @@ export function montar(root: HTMLElement): () => void {
   });
   const soltar = () => { if (ini && arrastou) { svgMv.classList.remove('anda'); clearTimeout(tRot); tRot = window.setTimeout(rotulos, 60); window.setTimeout(() => { arrastou = false; }, 0); } ini = null; };
   svgMv.addEventListener('pointerup', soltar); svgMv.addEventListener('pointercancel', soltar);
+  svgMv.addEventListener('dblclick', (ev) => { const g = (ev.target as Element).closest?.('[data-n]') as HTMLElement | null; if (g) { ev.preventDefault(); pairar(''); partir(g.dataset.n || ''); } });
+  svgMv.addEventListener('pointermove', (ev) => { if (ini && arrastou) return; const g = (ev.target as Element).closest?.('[data-n]') as HTMLElement | null; pairar(g?.dataset.n || '', ev); });
+  svgMv.addEventListener('pointerleave', () => pairar(''));
+  svgMv.addEventListener('focusin', (ev) => { const g = (ev.target as Element).closest?.('[data-n]') as HTMLElement | null; if (g) pairar(g.dataset.n || ''); });
+  svgMv.addEventListener('focusout', () => pairar(''));
   svgMv.addEventListener('keydown', (ev) => { const g = (ev.target as Element).closest?.('[data-n]'); if (g && (ev.key === 'Enter' || ev.key === ' ')) { ev.preventDefault(); g.dispatchEvent(new MouseEvent('click', { bubbles: true })); } });
   aplicarVisao();
   document.fonts?.ready.then(redesenhar).catch(() => {});
@@ -587,6 +671,7 @@ export function montar(root: HTMLElement): () => void {
     colLig = db.collection<LigacaoInv>('mapa_ligacoes');
     sub<LigacaoInv>('mapa_ligacoes', (l) => { ligs = l; });
     sub<Alvo>('alvos', (l) => { alvos = l; });
+    offs.push(db.collection<ContatoOrg>('contatos').onSnapshot((s) => { contatos = s.docs.map(comId) as ContatoOrg[]; ficha(); }, () => {}));
   })();
   return () => { document.removeEventListener('keydown', tecla); ro?.disconnect(); cancelAnimationFrame(quadro); clearTimeout(tRe); clearTimeout(tAnim); clearTimeout(tRot); roMv?.disconnect(); cancelAnimationFrame(quadroMv); for (const o of offs) { try { o(); } catch { /* já cancelado */ } } };
 }

@@ -6,7 +6,7 @@ import { hoje as hojeISO } from '../lib/datas';
 import { banco, type Colecao } from '../lib/db';
 import type { Alvo } from '../lib/tipos';
 import { seletor, elDe, mensagem, comId } from './dom';
-import { kpis, numero, vazio, barras, porMes, contar, painel, sugerir, irPara, itensDe } from '../componentes';
+import { kpis, numero, vazio, barras, porMes, contar, painel, sugerir, irPara, itensDe, barrasFaceta, filtrarFacetas, etiquetasFiltro, cliqueFaceta, type Facetas } from '../componentes';
 
 export type Prioridade = 'alta' | 'media' | 'baixa';
 export type Status = 'novo' | 'andamento' | 'feito' | 'descartado';
@@ -49,7 +49,7 @@ export function montar(root: HTMLElement): () => void {
   const hoje = hojeISO();
   let A: Alerta[] = [], alvos: Alvo[] = [], col: Colecao<Alerta> | null = null, colAlvos: Colecao<Alvo> | null = null, carregando = true;
   const offs: (() => void)[] = [];
-  const F = { s: '', t: '', q: '', k: '' };
+  const F = { s: '', t: '', q: '', k: '' }, fc: Facetas = {};
   try { const sv = JSON.parse(localStorage.getItem('ac.filtros.v2') || 'null'); if (sv) Object.assign(F, sv); } catch { /* sem armazenamento */ }
   const guardar = () => { try { localStorage.setItem('ac.filtros.v2', JSON.stringify(F)); } catch { /* sem armazenamento */ } };
   const ehAlvo = (nome: string) => alvos.some((a) => a.id === 'al-' + slug(nome) || mesmaEmpresa(a.nome, nome));
@@ -95,15 +95,17 @@ export function montar(root: HTMLElement): () => void {
       { rotulo: 'Feitos em 30 dias', valor: numero(n('feitos')), nota: 'ações concluídas', kpi: 'feitos', ativo: on('feitos'), acao: 'Ver os feitos' },
     ]);
     const corte = (l: Alerta[]) => (F.k && RECORTE[F.k] ? l.filter(RECORTE[F.k]) : l);
-    const L = corte(filtrar(A, F.k ? { ...F, s: '' } : F));
+    const L0 = corte(filtrar(A, F.k ? { ...F, s: '' } : F));
     const base = corte(filtrar(A, { ...F, t: '', s: F.k ? '' : F.s })), sit = (a: Alerta) => ({ novo: 'Novo', andamento: 'Em andamento', feito: 'Feito', descartado: 'Descartado' })[a.status || 'novo'];
+    const CF = { sit, mes: (a: Alerta) => (a.data || '').slice(0, 7) };
+    const L = filtrarFacetas(L0, fc, CF);
     $('#acPn').innerHTML = A.length ? painel([
       barras('Por tipo', contar(base, (a) => a.tipo).map((b) => ({ ...b, rotulo: TIPOS[b.rotulo] || b.rotulo, ativo: b.dado === F.t })), { attr: 't', nota: 'clique para ver só o tipo' }),
-      porMes('Alertas por mês', L.map((a) => a.data), 6),
+      porMes('Alertas por mês', filtrarFacetas(L0, fc, CF, 'mes').map((a) => a.data), 6, fc.mes ? 'clique de novo no mês para tirar o filtro' : 'clique num mês para filtrar', { campo: 'mes', ativo: fc.mes }),
       barras('Anunciantes mais citados', contar(L, (a) => [...new Set((a.empresas || []).map(nomeLegivel))]).map((b) => ({ ...b, ativo: chave(b.rotulo) === chave(F.q) })), { attr: 'q', nota: 'marcas e empresas que compram; clique para buscar' }),
       barras('Agências mais citadas', contar(L, (a) => [...new Set((a.agencias || []).map(nomeLegivel))]).map((b) => ({ ...b, ativo: chave(b.rotulo) === chave(F.q) })), { attr: 'q', nota: 'quem atende; clique para buscar' }),
-      barras('Situação', contar(L, sit)),
-    ], 'Resumo dos alertas') : '';
+      barrasFaceta('Situação', 'sit', L0, fc, CF),
+    ], 'Resumo dos alertas') + etiquetasFiltro(fc, { sit: 'Situação', mes: 'Mês' }, { mes: (k) => `${['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'][+k.slice(5) - 1]}/${k.slice(0, 4)}` }) : '';
     let html = '', dia = '';
     for (const a of L) {
       if (a.data !== dia) { if (dia) html += '</div></section>'; dia = a.data; html += `<section class="cn-dia" aria-label="${esc(dt(dia))}"><h2 class="cn-dh">${dia === hoje ? 'Hoje' : esc(dt(dia))}</h2><div class="cn-lista">`; }
@@ -134,6 +136,7 @@ export function montar(root: HTMLElement): () => void {
 
   root.addEventListener('click', (e) => {
     const el = elDe(e);
+    if (el.closest('.pn [data-fc], [data-fcx]') && cliqueFaceta(el, fc)) { render(); return; }
     const kk = el.closest<HTMLElement>('[data-kpi]'); if (kk) { F.k = F.k === kk.dataset.kpi ? '' : kk.dataset.kpi || ''; render(); irPara($('#acO')); return; }
     const q = el.closest<HTMLElement>('.pn [data-q]'); if (q) { F.q = chave(F.q) === chave(q.dataset.q || '') ? '' : q.dataset.q || ''; render(); return; }
     const t = el.closest<HTMLElement>('[data-t]'); if (t) { F.t = t.closest('.pn') && F.t === t.dataset.t ? '' : t.dataset.t || ''; render(); root.querySelector<HTMLElement>(`[data-t="${F.t}"]`)?.focus(); return; }

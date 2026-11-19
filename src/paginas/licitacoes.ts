@@ -431,7 +431,7 @@ ${txt.slice(0, 30000)}`, { json: true })) as Record<string, unknown> | null;
       else { const k = d.kpi as 'estudio' | 'abertas'; F[k] = !F[k]; }
       limite = 60; render(); irPara($('#lcOp')); return;
     }
-    if (d.fr !== undefined) { F.frente = F.frente === d.fr ? '' : d.fr; limite = 60; render(); return; }
+    if (d.fr !== undefined) { F.frente = F.frente === d.fr ? '' : d.fr; limite = 60; render(); if (F.frente) irPara($('#lcOp')); return; }
     if (d.ad !== undefined) { F.aderencia = d.ad as FiltroRadar['aderencia']; limite = 60; render(); return; }
     if (d.tg) { const k = d.tg as 'nota60' | 'abertas' | 'estudio' | 'descartadas' | 'foraEscopo' | 'direta'; F[k] = !F[k]; limite = 60; render(); return; }
     if (b.id === 'lcMais') { limite += 60; render(); return; }

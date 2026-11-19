@@ -199,7 +199,7 @@ export function montar(root: HTMLElement): () => void {
     const o = $('#vcO');
     if (!m) return;
     if (visao === 'precos') $('#vcPn').innerHTML = '';
-    else if (visao === 'contratos') { const C = filtrarContratos(m, f); resumo(C, barras('Órgãos que mais contrataram', contar(C, (c) => c.orgao, (c) => c.valor || 0), { fmt: brk })); }
+    else if (visao === 'contratos') { const C = filtrarContratos(m, f); resumo(C, barras('Órgãos que mais contrataram', contar(C, (c) => c.orgao, (c) => c.valor || 0).map((b) => ({ ...b, ativo: b.dado === f.busca })), { attr: 'vb', fmt: brk, nota: f.busca ? 'clique de novo para tirar o filtro' : 'clique para filtrar' })); }
     else if (visao === 'orgaos') { const L = orgaosVencendo(m, f); resumo(filtrarContratos(m, { ...f, soVigentes: true }).filter((c) => c.fim && c.fim <= new Date(Date.now() + 243 * 864e5).toISOString().slice(0, 10)), barras('Mais valor vencendo', L.map((g) => ({ rotulo: g.nome, valor: g.valorVencendo, dado: g.cnpj })).sort((a, b) => b.valor - a.valor), { attr: 'org', fmt: brk, nota: 'clique para ver o órgão' })); }
     else { const L = filtrarEmpresas(m, f), raizes = new Set(L.map((e) => e.raiz || e.cnpj.slice(0, 8))); resumo(filtrarContratos(m, f).filter((c) => raizes.has((c.cnpj || '').slice(0, 8))), barras('Maiores vencedores', L.map((e) => ({ rotulo: e.nome, valor: e.valorVigente || e.valorTotal, dado: e.cnpj })).sort((a, b) => b.valor - a.valor), { attr: 'emp', fmt: brk, nota: 'clique para ver a empresa' })); }
     if (visao === 'empresas') {
@@ -347,6 +347,7 @@ export function montar(root: HTMLElement): () => void {
     if (d.mais) { limite += Number(d.mais); lista(); return; }
     if (d.fr !== undefined || d.uf !== undefined) { if (d.fr !== undefined) f.frente = f.frente === d.fr ? '' : d.fr; else f.uf = f.uf === d.uf ? '' : d.uf!; limite = 60; filtros(); lista(); avisar(`Filtro: ${fr(f.frente) || 'todas as frentes'}, ${f.uf || 'todo o Brasil'}.`); return; }
     if (d.emp) { const e = m.empresas.find((x) => x.cnpj === d.emp); if (e) abrirEmpresa(e, b); return; }
+    if (d.vb !== undefined) { f.busca = f.busca === d.vb ? '' : d.vb; const q = root.querySelector<HTMLInputElement>('#vcQ'); if (q) q.value = f.busca; limite = 60; lista(); avisar(f.busca ? `Filtro: ${f.busca}.` : 'Filtro tirado.'); return; }
     if (d.org) { const g = m.orgaos.find((x) => x.cnpj === d.org); if (g) abrirOrgao(g, b); return; }
     if (b.id === 'vcCSV') baixar();
   });

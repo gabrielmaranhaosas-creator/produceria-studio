@@ -26,3 +26,16 @@ button.pn-l[aria-pressed=true] .pn-t i,.pn-l:first-child .pn-t i{background:var(
 .grupo-h .note{margin:0}
 @media (max-width:480px){.pn{grid-template-columns:minmax(0,1fr)}.pn-l{grid-template-columns:minmax(0,1.3fr) minmax(0,.7fr) 4.5ch}}
 .mc .vc-chk input{width:18px;height:18px;min-height:0;padding:0;margin:0;flex:none;accent-color:var(--ink)}
+
+.fc-et{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin:12px 0}
+.fc-et .lab{margin-right:4px}
+.fc-chip{display:inline-flex;align-items:center;gap:6px;border-color:var(--ink)}
+.fc-chip .note{font-size:11px}
+
+.pn-m.fc li{display:block}
+.pn-m.fc button{all:unset;box-sizing:border-box;width:100%;display:grid;grid-template-rows:auto 1fr auto;height:100%;align-items:end;text-align:center;cursor:pointer;min-width:0;border-radius:2px}
+.pn-m.fc button:hover i,.pn-m.fc button:focus-visible i{background:var(--sinal)}
+.pn-m.fc button:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
+.pn-m.fc button[aria-pressed="true"] i{background:var(--sinal)}
+.pn-m.fc button[aria-pressed="true"] .pn-x{color:var(--ink);font-weight:600}
+.pn-m.fc:has([aria-pressed="true"]) button:not([aria-pressed="true"]) i{opacity:.35}

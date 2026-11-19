@@ -12,12 +12,12 @@ import type { Montar } from '../paginas/dom';
 export interface Item { h: string; l: string; rotas: string[] }
 export interface Nicho { id: string; l: string; home: string; itens: Item[] }
 export const NICHOS: Nicho[] = [
-  { id: 'comercial', l: 'Comercial', home: 'central', itens: [{ h: 'central', l: 'Central de notícias', rotas: ['central'] }, { h: 'alertas', l: 'Alertas comerciais', rotas: ['alertas'] }, { h: 'bigdata', l: 'Big Data do mercado', rotas: ['bigdata'] }, { h: 'investigacao', l: 'Investigação', rotas: ['investigacao'] }, { h: 'agenda', l: 'Agenda de contatos', rotas: ['agenda'] }, { h: 'captacao', l: 'Captação', rotas: ['captacao'] }, { h: 'mercado', l: 'Contas e agências', rotas: ['mercado'] }, { h: 'b2g', l: 'Licitações', rotas: ['b2g'] }, { h: 'vencedores', l: 'Vencedores', rotas: ['vencedores'] }, { h: 'contas', l: 'Mapa de contas', rotas: ['contas'] }, { h: 'estrategia', l: 'Estratégia e funil', rotas: ['estrategia', 'funil'] }] },
+  { id: 'comercial', l: 'Comercial', home: 'central', itens: [{ h: 'central', l: 'Central de notícias', rotas: ['central'] }, { h: 'alertas', l: 'Alertas comerciais', rotas: ['alertas'] }, { h: 'bigdata', l: 'Big Data do mercado', rotas: ['bigdata'] }, { h: 'investigacao', l: 'Investigação', rotas: ['investigacao'] }, { h: 'agenda', l: 'Agenda de contatos', rotas: ['agenda'] }, { h: 'captacao', l: 'Captação', rotas: ['captacao'] }, { h: 'disparos', l: 'Mesa comercial', rotas: ['disparos'] }, { h: 'mercado', l: 'Contas e agências', rotas: ['mercado'] }, { h: 'b2g', l: 'Licitações', rotas: ['b2g'] }, { h: 'vencedores', l: 'Vencedores', rotas: ['vencedores'] }, { h: 'contas', l: 'Mapa de contas', rotas: ['contas'] }, { h: 'estrategia', l: 'Estratégia e funil', rotas: ['estrategia', 'funil'] }] },
   { id: 'gestao', l: 'Gestão', home: 'rotinas', itens: [{ h: 'rotinas', l: 'Rotinas do Claude', rotas: ['rotinas'] }, { h: 'tabela', l: 'Tabela de serviços', rotas: ['tabela'] }, { h: 'biblioteca', l: 'Biblioteca', rotas: ['biblioteca'] }, { h: 'casos', l: 'Casos', rotas: ['casos'] }, { h: 'lixeira', l: 'Lixeira', rotas: ['lixeira'] }, { h: 'ajustes', l: 'Ajustes e dados', rotas: ['ajustes'] }] },
 ];
 /** Rota → página registrada. */
 export const PAGINA: Record<string, string> = {
-  painel: 'inicio', central: 'central', alertas: 'alertas', bigdata: 'bigdata', investigacao: 'investigacao', agenda: 'agenda', casos: 'casos', captacao: 'captacao', mercado: 'mercado', b2g: 'licitacoes', vencedores: 'vencedores',
+  painel: 'inicio', central: 'central', alertas: 'alertas', bigdata: 'bigdata', investigacao: 'investigacao', agenda: 'agenda', casos: 'casos', captacao: 'captacao', disparos: 'disparos', mercado: 'mercado', b2g: 'licitacoes', vencedores: 'vencedores',
   contas: 'contas', estrategia: 'estrategia', funil: 'funil', rotinas: 'rotinas', tabela: 'tabela', ajustes: 'ajustes',
   biblioteca: 'biblioteca', lixeira: 'lixeira',
   sid: 'sid',
@@ -33,6 +33,7 @@ export const CABECALHOS: Record<string, { e: string; t: string; d: string }> = {
   lixeira: { e: 'Gestão · Lixeira', t: 'O que foi apagado', d: 'Tudo o que é apagado no Studio fica aqui e pode ser restaurado por qualquer pessoa da equipe.' },
   casos: { e: 'Gestão · Casos', t: 'Casos da casa', d: 'O portfólio que vira argumento de venda. Cada caso diz o que a Produceria fez, para quem e com que resultado.' },
   contas: { e: 'Comercial · Mapa de contas', t: 'Quem detém cada conta', d: 'Empresas e agências que detêm contas públicas e privadas, com cliente, serviço, valor e vigência. Filtre e veja os dashboards.' },
+  disparos: { e: 'Comercial · Mesa comercial', t: 'Disparos com estratégia', d: 'Os contatos de todo o multiverso num lugar só: e-mail publicado (com fonte) e LinkedIn. A diretora comercial da casa escolhe a porta, a ponte e a oferta, escreve cada e-mail sob medida e, depois que você revisa e aprova, deixa o rascunho pronto no Gmail da PRODUCERIA. Por enquanto, nada é enviado pelo Studio.' },
   captacao: { e: 'Comercial · Captação', t: 'Novos negócios', d: 'Quem procurar, por que agora e o que dizer. Os sinais saem dos seus dados; os alvos, de textos reais que você cola; a abordagem, da IA com as provas da casa. Nada é enviado sem você.' },
   funil: { e: 'Comercial · Estratégia e funil', t: 'De onde vem a receita', d: 'Receita orçada por canal (privado, público, internacional), concentração por cliente e o funil de oportunidades.' },
   mercado: { e: 'Comercial · Contas e agências', t: 'Quem atende quem no mercado privado', d: 'Agências, contas e movimentações do mercado publicitário, cada linha com a fonte. Quem acabou de ganhar conta precisa de capacidade de produção: é a hora de abordar.' },
@@ -51,7 +52,7 @@ export const nichoDe = (rota: string) => NICHOS.find((n) => n.itens.some((i) => 
 
 const IR = [
   ['Início · o que fazer agora', 'painel'], ['Central de notícias e leads', 'central'], ['Alertas comerciais · ação do dia', 'alertas'], ['Big Data · anunciantes, agências e pessoas', 'bigdata'], ['Investigação · reação em cadeia da prospecção', 'investigacao'], ['Agenda · quem contatar hoje', 'agenda'],
-  ['Casos da casa (portfólio)', 'casos'], ['Captação de novos negócios', 'captacao'], ['Contas e agências do mercado', 'mercado'], ['Vencedores de licitações', 'vencedores'],
+  ['Casos da casa (portfólio)', 'casos'], ['Captação de novos negócios', 'captacao'], ['Mesa comercial · disparos de e-mail', 'disparos'], ['Contas e agências do mercado', 'mercado'], ['Vencedores de licitações', 'vencedores'],
   ['Funil comercial', 'funil'], ['Licitações', 'b2g'], ['Biblioteca · marcas, masters e specs', 'biblioteca'],
   ['Estratégia · SWOT', 'estrategia'], ['Rotinas do Claude · rodar, pausar', 'rotinas'], ['Tabela de serviços', 'tabela'], ['Lixeira · restaurar o que foi apagado', 'lixeira'], ['Ajustes e dados', 'ajustes'], ['Atalhos de teclado', '?'],
 ].map(([titulo, h]) => ({ tipo: 'Ir', titulo, href: '#' + h }));

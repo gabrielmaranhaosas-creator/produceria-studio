@@ -232,13 +232,29 @@
 .iv .iv-rd-z{position:absolute;right:12px;bottom:12px;display:grid;gap:4px}
 .iv .iv-rd-z button{width:34px;height:34px;border-radius:40px;border:1px solid var(--line-strong);background:var(--surface-200);color:var(--ink);font:400 18px/1 var(--font-text);cursor:pointer}
 .iv .iv-rd-z button:hover{border-color:var(--ink)}
-.iv .iv-rd-leg{position:absolute;left:12px;bottom:10px;display:flex;flex-wrap:wrap;gap:4px 14px;margin:0;padding:6px 10px;list-style:none;font-size:11px;color:var(--ink-muted);background:color-mix(in srgb,var(--surface-100) 88%,transparent);border-radius:40px}
-.iv .iv-rd-leg li{display:flex;align-items:center;gap:6px}
+.iv .iv-rd-leg{position:absolute;left:12px;bottom:10px;display:flex;flex-wrap:wrap;align-items:center;gap:4px;margin:0;padding:4px 6px;font-size:11px;color:var(--ink-muted);background:color-mix(in srgb,var(--surface-100) 90%,transparent);border-radius:40px;z-index:2}
+.iv .iv-rd-lt{padding:0 6px;text-transform:uppercase;letter-spacing:.06em;font-size:10px}
+.iv .iv-rd-leg button{display:inline-flex;align-items:center;gap:6px;min-height:28px;padding:2px 10px;border:1px solid var(--line);border-radius:40px;background:var(--surface-100);color:var(--ink);font:inherit;font-size:11px;cursor:pointer}
+.iv .iv-rd-leg button[aria-pressed=false]{color:var(--ink-muted);text-decoration:line-through;border-style:dashed;opacity:.7}
+.iv .iv-rd-leg button:hover{border-color:var(--ink)}
 .iv .iv-rd-leg i{display:inline-block;width:10px;height:10px;border-radius:50%;border:1.5px solid var(--ink)}
 .iv .iv-rd-leg i.ag{background:var(--ink)}
 .iv .iv-rd-leg i.em{background:var(--surface-200)}
 .iv .iv-rd-leg i.pe{width:7px;height:7px;border:0;background:var(--ink-muted)}
 .iv .iv-rd-leg i.ct{width:7px;height:7px;border:0;background:var(--ink)}
+.iv .mv-n.oculto,.iv .mv-f.oculto{display:none}
+.iv .iv-rd.hov .mv-n:not(.hv){opacity:.16}
+.iv .iv-rd.hov .mv-f:not(.hv){opacity:.04}
+.iv .iv-rd.hov .mv-f.hv{opacity:1;stroke:var(--ink);stroke-width:1.6}
+.iv .iv-rd.hov .mv-n.hv .mv-l{opacity:1}
+.iv .iv-tip{position:absolute;left:0;top:0;z-index:4;pointer-events:none;max-width:300px;display:flex;flex-direction:column;gap:3px;padding:10px 12px;background:var(--ink);color:var(--surface-100);border-radius:4px;font-size:12px;line-height:1.35;box-shadow:0 8px 24px rgba(0,0,0,.2)}
+.iv .iv-tip b{font-size:14px}
+.iv .iv-tip-k{text-transform:uppercase;letter-spacing:.06em;font-size:10px;opacity:.75}
+.iv .iv-tip-c{opacity:.85}
+.iv .iv-tip-a{margin-top:4px;font-size:10px;opacity:.6}
+.iv .iv-cto{display:flex;flex-direction:column;gap:6px}
+.iv .iv-cto-l{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:4px;overflow-wrap:anywhere}
+.iv .iv-cto-x{margin:0}
 /* entrada: os pontos crescem uma volta por vez e os fios se desenham */
 @keyframes mvEntra{from{opacity:0;transform:scale(.2)}to{opacity:1;transform:none}}
 .iv .iv-rd.entra .mv-n{transform-box:fill-box;transform-origin:center;animation:mvEntra .45s cubic-bezier(.2,.7,.2,1) both;animation-delay:calc(var(--g,0) * .18s)}
@@ -249,7 +265,7 @@
   .iv .iv-mesa.mv,.iv .iv-mesa.mv.com-ficha{display:block;position:relative}
   .iv .iv-mesa.mv .iv-ficha{position:absolute;top:12px;right:12px;width:min(370px,calc(100% - 24px));max-height:calc(100% - 24px);z-index:3;box-shadow:0 12px 32px rgba(0,0,0,.16)}
 }
-@media (max-width:820px){.iv .iv-rd{height:min(78vh,620px)}.iv .iv-rd-leg{display:none}}
+@media (max-width:820px){.iv .iv-rd{height:min(78vh,620px)}.iv .iv-rd-lt{display:none}.iv .iv-rd-leg{right:56px}}
 @media (prefers-reduced-motion:reduce){.iv .mv-pulso,.iv .iv-rd.entra .mv-n,.iv .iv-rd.entra .mv-f{animation:none}.iv .iv-rd.entra .mv-f{stroke-dasharray:none;stroke-dashoffset:0}.iv #ivRdG.suave{transition:none}}
 /* Pontes: ilhas fora de alcance e abertos longe, com missões e o registro de ligação */
 .iv .iv-pon{margin-top:8px}

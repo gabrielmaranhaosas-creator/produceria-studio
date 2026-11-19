@@ -6,7 +6,8 @@ import {calibrar,prioridade} from '../lib/prioridade';
 import {banco,lerBase,type Banco,type Colecao,type Consulta} from '../lib/db';
 import type {Alvo,ContratoPublico,Licitacao,Movimento,Noticia,Perfil} from '../lib/tipos';
 import {seletor,elDe,mensagem,comId} from './dom';
-import {kpis,numero,barras,porMes,contar,painel, sugerir, irPara } from '../componentes';
+import {kpis,numero,barras,porMes,contar,painel, sugerir, irPara, filtrarFacetas, cliqueFaceta, type Facetas } from '../componentes';
+const MESES=['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
 
 type TipoItem='conta'|'negocio'|'venceu'|'aberta'|'renova';
 interface Lead { nome: string; perfil: Perfil|string; gatilho: string; fonte: string }
@@ -45,7 +46,7 @@ const diaMs=864e5;const desde=(n: number)=>new Date(Date.now()-n*diaMs).toISOStr
 const TIPOS: [TipoItem|'',string][]=[['','Tudo'],['conta','Contas'],['negocio','Negócios'],['venceu','Licitações vencidas'],['aberta','Licitações abertas'],['renova','Renovações à vista']];
 const TL: Record<TipoItem,string>={conta:'Conta',negocio:'Negócio',venceu:'Licitação vencida',aberta:'Licitação aberta',renova:'Renovação à vista'};
 const CAT: Record<string,TipoItem>={conta:'conta',licitacao:'conta',negocio:'negocio',inhouse:'negocio',mercado:'negocio',pessoas:'negocio'};
-const S: Fontes={noticias:[],movimentos:[],contratos:[],b2g:[],alvos:[],central:[]};let renov: ContratoComFim[]=[],estatico: Movimento[]=[],F: Filtros={t:'',q:'',p:'0',e:'',o:'classe'},lim=100,db: Banco|null=null,timer: ReturnType<typeof setTimeout>|undefined,mode: 'carregando'|'local'|'db'='carregando';
+const S: Fontes={noticias:[],movimentos:[],contratos:[],b2g:[],alvos:[],central:[]};const fc: Facetas={};let renov: ContratoComFim[]=[],estatico: Movimento[]=[],F: Filtros={t:'',q:'',p:'0',e:'',o:'classe'},lim=100,db: Banco|null=null,timer: ReturnType<typeof setTimeout>|undefined,mode: 'carregando'|'local'|'db'='carregando';
 const col: {alvos?: Colecao<Alvo>; central?: Colecao<EstadoCentral>; [nome: string]: Colecao<unknown>|undefined}={},offs: (()=>void)[]=[],aberto: Record<string,boolean>={};
 try{const sv=JSON.parse(localStorage.getItem('cn.v2')||'null');if(sv)F={...F,...sv}}catch(e){}
 const persist=()=>{try{localStorage.setItem('cn.v2',JSON.stringify(F))}catch(e){}};
@@ -95,19 +96,19 @@ function filt0(all: Item[],t: TipoItem){const t0=F.t;F.t=t;const l=filt(all);F.t
 function render(){persist();
  $('#cnT').innerHTML=TIPOS.map(([v,t])=>`<button type="button" data-t="${v}" aria-pressed="${F.t===v}">${t}</button>`).join('');
  const cnQ=$<HTMLInputElement>('#cnQ');cnQ.value!==F.q&&document.activeElement!==cnQ&&(cnQ.value=F.q);$<HTMLSelectElement>('#cnP').value=F.p;$<HTMLSelectElement>('#cnE').value=F.e;
- const all=itens(),L=filt(all),d7=desde(7);
+ const all=itens(),L0=filt(all),CM={mes:(i:{data:string})=>(i.data||'').slice(0,7)},L=filtrarFacetas(L0,fc,CM),d7=desde(7);
  const novos7=all.filter(i=>i.tipo!=='renova'&&i.data>=d7&&i.data<=hoje&&est(i.k)?.estado!=='arquivado'),sug=sugeridos(all),ativos=S.alvos.filter(a=>a.status&&a.status!=='Cliente'),fortes=all.filter(i=>i.tipo==='aberta');
  $('#cnK').innerHTML=kpis([
   {rotulo:'Novidades · 7 dias',kpi:'7d',ativo:F.p==='7'&&!F.t,acao:'Ver só os últimos 7 dias',valor:numero(int(novos7.length)),nota:(['conta','negocio','venceu','aberta'] as const).map(t=>int(novos7.filter(i=>i.tipo===t).length)+' '+{conta:'de conta',negocio:'de negócio',venceu:'contratos',aberta:'licitações'}[t]).join(' · ')},
   {rotulo:'Leads sugeridos',kpi:'leads',acao:'Ver os leads',valor:numero(int(sug.length)),nota:'sinais dos últimos 90 dias, fora da Captação'},
   {rotulo:'Alvos em andamento',href:'#captacao',acao:'Abrir a Captação',valor:numero(int(ativos.length)),nota:'na Captação, fora os clientes'},
   {rotulo:'Licitações abertas fortes',kpi:'aberta',ativo:F.t==='aberta',acao:'Ver as licitações abertas',valor:numero(int(fortes.length)),nota:`nota 60+ e prazo aberto · ${int(renov.filter(c=>c.fim<=addDias(hoje,90)).length)} contratos vencem em 90 dias`}]);
- const ch: [keyof Filtros,string][]=[];if(F.t)ch.push(['t',TL[F.t]]);if(F.q)ch.push(['q','Busca: '+F.q]);if(F.e)ch.push(['e',F.e==='salvo'?'Só salvas':'Arquivadas']);
+ const ch: [string,string][]=[];if(fc.mes)ch.push(['fc:mes','Mês: '+MESES[+fc.mes.slice(5)-1]+'/'+fc.mes.slice(0,4)]);if(F.t)ch.push(['t',TL[F.t]]);if(F.q)ch.push(['q','Busca: '+F.q]);if(F.e)ch.push(['e',F.e==='salvo'?'Só salvas':'Arquivadas']);
  $('#cnC').innerHTML=`<span class="lab">${int(L.length)} ite${L.length===1?'m':'ns'}</span>`+ch.map(([k,t])=>`<button type="button" class="chip" data-r="${k}" aria-label="Remover filtro: ${esc(t)}">${esc(t)} <span aria-hidden="true">×</span></button>`).join('')+(ch.length?'<button type="button" class="ghost sm" data-r="*">Limpar</button>':'');
  const ags=new Set(all.filter(i=>i.tipo==='conta').map(i=>chave(i.empresas[0]||'')));
  $('#cnPn').innerHTML=painel([
   barras('Por classe',TIPOS.slice(1).map(([v,t])=>({rotulo:t,valor:filt0(all,v as TipoItem).length,dado:v,ativo:F.t===v})),{attr:'t',nota:'clique para ver só a classe'}),
-  porMes('Sinais por mês',L.map(i=>i.data).filter(d=>d<=hoje)),
+  porMes('Sinais por mês',filtrarFacetas(L0,fc,CM,'mes').map(i=>i.data).filter(d=>d<=hoje),12,fc.mes?'clique de novo no mês para tirar o filtro':'clique num mês para filtrar',{campo:'mes',ativo:fc.mes}),
   barras('Agências e fornecedores',contar(L,i=>papeis(i,ags).ag.map(nomeLegivel)),{attr:'q',nota:'quem atende: agência da conta ou empresa do contrato'}),
   barras('Anunciantes e órgãos',contar(L,i=>papeis(i,ags).cl.map(nomeLegivel)),{attr:'q',nota:'quem compra: marca, anunciante ou órgão público'})],'Painel da central');
  $<HTMLSelectElement>('#cnO').value=F.o||'classe';
@@ -136,9 +137,10 @@ async function marcar(k: string,estado: string){const id=cid(k),cur=est(k)?.esta
  if(!col.central)return loc();try{if(novo)await col.central.doc(id).set({estado:novo,em:new Date().toISOString(),chave:k});else await col.central.doc(id).delete()}catch(e){loc()}}
 const achar=(k: string)=>itens().find(i=>i.k===k);
 root.addEventListener('click',e=>{const el=elDe(e);
+ if(el.closest('.pn [data-fc]')&&cliqueFaceta(el,fc)){lim=100;render();irPara($('#cnF'));return}
  const kk=el.closest<HTMLElement>('[data-kpi]');if(kk){const k=kk.dataset.kpi;if(k==='leads'){irPara($('#cnL'));return}
   if(k==='7d'){const on=F.p==='7'&&!F.t;F.p=on?'0':'7';F.t=''}else{F.t=F.t==='aberta'?'':'aberta';F.p='0'}lim=100;render();irPara($('#cnF'));return}const t=el.closest<HTMLElement>('[data-t]');if(t){const v=t.dataset.t as TipoItem|'';F.t=t.closest('.pn')&&F.t===v?'':v;lim=100;render();root.querySelector<HTMLElement>(`[data-t="${F.t}"]`)!.focus();return}
- const r=el.closest<HTMLElement>('[data-r]');if(r){const k=r.dataset.r;if(k==='*')F={...F,t:'',q:'',e:''};else F[k as keyof Filtros]='';$<HTMLInputElement>('#cnQ').value=F.q;lim=100;render();(root.querySelector<HTMLElement>('#cnC [data-r]')||$<HTMLElement>('#cnQ')).focus();return}
+ const r=el.closest<HTMLElement>('[data-r]');if(r){const k=r.dataset.r||'';if(k==='*'){F={...F,t:'',q:'',e:''};delete fc.mes}else if(k==='fc:mes')delete fc.mes;else F[k as keyof Filtros]='';$<HTMLInputElement>('#cnQ').value=F.q;lim=100;render();(root.querySelector<HTMLElement>('#cnC [data-r]')||$<HTMLElement>('#cnQ')).focus();return}
  const q=el.closest<HTMLElement>('[data-q]');if(q){const v=q.dataset.q||'';F.q=q.closest('.pn')&&F.q===v?'':v;$<HTMLInputElement>('#cnQ').value=F.q;lim=100;render();$('#cnQ').focus();return}
  if(el.id==='cnM'){const n=lim;lim+=40;render();const it=root.querySelectorAll('.cn-it')[n];it&&it.querySelector<HTMLElement>('button,a')?.focus();return}
  const ld=el.closest<HTMLButtonElement>('[data-lead]');if(ld){const i=achar(ld.dataset.lead!);i&&virarAlvo(i,ld);return}

@@ -49,7 +49,7 @@ Regras:
 - Nunca invente resultados, clientes, prêmios, métricas, valores, autorizações ou prazos.
 - Marque cada afirmação relevante como [CONFIRMADO], [HIPÓTESE], [FALTA EVIDÊNCIA] ou [AGUARDA APROVAÇÃO].
 - Normas, tributos e regras de licitação precisam de verificação da fonte vigente antes de uso.
-- O Studio não envia e-mails, não compra mídia e não aprova despesas: suas respostas são propostas para revisão humana.`;
+- O Studio só envia e-mail pela Mesa comercial, depois que a pessoa revisa e aprova cada mensagem; não compra mídia e não aprova despesas: suas respostas são propostas para revisão humana.`;
 
 /** A IA está disponível nesta visualização? (não consome consulta) */
 export async function iaDisponivel(): Promise<boolean> { return !!(await amostra()); }
