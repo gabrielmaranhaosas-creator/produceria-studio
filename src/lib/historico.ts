@@ -167,5 +167,3 @@ export async function restaurar(item: ItemLixeira): Promise<void> {
   await bruto.collection('lixeira').doc(item.id).delete();
 }
 
-/** Só para os testes: zera o estado do módulo. */
-export function _zerar() { bruto = null; cache.clear(); desfazer.length = 0; refazer.length = 0; ouvintes.clear(); aplicando = false; }

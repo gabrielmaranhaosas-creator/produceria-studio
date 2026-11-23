@@ -42,24 +42,6 @@ export function banco(): Promise<Banco | null> {
   return promessa;
 }
 
-/**
- * Assina uma coleção (ou consulta) e entrega os documentos já com o id.
- * Desiste em 10 s sem resposta (chama `semBanco`). Devolve a função de cancelar.
- */
-export function assinar<T>(
-  db: Banco,
-  fonte: string | ((db: Banco) => Consulta<T>),
-  ok: (docs: (T & { id: string })[]) => void,
-  semBanco?: () => void,
-): () => void {
-  const q = typeof fonte === 'string' ? db.collection<T>(fonte) : fonte(db);
-  const t = setTimeout(() => semBanco?.(), 10000);
-  return q.onSnapshot(
-    (s) => { clearTimeout(t); ok(s.docs.map((d) => ({ id: d.id, ...(d.data() as T) }))); },
-    () => { clearTimeout(t); semBanco?.(); },
-  );
-}
-
 /** Lê um JSON publicado junto do Studio, comprimido (gzip) ou não. */
 export async function lerArquivo<T>(...caminhos: string[]): Promise<T> {
   let ultimoErro: unknown;
