@@ -8,6 +8,7 @@ import { nomeProprio } from '../lib/arquivos';
 import { abrirDialogo, devolverFoco, type DialogoComRetorno } from '../componentes';
 import { ouvirHistorico, desfazerUltimo, refazerUltimo, podeDesfazer, podeRefazer } from '../lib/historico';
 import type { Montar } from '../paginas/dom';
+import { extrair, pdf, xlsx } from '../lib/saidas';
 
 export interface Item { h: string; l: string; rotas: string[] }
 export interface Nicho { id: string; l: string; home: string; itens: Item[] }
@@ -138,6 +139,7 @@ export function iniciarCasca(raiz: HTMLElement, paginas: Record<string, Montar>,
     const cab = CABECALHOS[rota];
     main.innerHTML = (cab ? `<header class="page-head"><span class="eyebrow">${esc(cab.e)}</span><h1 class="d d-title">${esc(cab.t)}</h1><p class="lead measure muted">${esc(cab.d)}</p></header>` : '')
       + (rota === 'funil' || rota === 'estrategia' ? `<nav class="tabs" aria-label="Estratégia e funil"><a class="tab${rota === 'estrategia' ? ' on' : ''}" href="#estrategia"${rota === 'estrategia' ? ' aria-current="page"' : ''}>SWOT e frentes</a><a class="tab${rota === 'funil' ? ' on' : ''}" href="#funil"${rota === 'funil' ? ' aria-current="page"' : ''}>Funil e receita</a></nav>` : '')
+      + '<div class="cs-exp" role="group" aria-label="Exportar esta tela"><span class="caption muted">O que está na tela, com os filtros</span><button type="button" class="chip" data-exp="pdf">PDF</button><button type="button" class="chip" data-exp="xlsx">Excel</button></div>'
       + '<div class="mc cn" id="csPag"></div>';
     const alvo = $('#csPag'), m = paginas[PAGINA[rota]];
     alvo.dataset.th = document.documentElement.getAttribute('data-theme') || '';
@@ -146,6 +148,25 @@ export function iniciarCasca(raiz: HTMLElement, paginas: Record<string, Montar>,
     window.scrollTo(0, 0);
     document.title = `${cab?.t || (rota === 'sid' ? 'Alerta B2B do Sid' : '') || atual.itens.find((i) => i.rotas.includes(rota))?.l || 'Início'} · PRODUCERia Studio`;
   }
+
+  // ---------------------------------------------------------------- saídas: PDF e Excel do que está na tela
+  async function exportar(b: HTMLButtonElement, tipo: 'pdf' | 'xlsx') {
+    const R = { ...extrair(main), em: new Date(), versao: (window as { __studio?: { versao: string } }).__studio?.versao, endereco: '#' + rotaAtual };
+    if (!R.kpis.length && !R.blocos.some((x) => x.t !== 'secao')) { toast('Esta tela ainda não tem dados para exportar.'); return; }
+    b.disabled = true; const txt = b.textContent; b.textContent = 'Gerando…';
+    try {
+      const d = (await window.claude?.use('downloads')) as { save(o: { filename: string; data: Uint8Array }): Promise<{ status?: string } | void> } | undefined;
+      if (!d) { toast('Download disponível só com o Studio aberto no Claude.'); return; }
+      const dados = tipo === 'pdf' ? await pdf(R) : await xlsx(R);
+      const nome = `produceria-${rotaAtual}-${R.em.toISOString().slice(0, 10)}.${tipo}`;
+      const r = await d.save({ filename: nome, data: dados });
+      if (r && r.status === 'saved') toast('Arquivo salvo: ' + nome);
+    } catch (e) {
+      const c = (e as { code?: string })?.code;
+      if (c !== 'declined') toast(c === 'rate_limited' ? 'Já há um download esperando confirmação.' : c === 'extension_not_enabled' || c === 'rejected_extension' ? 'Este formato não está liberado nesta janela.' : 'Não foi possível gerar o arquivo agora.');
+    } finally { b.disabled = false; b.textContent = txt; }
+  }
+  main.addEventListener('click', (ev) => { const b = (ev.target as HTMLElement).closest<HTMLButtonElement>('[data-exp]'); if (b) exportar(b, b.dataset.exp as 'pdf' | 'xlsx'); });
 
   // ---------------------------------------------------------------- avisos
   const naoLidos = () => avisos.filter((a) => String(a.em) > visto && (!a.para || !meuNome || a.para === meuNome)).length;

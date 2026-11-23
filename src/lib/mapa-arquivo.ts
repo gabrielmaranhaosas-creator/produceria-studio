@@ -3,8 +3,8 @@
  * busca, dossiê, radar, ramificações). As fontes da casa vão embutidas quando a página do Studio as tem.
  */
 import type { MapaArquivo } from './investigacao';
-import visor from './mapa-visor.js?raw';
-import estilo from './mapa-visor.css?raw';
+import visor from './mapa-visor.js?mini';
+import estilo from './mapa-visor.css?mini';
 
 const esc = (s: string) => s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]!);
 /** JSON que pode morar dentro de <script>: nada de "</script>" nem "<!--" no meio. */

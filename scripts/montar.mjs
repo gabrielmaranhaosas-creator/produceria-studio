@@ -152,7 +152,8 @@ writeFileSync('dist/legado.html', html);
 {
   // Fase 4: o CSS global e o reset vêm de src/estilos; do legado só saem as fontes (@font-face), até a licença
   // delas ser resolvida (ver docs/ROADMAP.md).
-  const enxuto = (css) => css.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\s+/g, ' ').trim();
+  // minificação de verdade (esbuild): cerca de 5 KB a menos que só tirar comentários e espaços
+  const enxuto = (css) => transformSync(css, { loader: 'css', minify: true }).code.trim();
   const fontes = legado.match(/@font-face\{[^}]*\}/g) || [];
   if (fontes.length !== 4) throw new Error(`Esperava 4 fontes no legado, achei ${fontes.length}.`);
   const reset = `<style>${enxuto(readFileSync('src/estilos/reset.css', 'utf8'))}</style>`;
