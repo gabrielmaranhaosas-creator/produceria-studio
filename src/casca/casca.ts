@@ -12,14 +12,14 @@ import type { Montar } from '../paginas/dom';
 export interface Item { h: string; l: string; rotas: string[] }
 export interface Nicho { id: string; l: string; home: string; itens: Item[] }
 export const NICHOS: Nicho[] = [
-  { id: 'comercial', l: 'Comercial', home: 'central', itens: [{ h: 'central', l: 'Central de notícias', rotas: ['central'] }, { h: 'alertas', l: 'Alertas comerciais', rotas: ['alertas'] }, { h: 'bigdata', l: 'Big Data do mercado', rotas: ['bigdata'] }, { h: 'investigacao', l: 'Investigação', rotas: ['investigacao'] }, { h: 'agenda', l: 'Agenda de contatos', rotas: ['agenda'] }, { h: 'captacao', l: 'Captação', rotas: ['captacao'] }, { h: 'disparos', l: 'Mesa comercial', rotas: ['disparos'] }, { h: 'mercado', l: 'Contas e agências', rotas: ['mercado'] }, { h: 'b2g', l: 'Licitações', rotas: ['b2g'] }, { h: 'vencedores', l: 'Vencedores', rotas: ['vencedores'] }, { h: 'contas', l: 'Mapa de contas', rotas: ['contas'] }, { h: 'estrategia', l: 'Estratégia e funil', rotas: ['estrategia', 'funil'] }] },
+  { id: 'comercial', l: 'Comercial', home: 'central', itens: [{ h: 'semana', l: 'Semana comercial', rotas: ['semana'] }, { h: 'central', l: 'Central de notícias', rotas: ['central'] }, { h: 'alertas', l: 'Alertas comerciais', rotas: ['alertas'] }, { h: 'bigdata', l: 'Big Data do mercado', rotas: ['bigdata'] }, { h: 'investigacao', l: 'Investigação', rotas: ['investigacao'] }, { h: 'agenda', l: 'Agenda de contatos', rotas: ['agenda'] }, { h: 'captacao', l: 'Captação', rotas: ['captacao'] }, { h: 'disparos', l: 'Mesa comercial', rotas: ['disparos'] }, { h: 'mercado', l: 'Contas e agências', rotas: ['mercado'] }, { h: 'b2g', l: 'Licitações', rotas: ['b2g'] }, { h: 'vencedores', l: 'Vencedores', rotas: ['vencedores'] }, { h: 'contas', l: 'Mapa de contas', rotas: ['contas'] }, { h: 'estrategia', l: 'Estratégia e funil', rotas: ['estrategia', 'funil'] }] },
   { id: 'gestao', l: 'Gestão', home: 'rotinas', itens: [{ h: 'rotinas', l: 'Rotinas do Claude', rotas: ['rotinas'] }, { h: 'tabela', l: 'Tabela de serviços', rotas: ['tabela'] }, { h: 'biblioteca', l: 'Biblioteca', rotas: ['biblioteca'] }, { h: 'casos', l: 'Casos', rotas: ['casos'] }, { h: 'lixeira', l: 'Lixeira', rotas: ['lixeira'] }, { h: 'ajustes', l: 'Ajustes e dados', rotas: ['ajustes'] }] },
 ];
 /** Rota → página registrada. */
 export const PAGINA: Record<string, string> = {
   painel: 'inicio', central: 'central', alertas: 'alertas', bigdata: 'bigdata', investigacao: 'investigacao', agenda: 'agenda', casos: 'casos', captacao: 'captacao', disparos: 'disparos', mercado: 'mercado', b2g: 'licitacoes', vencedores: 'vencedores',
   contas: 'contas', estrategia: 'estrategia', funil: 'funil', rotinas: 'rotinas', tabela: 'tabela', ajustes: 'ajustes',
-  biblioteca: 'biblioteca', lixeira: 'lixeira',
+  biblioteca: 'biblioteca', lixeira: 'lixeira', semana: 'semana',
   sid: 'sid',
 };
 const APELIDOS: Record<string, string> = { diversificacao: 'funil', mapa: 'funil', frentes: 'estrategia', swot: 'estrategia', ia: 'estrategia', agencias: 'mercado', receitas: 'funil' };
@@ -30,6 +30,7 @@ export const CABECALHOS: Record<string, { e: string; t: string; d: string }> = {
   investigacao: { e: 'Comercial · Investigação', t: 'Reação em cadeia', d: 'O mapa da prospecção: parta da PRODUCERIA ou de qualquer empresa, agência ou pessoa e siga as ramificações (quem atende quem, quem trabalha onde, por onde passou, qual extinta virou qual). Cada ponto ganha uma força de possibilidade de negócio e vai direto para o radar da Captação.' },
   central: { e: 'Comercial · Central', t: 'Notícias e leads', d: 'Tudo o que se move no mercado publicitário num lugar só: contas que trocaram de agência, contratos públicos vencidos, licitações abertas e notícias de negócio. Cada sinal pode virar alvo da Captação com um clique.' },
   agenda: { e: 'Comercial · Agenda', t: 'Quem contatar hoje', d: 'A cadência de cada alvo em ordem de prazo e prioridade. Registre cada contato aqui: a etapa avança sozinha, o próximo toque é sugerido pela cadência e a conversão por origem passa a ser medida.' },
+  semana: { e: 'Comercial · Semana comercial', t: 'A semana em uma página', d: 'O ritual de segunda: meta e realizado, o que entrou, avançou e travou, sinais que esfriam, previsão do funil, ganhos e perdas e clientes parados. Tudo sai dos dados das outras telas.' },
   lixeira: { e: 'Gestão · Lixeira', t: 'O que foi apagado', d: 'Tudo o que é apagado no Studio fica aqui e pode ser restaurado por qualquer pessoa da equipe.' },
   casos: { e: 'Gestão · Casos', t: 'Casos da casa', d: 'O portfólio que vira argumento de venda. Cada caso diz o que a Produceria fez, para quem e com que resultado.' },
   contas: { e: 'Comercial · Mapa de contas', t: 'Quem detém cada conta', d: 'Empresas e agências que detêm contas públicas e privadas, com cliente, serviço, valor e vigência. Filtre e veja os dashboards.' },
@@ -53,7 +54,7 @@ export const nichoDe = (rota: string) => NICHOS.find((n) => n.itens.some((i) => 
 const IR = [
   ['Início · o que fazer agora', 'painel'], ['Central de notícias e leads', 'central'], ['Alertas comerciais · ação do dia', 'alertas'], ['Big Data · anunciantes, agências e pessoas', 'bigdata'], ['Investigação · reação em cadeia da prospecção', 'investigacao'], ['Agenda · quem contatar hoje', 'agenda'],
   ['Casos da casa (portfólio)', 'casos'], ['Captação de novos negócios', 'captacao'], ['Mesa comercial · disparos de e-mail', 'disparos'], ['Contas e agências do mercado', 'mercado'], ['Vencedores de licitações', 'vencedores'],
-  ['Funil comercial', 'funil'], ['Licitações', 'b2g'], ['Biblioteca · marcas, masters e specs', 'biblioteca'],
+  ['Semana comercial · meta e previsão', 'semana'], ['Funil comercial', 'funil'], ['Licitações', 'b2g'], ['Biblioteca · marcas, masters e specs', 'biblioteca'],
   ['Estratégia · SWOT', 'estrategia'], ['Rotinas do Claude · rodar, pausar', 'rotinas'], ['Tabela de serviços', 'tabela'], ['Lixeira · restaurar o que foi apagado', 'lixeira'], ['Ajustes e dados', 'ajustes'], ['Atalhos de teclado', '?'],
 ].map(([titulo, h]) => ({ tipo: 'Ir', titulo, href: '#' + h }));
 const sem = (s: unknown) => String(s ?? '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();

@@ -9,7 +9,7 @@ import { banco, lerBase, type Colecao } from '../lib/db';
 import { montarGrafo, type MercadoBase, type MovimentoBase, type EmpresaMapa, type AgenciaMapa, type PessoaMapa } from '../lib/grafo';
 import { montarUniverso, reacao, multiverso, ORIGEM, type PessoaInv, type OrgInv, type LigacaoInv } from '../lib/investigacao';
 import { perguntar, ErroIA } from '../lib/ia';
-import { destinos, impedimento, pedidoMensagem, htmlEmail, textoEmail, resumo, idBloqueio, PERSONA, LIMITE_LOTE, LIMITE_DIA, ENVIO_LIBERADO, levarPara, focoPendente, FOCO_MESA, situacaoDe, pendente, consultas, conferir, placar, type ContatoOrg, type Disparo, type Bloqueio, type Destino, type Situacao, type LinhaPlacar } from '../lib/comercial';
+import { destinos, impedimento, pedidoMensagem, htmlEmail, textoEmail, resumo, idBloqueio, PERSONA, LIMITE_LOTE, LIMITE_DIA, ENVIO_LIBERADO, levarPara, focoPendente, FOCO_MESA, situacaoDe, pendente, consultas, conferir, placar, type ContatoOrg, type Disparo, type Bloqueio, type Destino, type Situacao, type LinhaPlacar, type ThreadGmail } from '../lib/comercial';
 import { registrarContato, sugerirProximo, type Resultado } from '../lib/cadencia';
 import { mesmaEmpresa, slug } from '../lib/nomes';
 import type { Alvo, Caso } from '../lib/tipos';
@@ -37,7 +37,7 @@ let msgConf = '';
 
 let mcp: Promise<Mcp | null> | null = null;
 const conector = () => (mcp ??= window.claude?.use ? (window.claude.use('mcp') as Promise<Mcp>).catch(() => null) : Promise.resolve(null));
-async function gmail(ferramenta: 'send_message' | 'create_draft' | 'search_threads', args: object): Promise<{ id?: string; threadId?: string }> {
+async function gmail(ferramenta: 'send_message' | 'create_draft' | 'search_threads' | 'get_thread', args: object): Promise<{ id?: string; threadId?: string }> {
   if (ferramenta === 'send_message' && !ENVIO_LIBERADO) throw { code: 'envio_desligado' };
   const m = await conector();
   if (!m) throw { code: 'server_not_connected' };
@@ -243,7 +243,14 @@ export function montar(root: HTMLElement): () => void {
     const L = disparos.filter((d) => pendente(d, hoje())).sort((a, b) => b.em.localeCompare(a.em)).slice(0, 30);
     if (!L.length) { $('#dpConfN').textContent = 'Nada em aberto para conferir.'; return; }
     ocupado = true; ($('#dpConf') as HTMLButtonElement).disabled = true;
-    const busca = async (query: string) => (await gmail('search_threads', { query, pageSize: 5, view: 'THREAD_VIEW_MINIMAL' })) as unknown;
+    // A busca às vezes volta sem data e sem trecho: a conversa completa (get_thread) traz data e texto da resposta.
+    const busca = async (query: string, completa = false) => {
+      const r = (await gmail('search_threads', { query, pageSize: 5, view: 'THREAD_VIEW_MINIMAL' })) as { threads?: ThreadGmail[] };
+      if (completa) for (const th of (r.threads || []).slice(0, 2)) if (th.id && (th.messages || []).some((m) => !m.date || !m.snippet)) {
+        try { const c = (await gmail('get_thread', { threadId: th.id, messageFormat: 'PLAIN_TEXT' })) as ThreadGmail; if (c.messages?.length) th.messages = c.messages; } catch { /* fica com o que a busca trouxe */ }
+      }
+      return r as unknown;
+    };
     const conta: Record<string, number> = {};
     let n = 0, erro = '';
     for (const d of L) {
@@ -251,9 +258,9 @@ export function montar(root: HTMLElement): () => void {
       try {
         const q = consultas(d), antes = situacaoDe(d);
         const res: { envio?: unknown; resposta?: unknown; devolucao?: unknown } = {};
-        if (antes === 'rascunho') res.envio = await busca(q.envio);
+        if (antes === 'rascunho') res.envio = await busca(q.envio, true);
         const ok = antes === 'enviado' || (res.envio !== undefined && conferir(d, res).situacao === 'enviado');
-        if (ok) { const env = { ...d, ...conferir(d, res) }; const q2 = consultas(env); res.devolucao = await busca(q2.devolucao); res.resposta = await busca(q2.resposta); }
+        if (ok) { const env = { ...d, ...conferir(d, res) }; const q2 = consultas(env); res.devolucao = await busca(q2.devolucao); res.resposta = await busca(q2.resposta, true); }
         const up = conferir(d, res), depois = up.situacao || antes;
         Object.assign(d, up);
         try { await colDisp?.doc(d.id).update(up); } catch { /* vale nesta visita */ }

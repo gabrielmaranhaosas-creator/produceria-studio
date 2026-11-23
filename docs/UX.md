@@ -34,7 +34,7 @@ Percurso feito tela a tela no Studio montado com os dados reais (exportação do
 - Central: 959 sinais visíveis ao abrir (antes 92), em 5 classes.
 - Contas e agências: 148 movimentações (antes 60).
 - Licitações: em ranking por nota, só no escopo do hub (ver ajuste abaixo).
-- Página publicada: 822 KB, abaixo do limite de 870 KB da revisão de compartilhamento.
+- Página publicada: 822 KB, abaixo do limite (hoje 880 KB) da revisão de compartilhamento.
 
 ## Ajuste do mesmo dia: precisão em vez de volume
 

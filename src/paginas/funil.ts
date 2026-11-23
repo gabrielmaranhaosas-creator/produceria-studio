@@ -5,12 +5,13 @@ import { perguntar, ErroIA, CONTEXTO } from '../lib/ia';
 import { totalOrcamento, orcamentoVigente, type Orcamento } from '../lib/servicos';
 import { seletor, comId } from './dom';
 import { kpis, vazio, confirmarNoBotao, irPara } from '../componentes';
+import { MOTIVOS } from '../lib/semana';
 
 export const EIXOS = ['Privado', 'Público', 'Internacional'] as const;
 export const ESTAGIOS = ['Identificada', 'Contato', 'Proposta', 'Negociação', 'Ganha', 'Perdida'] as const;
 const ATIVOS = ESTAGIOS.filter((e) => e !== 'Perdida');
 
-export interface Oportunidade { id: string; eixo: string; titulo: string; alvo?: string; valor?: number | null; estagio: string; proximoPasso?: string; prazo?: string; fonte?: string; criadoEm?: string; origem?: string }
+export interface Oportunidade { id: string; eixo: string; titulo: string; alvo?: string; valor?: number | null; estagio: string; motivo?: string; movidoEm?: string; fechadoEm?: string; proximoPasso?: string; prazo?: string; fonte?: string; criadoEm?: string; origem?: string }
 export interface Linha { id: string; nome: string; grupo: 'Atual' | 'Nova' | string; receita12m: number | null; meta12m: number | null; ordem: number }
 interface Projeto { id: string; cliente?: string; canal?: string; orcamentos?: Orcamento[] }
 
@@ -81,7 +82,7 @@ export function montar(root: HTMLElement): () => void {
   </section></div>`;
   const $ = seletor(root);
   let P: Oportunidade[] = [], L: Linha[] = [], projetos: Projeto[] = [], db: Banco | null = null;
-  let carregado = false, eixo = '', nova = false, grupo = 'Nova';
+  let carregado = false, eixo = '', nova = false, grupo = 'Nova', perdendo = '';
   const offs: (() => void)[] = [];
   const avisar = (t: string) => { $('#fnLive').textContent = t; };
 
@@ -120,9 +121,9 @@ export function montar(root: HTMLElement): () => void {
       ${itens.length ? itens.map((o) => `<div class="lc-card"><span class="note">${esc(o.eixo)}${o.alvo ? ' · ' + esc(o.alvo) : ''}</span><b>${esc(o.titulo)}</b>
         <span class="note">${esc(o.proximoPasso || '')}${o.prazo ? ' · até ' + dt(o.prazo) : ''}</span>${o.valor ? `<span class="note num">${brl(o.valor)}</span>` : ''}${fonteLink(o.fonte)}
         <div class="lc-mv">${i > 0 ? `<button type="button" class="ghost sm" data-mv="${esc(o.id)}" data-para="${ATIVOS[i - 1]}" aria-label="Voltar ${esc(o.titulo)} para ${ATIVOS[i - 1]}">← ${ATIVOS[i - 1]}</button>` : '<span></span>'}${i < ATIVOS.length - 1 ? `<button type="button" class="ghost sm" data-mv="${esc(o.id)}" data-para="${ATIVOS[i + 1]}" aria-label="Avançar ${esc(o.titulo)} para ${ATIVOS[i + 1]}">${ATIVOS[i + 1]} →</button>` : ''}</div>
-        <button type="button" class="lnk" data-mv="${esc(o.id)}" data-para="Perdida">Marcar como perdida</button></div>`).join('') : '<span class="note">Nada aqui ainda</span>'}</section>`;
+        ${perdendo === o.id ? `<div class="acts" role="group" aria-label="Motivo da perda"><span class="note">Por que perdeu?</span>${MOTIVOS.map((m) => `<button type="button" class="chip" data-mv="${esc(o.id)}" data-para="Perdida" data-motivo="${m}">${m}</button>`).join('')}<button type="button" class="lnk" data-perde="">Cancelar</button></div>` : `<button type="button" class="lnk" data-perde="${esc(o.id)}">Marcar como perdida</button>`}</div>`).join('') : '<span class="note">Nada aqui ainda</span>'}</section>`;
     }).join('')}</div>
-    ${perdidas.length ? `<details class="fn-perdidas"><summary class="note">Perdidas (${perdidas.length})</summary><ul class="vc-l">${perdidas.map((o) => `<li class="fn-pd"><span>${esc(o.titulo)}</span><button type="button" class="ghost sm" data-mv="${esc(o.id)}" data-para="Identificada">Reabrir</button><button type="button" class="lnk perigo" data-apaga="${esc(o.id)}">Apagar</button></li>`).join('')}</ul></details>` : ''}`;
+    ${perdidas.length ? `<details class="fn-perdidas"><summary class="note">Perdidas (${perdidas.length})</summary><ul class="vc-l">${perdidas.map((o) => `<li class="fn-pd"><span>${esc(o.titulo)}${o.motivo ? ` <span class="note">· ${esc(o.motivo)}</span>` : ''}</span><button type="button" class="ghost sm" data-mv="${esc(o.id)}" data-para="Identificada">Reabrir</button><button type="button" class="lnk perigo" data-apaga="${esc(o.id)}">Apagar</button></li>`).join('')}</ul></details>` : ''}`;
     $('#fnQ').querySelectorAll<HTMLButtonElement>('[data-apaga]').forEach((b) => confirmarNoBotao(b, 'Confirmar exclusão', async () => {
       if (!db) return;
       try { await db.collection('pipeline').doc(b.dataset.apaga!).delete(); avisar('Oportunidade apagada.'); } catch { avisar('Não foi possível apagar.'); }
@@ -161,7 +162,13 @@ export function montar(root: HTMLElement): () => void {
     if (d.eixo !== undefined) { eixo = d.eixo; funil(); return; }
     if (b.id === 'fnNova') { nova = !nova; funil(); if (nova) $<HTMLInputElement>('#fo_tit').focus(); return; }
     if (b.id === 'fnNovaX') { nova = false; funil(); $<HTMLElement>('#fnNova').focus(); return; }
-    if (d.mv && d.para) { const o = P.find((x) => x.id === d.mv); if (o) await salvar('pipeline', o.id, { estagio: d.para }, `${o.titulo}: ${d.para}.`); return; }
+    if (d.perde !== undefined) { perdendo = d.perde; funil(); return; }
+    if (d.mv && d.para) {
+      const o = P.find((x) => x.id === d.mv), em = new Date().toISOString(), fecha = d.para === 'Ganha' || d.para === 'Perdida';
+      perdendo = '';
+      if (o) await salvar('pipeline', o.id, { estagio: d.para, movidoEm: em, fechadoEm: fecha ? em : '', motivo: d.motivo || '' }, `${o.titulo}: ${d.para}${d.motivo ? ' (' + d.motivo + ')' : ''}.`);
+      return;
+    }
     if (d.ac) {
       const e = ANTICICLICAS[Number(d.ac)];
       await criar('pipeline', novoId('fn'), { eixo: e.eixo, titulo: e.titulo, alvo: '', valor: null, estagio: 'Identificada', proximoPasso: e.passo, fonte: e.fonte || '', criadoEm: new Date().toISOString(), origem: 'Estratégia' }, `${e.titulo} entrou no funil.`);

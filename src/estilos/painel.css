@@ -39,3 +39,9 @@ button.pn-l[aria-pressed=true] .pn-t i,.pn-l:first-child .pn-t i{background:var(
 .pn-m.fc button[aria-pressed="true"] i{background:var(--sinal)}
 .pn-m.fc button[aria-pressed="true"] .pn-x{color:var(--ink);font-weight:600}
 .pn-m.fc:has([aria-pressed="true"]) button:not([aria-pressed="true"]) i{opacity:.35}
+.sm-g{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:24px}
+.sm-g .lab .num{margin-left:6px;opacity:.7}
+.sm-m{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px}
+.sm-w .kpis small{font-size:.5em;opacity:.6}
+@media (max-width:900px){.sm-g{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:560px){.sm-g{grid-template-columns:1fr}}

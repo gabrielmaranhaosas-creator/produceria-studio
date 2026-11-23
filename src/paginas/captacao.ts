@@ -107,7 +107,7 @@ export function montar(root: HTMLElement): () => void {
   async function mover(a: AlvoDoc, etapa: string) {
     if (a.status === etapa) return;
     if (etapa === 'Proposta' || etapa === 'Cliente') notificar(etapa === 'Cliente' ? `Novo cliente: ${a.nome}` : `Proposta para ${a.nome}`, a.gatilho || '');
-    await atualizar(a.id, { status: etapa }, `${a.nome}: ${etapa}.`);
+    await atualizar(a.id, { status: etapa, etapas: { ...(a.etapas || {}), [etapa]: agora() } }, `${a.nome}: ${etapa}.`);
     if (!col) render();
   }
 

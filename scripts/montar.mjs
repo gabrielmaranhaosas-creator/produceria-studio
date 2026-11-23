@@ -169,8 +169,9 @@ writeFileSync('dist/legado.html', html);
   const enxutos = transformSync(readFileSync('dist/enxuto/studio-modulos.js', 'utf8'), { minify: true, format: 'esm', target: 'es2022' }).code;
   if (/<\/script/i.test(enxutos)) throw new Error('O pacote enxuto contém "</script".');
   const studioClaude = pagina(enxutos);
-  const LIMITE = 870 * 1024;
-  if (Buffer.byteLength(studioClaude) > LIMITE) throw new Error(`dist/index.html com ${(Buffer.byteLength(studioClaude) / 1024).toFixed(0)} KB passa de 870 KB: o compartilhamento do claude.ai recusa. Enxugue antes de publicar.`);
+  // 880 KB: abaixo dos 885 KB que passaram em 17/11, com folga.
+  const LIMITE = 880 * 1024;
+  if (Buffer.byteLength(studioClaude) > LIMITE) throw new Error(`dist/index.html com ${(Buffer.byteLength(studioClaude) / 1024).toFixed(0)} KB passa de 880 KB: o compartilhamento do claude.ai recusa. Enxugue antes de publicar.`);
   writeFileSync('dist/index.html', studioClaude);
   const kit = documentosDoBanco();
   // A cópia de consulta (fora do claude.ai, sem limite) leva o pacote completo, com os arquivos dos plugins.
@@ -183,5 +184,5 @@ writeFileSync('dist/legado.html', html);
   const consulta = novo.replace('</head>', () => `${faixa}<title>PRODUCERia Studio · consulta</title></head>`).replace('<title>PRODUCERia Studio</title>', '')
     .replace('<script type="module" data-studio="modulos">', () => `<script data-studio="consulta">${runtime}</script><script type="module" data-studio="modulos">`);
   writeFileSync('dist/consulta.html', consulta);
-  console.log(`dist/index.html: ${(Buffer.byteLength(studioClaude) / 1024).toFixed(0)} KB (limite 870) · ${kit.length} arquivos dos plugins em dist/kit-banco para a coleção kit_plugins · dist/consulta.html: ${(consulta.length / 1024).toFixed(0)} KB · dist/legado.html: ${(html.length / 1024).toFixed(0)} KB de reserva`);
+  console.log(`dist/index.html: ${(Buffer.byteLength(studioClaude) / 1024).toFixed(0)} KB (limite 880) · ${kit.length} arquivos dos plugins em dist/kit-banco para a coleção kit_plugins · dist/consulta.html: ${(consulta.length / 1024).toFixed(0)} KB · dist/legado.html: ${(html.length / 1024).toFixed(0)} KB de reserva`);
 }

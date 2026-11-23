@@ -197,18 +197,26 @@ export function consultas(d: Disparo) {
     devolucao: `from:mailer-daemon ${d.para} after:${env}`,
   };
 }
-export interface MsgGmail { id?: string; threadId?: string; sender?: string; subject?: string; snippet?: string; date?: string; viewUrl?: string; toRecipients?: string[] }
+export interface MsgGmail { id?: string; threadId?: string; sender?: string; subject?: string; snippet?: string; plaintextBody?: string; date?: string; viewUrl?: string; toRecipients?: string[] }
 export interface ThreadGmail { id?: string; viewUrl?: string; messages?: MsgGmail[] }
-/** Mensagens de um resultado de search_threads, cada uma com o link da conversa. */
+/** Mensagens de um resultado de search_threads (ou de get_thread), cada uma com o link da conversa. */
 export function mensagens(payload: unknown): MsgGmail[] {
-  const t = ((payload as { threads?: ThreadGmail[] })?.threads || []);
+  const p = payload as { threads?: ThreadGmail[] } & ThreadGmail;
+  const t = p?.threads || (p?.messages ? [p] : []);
   return t.flatMap((th) => (th.messages || []).map((m) => ({ ...m, threadId: m.threadId || th.id, viewUrl: m.viewUrl || th.viewUrl })));
 }
+/**
+ * Endereço comparável: a busca do Gmail devolve o endereço sem os pontos da parte local ("nelsongraca@" para
+ * "nelson.graca@"), então a comparação ignora pontos e o "+etiqueta" antes do @.
+ */
+export const normEmail = (x: string) => { const [u, d = ''] = x.trim().toLowerCase().split('@'); return u.split('+')[0].replace(/\./g, '') + '@' + d; };
+const emails = (x: string) => (x.match(/[^\s<>,;"']+@[^\s<>,;"']+/g) || []).map(normEmail);
+const temEmail = (lista: string[] | string | undefined, alvo: string) => [lista || []].flat().some((x) => emails(x).includes(normEmail(alvo)));
 const semPrefixo = (x: string) => chave(x.replace(/^\s*((re|res|enc|fwd?|tr)\s*:\s*)+/i, ''));
 /** A mensagem enviada que corresponde ao rascunho (mesmo destinatário e mesmo assunto). */
 export function acharEnvio(d: Disparo, l: MsgGmail[]): MsgGmail | undefined {
   const a = semPrefixo(d.assunto);
-  return l.find((m) => (m.toRecipients || []).some((t) => t.toLowerCase().includes(d.para.toLowerCase())) && (!a || semPrefixo(m.subject || '') === a))
+  return l.find((m) => temEmail(m.toRecipients, d.para) && (!a || semPrefixo(m.subject || '') === a))
     || l.find((m) => !!a && semPrefixo(m.subject || '').includes(a));
 }
 /** Lê a resposta: pediu para sair, sem interesse ou respondeu. */
@@ -232,8 +240,8 @@ export function conferir(d: Disparo, r: { envio?: unknown; resposta?: unknown; d
   if (s !== 'enviado') return up;
   const volta = mensagens(r.devolucao)[0];
   if (volta) return Object.assign(up, { situacao: 'voltou' as Situacao, respostaEm: dataMsg(volta, agora), resposta: (volta.snippet || 'O e-mail não foi entregue.').slice(0, 240) });
-  const resp = mensagens(r.resposta).find((m) => (m.sender || '').toLowerCase().includes(d.para.toLowerCase()));
-  if (resp) return Object.assign(up, { situacao: lerResposta(resp.snippet || resp.subject || ''), respostaEm: dataMsg(resp, agora), resposta: (resp.snippet || '').slice(0, 240), link: resp.viewUrl || up.link || d.link || '' });
+  const resp = mensagens(r.resposta).find((m) => temEmail(m.sender, d.para));
+  if (resp) return Object.assign(up, { situacao: lerResposta(resp.plaintextBody || resp.snippet || resp.subject || ''), respostaEm: dataMsg(resp, agora), resposta: (resp.snippet || resp.plaintextBody || '').replace(/\s+/g, ' ').slice(0, 240), link: resp.viewUrl || up.link || d.link || '' });
   return up;
 }
 

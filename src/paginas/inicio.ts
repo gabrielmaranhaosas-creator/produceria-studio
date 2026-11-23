@@ -25,7 +25,7 @@ export function passos(pipeline: Doc[], alvos: Doc[], b2g: Doc[]): Passo[] {
 }
 
 const GESTAO: [string, string, string][] = [['rotinas', 'Rotinas do Claude', 'O que roda sozinho todo dia, quando rodou e o que trouxe.'], ['tabela', 'Tabela de serviços', 'Preços que sustentam qualquer orçamento.'], ['biblioteca', 'Biblioteca', 'Marcas, masters e specs da casa.'], ['casos', 'Casos', 'O portfólio que vira argumento de venda.']];
-const VENDA: [string, string, string][] = [['#captacao', 'Abordar um alvo', 'Casos e provas da casa entram na mensagem.'], ['#investigacao', 'Seguir uma pista', 'Quem saiu, para onde foi e quem chegou no lugar.'], ['#b2g', 'Avaliar licitação', 'GO / NO-GO cruzando o edital com o que a Produceria entrega.'], ['#estrategia', 'Revisar frentes de receita', 'SWOT com evidência e o funil de cada frente.']];
+const VENDA: [string, string, string][] = [['#semana', 'Rever a semana', 'Meta, previsão, o que travou e os sinais esfriando.'], ['#captacao', 'Abordar um alvo', 'Casos e provas da casa entram na mensagem.'], ['#investigacao', 'Seguir uma pista', 'Quem saiu, para onde foi e quem chegou no lugar.'], ['#b2g', 'Avaliar licitação', 'GO / NO-GO cruzando o edital com o que a Produceria entrega.'], ['#estrategia', 'Revisar frentes de receita', 'SWOT com evidência e o funil de cada frente.']];
 
 export function montar(root: HTMLElement): () => void {
   root.innerHTML = `<div class="wrap vc ini">

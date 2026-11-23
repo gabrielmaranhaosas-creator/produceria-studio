@@ -67,6 +67,17 @@ describe('Mesa comercial', () => {
 });
 
 describe('ciclo depois do rascunho', () => {
+  it('lê o Gmail real: endereço sem pontos na busca e resposta pela conversa completa', () => {
+    const d: Disparo = { id: 'g1', para: 'ana.souza@cliente1.com.br', nome: 'Ana', no: 'p:x', assunto: 'Produção', corpo: 'x', modo: 'rascunho', em: '2026-11-10T10:00:00Z' };
+    // formato devolvido pela busca do Gmail em 23/11: sem date, sem snippet e com o endereço sem pontos
+    const envio = { threads: [{ id: 't1', messages: [{ id: 'm1', sender: 'eu@exemplo.com', subject: 'Produção', threadId: 't1', toRecipients: ['anasouza@cliente1.com.br'] }] }] };
+    const ida = conferir(d, { envio }, '2026-11-12T10:00:00Z');
+    expect(ida).toMatchObject({ situacao: 'enviado', threadId: 't1', enviadoEm: '2026-11-12T10:00:00Z' });
+    // formato do get_thread (PLAIN_TEXT): mensagens soltas, com data e corpo
+    const resposta = { id: 't1', viewUrl: 'https://mail.google.com/x', messages: [{ id: 'm2', sender: 'Ana.Souza@cliente1.com.br', subject: 'Re: Produção', date: '2026-11-13T15:00:00Z', plaintextBody: 'Sair, por favor.\n\nEm 12/11 voce escreveu:\n> texto' }] };
+    expect(conferir({ ...d, ...ida }, { resposta }, '2026-11-14T10:00:00Z')).toMatchObject({ situacao: 'sair', respostaEm: '2026-11-13T15:00:00.000Z', link: 'https://mail.google.com/x' });
+  });
+
   const ras: Disparo = { id: 'r1', para: 'novosnegocios@cliente1.com.br', nome: 'Cliente 1', no: 'o:cliente 1', org: 'Cliente 1', assunto: 'Produção para a campanha de verão', corpo: 'x', modo: 'rascunho', em: '2026-11-10T10:00:00Z', porta: 'comercial', tipoNo: 'empresa', ger: 1, objetivo: 'desdobramento' };
   const th = (m: object) => ({ threads: [{ id: 't1', viewUrl: 'https://mail.google.com/x', messages: [{ threadId: 't1', date: '2026-11-11T09:00:00Z', ...m }] }] });
 
