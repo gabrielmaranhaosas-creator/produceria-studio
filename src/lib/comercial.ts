@@ -11,7 +11,14 @@ export interface EmailPub { email: string; tipo: TipoEmail | string; fonte: stri
 /** Contatos publicados de uma organização (coleção `contatos`, um documento por organização). */
 export interface ContatoOrg { id: string; nome: string; site?: string; siteOrigem?: string; linkedin?: string; emails?: EmailPub[]; atualizadoEm?: string }
 /** Registro de cada e-mail enviado ou deixado em rascunho (coleção `disparos`). */
-export interface Disparo { id: string; para: string; nome: string; no: string; org?: string; assunto: string; corpo: string; modo: 'enviado' | 'rascunho'; gmailId?: string; em: string }
+/** O que aconteceu com o e-mail depois de sair da Mesa (lido no Gmail). */
+export type Situacao = 'rascunho' | 'enviado' | 'respondeu' | 'sem interesse' | 'sair' | 'voltou';
+export interface Disparo {
+  id: string; para: string; nome: string; no: string; org?: string; assunto: string; corpo: string; modo: 'enviado' | 'rascunho'; gmailId?: string; em: string;
+  // para medir o que abre porta: tipo do e-mail, tipo do ponto, ramificação e o objetivo escrito na Mesa
+  porta?: string; tipoNo?: string; ger?: number; objetivo?: string;
+  situacao?: Situacao; enviadoEm?: string; respostaEm?: string; resposta?: string; threadId?: string; link?: string; conferidoEm?: string;
+}
 /** Quem pediu para não receber (coleção `nao_contatar`, id = slug do e-mail). */
 export interface Bloqueio { id: string; email: string; motivo?: string; em?: string }
 
@@ -168,3 +175,90 @@ export function resumo(l: Destino[]) {
 }
 
 export type { NoU };
+
+/* ───────────────────────── Ciclo depois do rascunho ─────────────────────────
+ * A Mesa deixa o rascunho; alguém envia pelo Gmail. Ao conferir, o Studio procura no Gmail da PRODUCERIA se o
+ * rascunho saiu, se a pessoa respondeu, pediu para sair ou se o e-mail voltou, e devolve o que mudou.
+ */
+export const situacaoDe = (d: Disparo): Situacao => d.situacao || (d.modo === 'enviado' ? 'enviado' : 'rascunho');
+/** Ainda vale conferir: rascunho que pode ter saído ou enviado sem resposta há menos de 60 dias. */
+export function pendente(d: Disparo, hoje: string): boolean {
+  const s = situacaoDe(d);
+  if (s === 'rascunho') return (Date.parse(hoje) - Date.parse(d.em.slice(0, 10))) / 864e5 <= 30;
+  return s === 'enviado' && (Date.parse(hoje) - Date.parse((d.enviadoEm || d.em).slice(0, 10))) / 864e5 <= 60;
+}
+const dataGmail = (iso: string) => iso.slice(0, 10).replace(/-/g, '/');
+/** Buscas no Gmail para um disparo: envio (pasta Enviados), resposta e devolução. */
+export function consultas(d: Disparo) {
+  const desde = dataGmail(d.em), env = dataGmail(d.enviadoEm || d.em);
+  return {
+    envio: `to:${d.para} in:sent after:${desde}`,
+    resposta: `from:${d.para} after:${env}`,
+    devolucao: `from:mailer-daemon ${d.para} after:${env}`,
+  };
+}
+export interface MsgGmail { id?: string; threadId?: string; sender?: string; subject?: string; snippet?: string; date?: string; viewUrl?: string; toRecipients?: string[] }
+export interface ThreadGmail { id?: string; viewUrl?: string; messages?: MsgGmail[] }
+/** Mensagens de um resultado de search_threads, cada uma com o link da conversa. */
+export function mensagens(payload: unknown): MsgGmail[] {
+  const t = ((payload as { threads?: ThreadGmail[] })?.threads || []);
+  return t.flatMap((th) => (th.messages || []).map((m) => ({ ...m, threadId: m.threadId || th.id, viewUrl: m.viewUrl || th.viewUrl })));
+}
+const semPrefixo = (x: string) => chave(x.replace(/^\s*((re|res|enc|fwd?|tr)\s*:\s*)+/i, ''));
+/** A mensagem enviada que corresponde ao rascunho (mesmo destinatário e mesmo assunto). */
+export function acharEnvio(d: Disparo, l: MsgGmail[]): MsgGmail | undefined {
+  const a = semPrefixo(d.assunto);
+  return l.find((m) => (m.toRecipients || []).some((t) => t.toLowerCase().includes(d.para.toLowerCase())) && (!a || semPrefixo(m.subject || '') === a))
+    || l.find((m) => !!a && semPrefixo(m.subject || '').includes(a));
+}
+/** Lê a resposta: pediu para sair, sem interesse ou respondeu. */
+export function lerResposta(texto: string): 'sair' | 'sem interesse' | 'respondeu' {
+  // só o que a pessoa escreveu: corta a citação do e-mail original (que traz o rodapé com "sair")
+  const proprio = texto.split(RODAPE)[0].split(/\n\s*>|\b(em|on)\s.{0,80}\s(escreveu|wrote)\s*:|-{3,}\s*(mensagem|original|forwarded)|\bde:\s|\bfrom:\s/i)[0];
+  const t = ` ${proprio.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, ' ')} `;
+  if (/^\s*(sair|remover|descadastrar)\b/.test(t) || /\b(remov\w* (meu|o|nosso)|descadastr\w*|unsubscribe|nao (quero|desejo|queremos) (mais )?receber|tir\w* (meu|o|nosso) (e ?mail|contato|endereco))\b/.test(t)) return 'sair';
+  if (/\b(sem interesse|nao temos interesse|nao tenho interesse|nao e o momento|no momento nao|nao ha demanda|ja temos (fornecedor|parceir\w*|produtora))\b/.test(t)) return 'sem interesse';
+  return 'respondeu';
+}
+const dataMsg = (m?: MsgGmail, padrao = new Date().toISOString()) => { const t = Date.parse(m?.date || ''); return isNaN(t) ? padrao : new Date(t).toISOString(); };
+/** O que muda no disparo a partir das três buscas (null se nada mudou). */
+export function conferir(d: Disparo, r: { envio?: unknown; resposta?: unknown; devolucao?: unknown }, agora = new Date().toISOString()): Partial<Disparo> {
+  const up: Partial<Disparo> = { conferidoEm: agora };
+  let s = situacaoDe(d);
+  if (s === 'rascunho' && r.envio !== undefined) {
+    const m = acharEnvio(d, mensagens(r.envio));
+    if (m) { s = 'enviado'; Object.assign(up, { modo: 'enviado', situacao: s, enviadoEm: dataMsg(m, agora), threadId: m.threadId || '', link: m.viewUrl || '' }); }
+  }
+  if (s !== 'enviado') return up;
+  const volta = mensagens(r.devolucao)[0];
+  if (volta) return Object.assign(up, { situacao: 'voltou' as Situacao, respostaEm: dataMsg(volta, agora), resposta: (volta.snippet || 'O e-mail não foi entregue.').slice(0, 240) });
+  const resp = mensagens(r.resposta).find((m) => (m.sender || '').toLowerCase().includes(d.para.toLowerCase()));
+  if (resp) return Object.assign(up, { situacao: lerResposta(resp.snippet || resp.subject || ''), respostaEm: dataMsg(resp, agora), resposta: (resp.snippet || '').slice(0, 240), link: resp.viewUrl || up.link || d.link || '' });
+  return up;
+}
+
+/** Placar dos disparos: quantos saíram, quantos responderam e a taxa por porta, tipo, ramificação e objetivo. */
+export const PORTAS: Record<string, string> = { comercial: 'E-mail comercial', geral: 'E-mail geral', nominal: 'E-mail da pessoa', 'imprensa/marketing': 'Imprensa e marketing', empresa: 'E-mail da empresa (para a pessoa)' };
+export interface LinhaPlacar { rotulo: string; enviados: number; respostas: number; taxa: number }
+export function placar(l: Disparo[]) {
+  const s = (d: Disparo) => situacaoDe(d);
+  const saiu = l.filter((d) => s(d) !== 'rascunho'), entregue = saiu.filter((d) => s(d) !== 'voltou');
+  const resp = entregue.filter((d) => ['respondeu', 'sem interesse', 'sair'].includes(s(d)));
+  const por = (f: (d: Disparo) => string): LinhaPlacar[] => {
+    const g = new Map<string, Disparo[]>();
+    for (const d of entregue) { const k = f(d) || 'Sem registro'; g.set(k, [...(g.get(k) || []), d]); }
+    return [...g].map(([rotulo, L]) => { const r = L.filter((d) => ['respondeu', 'sem interesse', 'sair'].includes(s(d))).length; return { rotulo, enviados: L.length, respostas: r, taxa: Math.round((100 * r) / L.length) }; })
+      .sort((a, b) => b.taxa - a.taxa || b.enviados - a.enviados);
+  };
+  const tempos = resp.map((d) => (Date.parse(d.respostaEm || '') - Date.parse(d.enviadoEm || d.em)) / 864e5).filter((x) => x >= 0);
+  return {
+    rascunhos: l.filter((d) => s(d) === 'rascunho').length, enviados: saiu.length, voltaram: saiu.length - entregue.length,
+    respostas: resp.length, positivas: resp.filter((d) => s(d) === 'respondeu').length, semInteresse: resp.filter((d) => s(d) === 'sem interesse').length, sair: resp.filter((d) => s(d) === 'sair').length,
+    taxa: entregue.length ? Math.round((100 * resp.length) / entregue.length) : 0,
+    diasResposta: tempos.length ? Math.round((10 * tempos.reduce((a, b) => a + b, 0)) / tempos.length) / 10 : null,
+    porPorta: por((d) => PORTAS[d.porta || ''] || d.porta || ''),
+    porTipo: por((d) => ({ agencia: 'Agência', empresa: 'Anunciante', pessoa: 'Pessoa' })[d.tipoNo || ''] || ''),
+    porRamo: por((d) => (d.ger == null ? '' : d.ger < 0 ? 'Fora de alcance' : d.ger === 0 ? 'Ponto de partida' : `${d.ger}ª ramificação`)),
+    porObjetivo: por((d) => (d.objetivo || '').trim() || 'Sem objetivo escrito'),
+  };
+}

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { montarUniverso, reacao, multiverso, ORIGEM, type OrgGrafo, type PessoaInv } from '../src/lib/investigacao';
-import { destinos, impedimento, pedidoMensagem, htmlEmail, textoEmail, resumo, RODAPE, LIMITE_DIA, type ContatoOrg, type Disparo } from '../src/lib/comercial';
+import { destinos, impedimento, pedidoMensagem, htmlEmail, textoEmail, resumo, RODAPE, LIMITE_DIA, conferir, consultas, lerResposta, pendente, placar, type ContatoOrg, type Disparo } from '../src/lib/comercial';
 
 const org = (nome: string, ligacoes: OrgGrafo['ligacoes'] = []): OrgGrafo => ({ k: nome.toLowerCase(), nome, ligacoes });
 const pessoas: (PessoaInv & { email?: string; emailFonte?: string })[] = [
@@ -63,5 +63,52 @@ describe('Mesa comercial', () => {
     expect(h).not.toMatch(/#(?!171717|57574f|deded8|ffffff)[0-9a-f]{6}/i);
     expect(h).toContain(RODAPE.replace(/"/g, '&quot;'));
     expect(textoEmail('Oi')).toContain(RODAPE);
+  });
+});
+
+describe('ciclo depois do rascunho', () => {
+  const ras: Disparo = { id: 'r1', para: 'novosnegocios@cliente1.com.br', nome: 'Cliente 1', no: 'o:cliente 1', org: 'Cliente 1', assunto: 'Produção para a campanha de verão', corpo: 'x', modo: 'rascunho', em: '2026-11-10T10:00:00Z', porta: 'comercial', tipoNo: 'empresa', ger: 1, objetivo: 'desdobramento' };
+  const th = (m: object) => ({ threads: [{ id: 't1', viewUrl: 'https://mail.google.com/x', messages: [{ threadId: 't1', date: '2026-11-11T09:00:00Z', ...m }] }] });
+
+  it('acha o rascunho na pasta Enviados pelo destinatário e pelo assunto', () => {
+    const up = conferir(ras, { envio: th({ toRecipients: ['Novos Negócios <novosnegocios@cliente1.com.br>'], subject: 'Produção para a campanha de verão' }) }, '2026-11-12T00:00:00Z');
+    expect(up).toMatchObject({ modo: 'enviado', situacao: 'enviado', enviadoEm: '2026-11-11T09:00:00.000Z', threadId: 't1' });
+    expect(conferir(ras, { envio: {} }).situacao).toBeUndefined();
+  });
+
+  it('lê resposta, pedido para sair e e-mail que voltou', () => {
+    const env: Disparo = { ...ras, modo: 'enviado', situacao: 'enviado', enviadoEm: '2026-11-11T09:00:00Z' };
+    expect(conferir(env, { resposta: th({ sender: 'Ana <novosnegocios@cliente1.com.br>', snippet: 'Olá! Vamos marcar uma conversa na semana que vem?' }) }).situacao).toBe('respondeu');
+    expect(conferir(env, { resposta: th({ sender: 'novosnegocios@cliente1.com.br', snippet: 'Sair' }) }).situacao).toBe('sair');
+    expect(conferir(env, { resposta: th({ sender: 'novosnegocios@cliente1.com.br', snippet: 'Obrigada, mas no momento não temos interesse.' }) }).situacao).toBe('sem interesse');
+    expect(conferir(env, { devolucao: th({ sender: 'mailer-daemon@googlemail.com', snippet: 'Endereço não encontrado' }), resposta: {} }).situacao).toBe('voltou');
+    // mensagem de outra pessoa no mesmo filtro não conta
+    expect(conferir(env, { resposta: th({ sender: 'outro@x.com', snippet: 'oi' }) }).situacao).toBeUndefined();
+  });
+
+  it('não confunde o rodapé citado com pedido para sair', () => {
+    expect(lerResposta(`Obrigado, gostei! Em 10/11, PRODUCERIA escreveu: ... ${RODAPE}`)).toBe('respondeu');
+    expect(lerResposta('Podem remover meu e-mail da lista, por favor')).toBe('sair');
+  });
+
+  it('só confere o que ainda está em aberto', () => {
+    expect(pendente(ras, '2026-11-20')).toBe(true);
+    expect(pendente(ras, '2026-12-20')).toBe(false);
+    expect(pendente({ ...ras, situacao: 'respondeu' }, '2026-11-20')).toBe(false);
+    expect(consultas(ras).envio).toBe('to:novosnegocios@cliente1.com.br in:sent after:2026/11/10');
+  });
+
+  it('placar: taxa sobre os entregues, por porta e por tipo', () => {
+    const L: Disparo[] = [
+      { ...ras, id: 'a', situacao: 'respondeu', enviadoEm: '2026-11-10T00:00:00Z', respostaEm: '2026-11-12T00:00:00Z' },
+      { ...ras, id: 'b', situacao: 'enviado' },
+      { ...ras, id: 'c', situacao: 'voltou', porta: 'geral' },
+      { ...ras, id: 'd', situacao: 'rascunho' },
+      { ...ras, id: 'e', situacao: 'sair', porta: 'geral', tipoNo: 'agencia' },
+    ];
+    const p = placar(L);
+    expect(p).toMatchObject({ rascunhos: 1, enviados: 4, voltaram: 1, respostas: 2, positivas: 1, sair: 1, taxa: 67, diasResposta: 2 });
+    expect(p.porPorta.find((x) => x.rotulo === 'E-mail comercial')).toMatchObject({ enviados: 2, respostas: 1, taxa: 50 });
+    expect(p.porTipo.find((x) => x.rotulo === 'Agência')).toMatchObject({ enviados: 1, respostas: 1 });
   });
 });

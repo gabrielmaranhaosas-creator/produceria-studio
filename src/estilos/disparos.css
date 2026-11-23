@@ -24,3 +24,16 @@
 .dp-acs{display:flex;flex-direction:column;gap:4px;align-items:flex-end}
 .dp-foco{margin:8px 0 0;padding:10px 14px;border:1px solid var(--ink);border-radius:4px;background:var(--surface-100)}
 @media (max-width:640px){.dp-it{grid-template-columns:24px minmax(0,1fr)}.dp-acs{grid-column:2;flex-direction:row;align-items:center;justify-self:start}}
+
+.dp-pts{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px 20px;margin-top:12px}
+.dp-pt{overflow-x:auto}
+.dp-pt table{width:100%;min-width:0;border-collapse:collapse;font-size:14px}
+.dp-pt th{position:static;white-space:normal;background:none}
+.dp-pt caption{text-align:left;padding-bottom:6px}
+.dp-pt thead th:first-child{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+.dp-pt th,.dp-pt td{padding:6px 4px;border-bottom:1px solid var(--line);text-align:left;font-weight:400}
+.dp-pt td.num,.dp-pt th.num{text-align:right;font-variant-numeric:tabular-nums}
+.dp-pt tbody th{overflow-wrap:anywhere}
+.dp-hi{display:flex;flex-direction:column;gap:4px;padding:10px 0;border-bottom:1px solid var(--line)}
+.dp-hi a.tag{text-decoration:none}
+.dp-resp{margin:2px 0 0;padding:6px 10px;border-left:2px solid var(--ink);color:var(--ink);font-size:14px;overflow-wrap:anywhere}

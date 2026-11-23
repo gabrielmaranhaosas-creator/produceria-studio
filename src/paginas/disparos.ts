@@ -1,19 +1,23 @@
 // Mesa comercial: a diretora comercial da casa escolhe quem abordar no multiverso, escreve cada e-mail com a ponte
-// e o gatilho certos, e o Studio envia pelo Gmail da PRODUCERIA (capability `mcp`) depois que você revisa.
-// Só usa contatos publicados, com fonte; registra cada envio, respeita quem pediu para sair e o intervalo entre e-mails.
+// e o gatilho certos e, depois que você revisa, deixa o rascunho no Gmail da PRODUCERIA (capability `mcp`).
+// Depois confere no Gmail quem foi enviado, quem respondeu, quem pediu para sair e qual e-mail voltou, avança o alvo
+// na Agenda e mede a taxa de resposta por porta, tipo de contato, distância e objetivo.
+// Só usa contatos publicados, com fonte; respeita quem pediu para sair e o intervalo entre e-mails.
 import { esc, int, dt } from '../lib/formato';
 import { hoje as hojeISO } from '../lib/datas';
 import { banco, lerBase, type Colecao } from '../lib/db';
 import { montarGrafo, type MercadoBase, type MovimentoBase, type EmpresaMapa, type AgenciaMapa, type PessoaMapa } from '../lib/grafo';
 import { montarUniverso, reacao, multiverso, ORIGEM, type PessoaInv, type OrgInv, type LigacaoInv } from '../lib/investigacao';
 import { perguntar, ErroIA } from '../lib/ia';
-import { destinos, impedimento, pedidoMensagem, htmlEmail, textoEmail, resumo, idBloqueio, PERSONA, LIMITE_LOTE, LIMITE_DIA, ENVIO_LIBERADO, levarPara, focoPendente, FOCO_MESA, type ContatoOrg, type Disparo, type Bloqueio, type Destino } from '../lib/comercial';
-import type { Alvo, Caso, Etapa } from '../lib/tipos';
+import { destinos, impedimento, pedidoMensagem, htmlEmail, textoEmail, resumo, idBloqueio, PERSONA, LIMITE_LOTE, LIMITE_DIA, ENVIO_LIBERADO, levarPara, focoPendente, FOCO_MESA, situacaoDe, pendente, consultas, conferir, placar, type ContatoOrg, type Disparo, type Bloqueio, type Destino, type Situacao, type LinhaPlacar } from '../lib/comercial';
+import { registrarContato, sugerirProximo, type Resultado } from '../lib/cadencia';
+import { mesmaEmpresa, slug } from '../lib/nomes';
+import type { Alvo, Caso } from '../lib/tipos';
 import { seletor, elDe, comId } from './dom';
 import { kpis } from '../componentes';
 
 interface Mcp { callTool(servidor: string, ferramenta: string, args: object, o?: object): Promise<{ payload?: unknown } | undefined> }
-interface ItemFila { id: string; email: string; assunto: string; corpo: string; estrategia: string; linkedin: string; proximo: string; ok: boolean; estado: '' | 'escrevendo' | 'enviando' | 'enviado' | 'rascunho' | 'erro'; erro?: string }
+interface ItemFila { id: string; objetivo?: string; email: string; assunto: string; corpo: string; estrategia: string; linkedin: string; proximo: string; ok: boolean; estado: '' | 'escrevendo' | 'enviando' | 'enviado' | 'rascunho' | 'erro'; erro?: string }
 
 const ERROS: Record<string, string> = {
   envio_desligado: 'O envio está desligado por enquanto. Crie o rascunho no Gmail.', server_not_connected: 'O Gmail não está conectado nesta conta do Claude. Conecte em Configurações › Conectores.', server_not_found: 'O Gmail não está conectado nesta conta do Claude.',
@@ -24,11 +28,16 @@ const erroGmail = (e: unknown) => ERROS[(e as { code?: string })?.code || ''] ||
 const FILA = 'studio.disparos.fila';
 const pausa = (ms: number) => new Promise((r) => setTimeout(r, ms));
 const host = (u?: string) => { try { return new URL(u || '').hostname.replace(/^www\./, ''); } catch { return 'fonte'; } };
-const ETAPAS_ANTES: string[] = ['Mapeado', 'Pesquisado'];
+const SIT: Record<Situacao, [string, string]> = {
+  rascunho: ['rascunho no Gmail', 'w'], enviado: ['enviado, sem resposta', 'aviso'], respondeu: ['respondeu', 'ok'],
+  'sem interesse': ['sem interesse agora', ''], sair: ['pediu para sair', 'erro'], voltou: ['e-mail voltou', 'erro'],
+};
+const CONF = 'studio.disparos.conferido';
+let msgConf = '';
 
 let mcp: Promise<Mcp | null> | null = null;
 const conector = () => (mcp ??= window.claude?.use ? (window.claude.use('mcp') as Promise<Mcp>).catch(() => null) : Promise.resolve(null));
-async function gmail(ferramenta: 'send_message' | 'create_draft', args: object): Promise<{ id?: string; threadId?: string }> {
+async function gmail(ferramenta: 'send_message' | 'create_draft' | 'search_threads', args: object): Promise<{ id?: string; threadId?: string }> {
   if (ferramenta === 'send_message' && !ENVIO_LIBERADO) throw { code: 'envio_desligado' };
   const m = await conector();
   if (!m) throw { code: 'server_not_connected' };
@@ -54,7 +63,11 @@ export function montar(root: HTMLElement): () => void {
   <div class="acts">${ENVIO_LIBERADO ? '<button type="button" id="dpEnv" disabled>Enviar os aprovados</button>' : ''}<button type="button" class="${ENVIO_LIBERADO ? 'ghost' : ''}" id="dpRas" disabled>Criar rascunhos no Gmail</button><button type="button" class="lnk" id="dpLimpa">Limpar a fila</button></div>
   ${ENVIO_LIBERADO ? '' : '<p class="note measure">O envio está desligado por enquanto. A Mesa escreve, você revisa e aprova, e o e-mail vira rascunho no Gmail da PRODUCERIA. Nada sai sem alguém abrir o Gmail e enviar.</p>'}
   <div id="dpFila"></div></section>
- <section aria-labelledby="dpHT"><h2 class="d d-sub" id="dpHT">Enviados e rascunhos</h2><div id="dpH"></div></section>
+ <section aria-labelledby="dpRT" id="dpRS"><div class="ph"><h2 class="d d-sub" id="dpRT">Resultado dos disparos</h2><span class="note" id="dpRC"></span></div>
+  <p class="note measure">O Studio confere no Gmail da PRODUCERIA se cada rascunho foi enviado, quem respondeu, quem pediu para sair e qual e-mail voltou. Quem responde vira alvo em Conversa, com o próximo passo na Agenda; quem pede para sair entra na lista de não contatar.</p>
+  <div class="acts"><button type="button" id="dpConf">Conferir respostas no Gmail</button><span class="note" id="dpConfN"></span></div>
+  <div id="dpR"></div></section>
+ <section aria-labelledby="dpHT"><h2 class="d d-sub" id="dpHT">Rascunhos, envios e respostas</h2><div id="dpH"></div></section>
  <p class="sr" id="dpLive" aria-live="polite" aria-atomic="true"></p>
 </div>`;
   const $ = seletor(root);
@@ -128,7 +141,7 @@ export function montar(root: HTMLElement): () => void {
     $('#dpM').innerHTML = l.length > lim ? `<button type="button" class="lnk" data-mais>Mostrar mais ${int(Math.min(40, l.length - lim))}</button>` : '';
     ($('#dpEsc') as HTMLButtonElement).disabled = !sel.size || ocupado;
     $('#dpEsc').textContent = sel.size ? `Escrever para os selecionados (${sel.size})` : 'Escrever para os selecionados';
-    renderFila(); renderHist();
+    renderFila(); renderPlacar(); renderHist();
   }
 
   function renderFila() {
@@ -150,10 +163,31 @@ export function montar(root: HTMLElement): () => void {
           ${i.email ? `<button type="button" class="lnk" data-bloq="${esc(i.id)}">Não contatar mais</button>` : ''}<button type="button" class="lnk" data-tira="${esc(i.id)}">Tirar da fila</button></div></article>`; }).join('');
   }
 
+  const tabela = (titulo: string, L: LinhaPlacar[]) => !L.length ? '' : `<div class="dp-pt"><table><caption class="lab">${esc(titulo)}</caption><thead><tr><th scope="col">${esc(titulo)}</th><th scope="col" class="num">Enviados</th><th scope="col" class="num">Responderam</th><th scope="col" class="num">Taxa</th></tr></thead><tbody>${L.slice(0, 8).map((l) => `<tr><th scope="row">${esc(l.rotulo)}</th><td class="num">${int(l.enviados)}</td><td class="num">${int(l.respostas)}</td><td class="num"><b>${l.taxa}%</b></td></tr>`).join('')}</tbody></table></div>`;
+  function renderPlacar() {
+    const p = placar(disparos);
+    let ult = ''; try { ult = localStorage.getItem(CONF) || ''; } catch { /* sem armazenamento */ }
+    const abertos = disparos.filter((d) => pendente(d, hoje())).length;
+    $('#dpRC').textContent = ult ? `última conferência ${new Date(ult).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })}` : '';
+    if (!ocupado) $('#dpConfN').textContent = msgConf ? msgConf + (abertos ? ` Ainda em aberto: ${int(abertos)}.` : '') : abertos ? `${int(abertos)} rascunho(s) ou envio(s) em aberto para conferir.` : disparos.length ? 'Nada em aberto.' : '';
+    ($('#dpConf') as HTMLButtonElement).disabled = ocupado || !abertos;
+    $('#dpR').innerHTML = !disparos.length ? '<p class="note">Quando os primeiros rascunhos forem enviados pelo Gmail, o placar aparece aqui: quem respondeu e qual porta, tipo de contato e objetivo dão mais resposta.</p>'
+      : `<section class="kpis" aria-label="Placar dos disparos">${kpis([
+        { rotulo: 'Esperando envio', valor: int(p.rascunhos), nota: 'rascunhos no Gmail' },
+        { rotulo: 'Enviados', valor: int(p.enviados), nota: p.voltaram ? `${int(p.voltaram)} voltaram` : 'entregues' },
+        { rotulo: 'Taxa de resposta', valor: `${p.taxa}%`, nota: `${int(p.respostas)} resposta(s)${p.diasResposta != null ? ` · em ${String(p.diasResposta).replace('.', ',')} dia(s) em média` : ''}` },
+        { rotulo: 'Viraram conversa', valor: int(p.positivas), nota: `${int(p.semInteresse)} sem interesse · ${int(p.sair)} pediram para sair` },
+      ])}</section>
+      ${p.enviados - p.voltaram ? `<div class="dp-pts">${tabela('Porta de entrada', p.porPorta)}${tabela('Tipo de contato', p.porTipo)}${tabela('Distância da PRODUCERIA', p.porRamo)}${tabela('Objetivo do disparo', p.porObjetivo)}</div>
+      <p class="note">Taxa = respostas ÷ e-mails entregues. Com poucos envios a taxa oscila muito: leia como tendência a partir de umas 20 mensagens por linha.</p>` : ''}`;
+  }
+
   function renderHist() {
-    const h = [...disparos].sort((x, y) => y.em.localeCompare(x.em)).slice(0, 30);
-    $('#dpH').innerHTML = !h.length ? '<p class="note">Nenhum e-mail enviado pela mesa comercial ainda.</p>'
-      : `<ul class="vc-l">${h.map((x) => `<li class="dp-hi"><span class="tag ${x.modo === 'enviado' ? 'ok' : 'w'}">${x.modo}</span> <b>${esc(x.nome)}</b> <span class="note">${esc(x.para)} · ${esc(x.assunto)} · ${new Date(x.em).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })}</span></li>`).join('')}</ul>`;
+    const h = [...disparos].sort((x, y) => (y.respostaEm || y.enviadoEm || y.em).localeCompare(x.respostaEm || x.enviadoEm || x.em)).slice(0, 40);
+    $('#dpH').innerHTML = !h.length ? '<p class="note">Nenhum rascunho criado pela mesa comercial ainda.</p>'
+      : `<ul class="vc-l">${h.map((x) => { const s = situacaoDe(x), [t, c] = SIT[s], al = alvoDe(x); return `<li class="dp-hi"><div class="dp-nome"><span class="tag ${c}">${esc(t)}</span> <b>${esc(x.nome)}</b>${al ? `<a class="tag" href="#agenda" title="Abrir a Agenda">alvo · ${esc(al.status || '')}</a>` : ''}</div>
+        <span class="note">${esc(x.para)} · ${esc(x.assunto)} · ${s === 'rascunho' ? 'rascunho de' : 'enviado'} ${new Date(x.enviadoEm || x.em).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })}${x.respostaEm ? ` · resposta ${new Date(x.respostaEm).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })}` : ''}${x.link ? ` · <a href="${esc(x.link)}" target="_blank" rel="noopener">abrir no Gmail ↗</a>` : ''}</span>
+        ${x.resposta ? `<blockquote class="dp-resp">${esc(x.resposta)}</blockquote>` : ''}</li>`; }).join('')}</ul>`;
   }
 
   async function escrever(ids: string[]) {
@@ -164,7 +198,7 @@ export function montar(root: HTMLElement): () => void {
       const x = porId(id); if (!x) continue;
       const email = emailDe(x), e = x.emails.find((y) => y.email === email) || { email: '', tipo: 'linkedin', fonte: '' };
       let it = fila.find((i) => i.id === id);
-      if (!it) { it = { id, email, assunto: '', corpo: '', estrategia: '', linkedin: '', proximo: '', ok: false, estado: 'escrevendo' }; fila.unshift(it); } else Object.assign(it, { email, estado: 'escrevendo', erro: '' });
+      if (!it) { it = { id, objetivo, email, assunto: '', corpo: '', estrategia: '', linkedin: '', proximo: '', ok: false, estado: 'escrevendo' }; fila.unshift(it); } else Object.assign(it, { objetivo, email, estado: 'escrevendo', erro: '' });
       renderFila(); avisar(`Escrevendo para ${x.nome}…`);
       try {
         const r = (await perguntar(pedidoMensagem(x, e, casos, objetivo), { json: true, tier: 'complex' })) as Partial<ItemFila> | null;
@@ -178,15 +212,70 @@ export function montar(root: HTMLElement): () => void {
 
   async function registrar(i: ItemFila, x: Destino, modo: 'enviado' | 'rascunho', gmailId?: string) {
     const em = new Date().toISOString();
-    const d: Disparo = { id: `dp-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`, para: i.email, nome: x.nome, no: x.id, org: x.org || (x.tipo !== 'pessoa' ? x.nome : ''), assunto: i.assunto, corpo: i.corpo, modo, gmailId: gmailId || '', em };
+    const e = x.emails.find((y) => y.email === i.email);
+    const d: Disparo = { id: `dp-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`, para: i.email, nome: x.nome, no: x.id, org: x.org || (x.tipo !== 'pessoa' ? x.nome : ''), assunto: i.assunto, corpo: i.corpo, modo, gmailId: gmailId || '', em,
+      porta: e?.daEmpresa ? 'empresa' : e?.tipo || '', tipoNo: x.tipo, ger: x.ger, objetivo: (i.objetivo || '').slice(0, 160), situacao: modo, ...(modo === 'enviado' ? { enviadoEm: em } : {}) };
     disparos = [...disparos, d];
     try { await colDisp?.doc(d.id).set(d); } catch { /* o envio já saiu; o registro tenta de novo na próxima ação */ }
-    if (modo === 'enviado' && x.alvo && colAlvos) {
-      const al = x.alvo, toques = [...(al.toques || []), { em, canal: 'E-mail', resultado: 'sem', nota: `Mesa comercial: ${i.assunto}` }];
-      const up: Record<string, unknown> = { toques, ultimoToque: em.slice(0, 10) };
-      if (!al.status || ETAPAS_ANTES.includes(al.status)) { up.status = 'Abordado' as Etapa; up.etapas = { ...(al.etapas || {}), Abordado: em.slice(0, 10) }; }
-      try { await colAlvos.doc(al.id).update(up); } catch { /* fica só o registro do disparo */ }
+    if (modo === 'enviado') await tocar(d, 'sem', `Mesa comercial: ${i.assunto}`, false);
+  }
+
+  /** Alvo ligado ao disparo: o do ponto no multiverso ou o da mesma empresa. */
+  const alvoDe = (d: Disparo) => porId(d.no)?.alvo || alvos.find((a) => mesmaEmpresa(a.nome, d.org || d.nome));
+  /** Registra o toque no alvo (a etapa avança pela mesma regra da Agenda); com `criar`, quem respondeu vira alvo. */
+  async function tocar(d: Disparo, r: Resultado, nota: string, criar: boolean) {
+    if (!colAlvos) return;
+    let al = alvoDe(d), novo = false;
+    if (!al) {
+      if (!criar) return;
+      const nome = d.org || d.nome, agora = new Date().toISOString();
+      al = { id: 'al-' + slug(nome), nome, perfil: d.tipoNo === 'agencia' ? 'independente' : 'inhouse', contato: d.org && d.org !== d.nome ? `${d.nome} <${d.para}>` : d.para, gatilho: `Respondeu ao e-mail da Mesa comercial: ${d.assunto}`, fonte: '', status: 'Abordado', origem: 'Mesa comercial', criadoEm: agora, etapas: { Abordado: (d.enviadoEm || d.em) } } as Alvo;
+      novo = true;
     }
+    const sug = sugerirProximo(al, r);
+    const patch = registrarContato(al, { canal: 'E-mail', resultado: r, nota, proxima: sug.data, oQueFazer: sug.texto }, r === 'sem' ? d.enviadoEm || d.em : d.respostaEm || new Date().toISOString());
+    try { if (novo) await colAlvos.doc(al.id).set({ ...al, ...patch } as Alvo); else await colAlvos.doc(al.id).update(patch); } catch { /* fica só o registro do disparo */ }
+  }
+
+  /** Confere no Gmail o que aconteceu com cada rascunho ou envio ainda em aberto. */
+  async function conferirGmail() {
+    if (ocupado) return;
+    const L = disparos.filter((d) => pendente(d, hoje())).sort((a, b) => b.em.localeCompare(a.em)).slice(0, 30);
+    if (!L.length) { $('#dpConfN').textContent = 'Nada em aberto para conferir.'; return; }
+    ocupado = true; ($('#dpConf') as HTMLButtonElement).disabled = true;
+    const busca = async (query: string) => (await gmail('search_threads', { query, pageSize: 5, view: 'THREAD_VIEW_MINIMAL' })) as unknown;
+    const conta: Record<string, number> = {};
+    let n = 0, erro = '';
+    for (const d of L) {
+      $('#dpConfN').textContent = `Conferindo ${++n} de ${L.length}…`;
+      try {
+        const q = consultas(d), antes = situacaoDe(d);
+        const res: { envio?: unknown; resposta?: unknown; devolucao?: unknown } = {};
+        if (antes === 'rascunho') res.envio = await busca(q.envio);
+        const ok = antes === 'enviado' || (res.envio !== undefined && conferir(d, res).situacao === 'enviado');
+        if (ok) { const env = { ...d, ...conferir(d, res) }; const q2 = consultas(env); res.devolucao = await busca(q2.devolucao); res.resposta = await busca(q2.resposta); }
+        const up = conferir(d, res), depois = up.situacao || antes;
+        Object.assign(d, up);
+        try { await colDisp?.doc(d.id).update(up); } catch { /* vale nesta visita */ }
+        if (depois !== antes) {
+          conta[depois] = (conta[depois] || 0) + 1;
+          if (antes === 'rascunho') await tocar(d, 'sem', `Mesa comercial (enviado pelo Gmail): ${d.assunto}`, false);
+          if (depois === 'respondeu') await tocar(d, 'resp', `Respondeu ao e-mail: ${d.resposta || ''}`.slice(0, 300), true);
+          if (depois === 'sem interesse') await tocar(d, 'nao', `Respondeu sem interesse agora: ${d.resposta || ''}`.slice(0, 300), false);
+          if (depois === 'sair' || depois === 'voltou') {
+            const bl: Bloqueio = { id: idBloqueio(d.para), email: d.para, motivo: depois === 'sair' ? 'respondeu pedindo para sair' : 'o e-mail voltou (endereço não entregue)', em: new Date().toISOString() };
+            if (!bloqueios.some((b) => b.email.toLowerCase() === d.para.toLowerCase())) { bloqueios = [...bloqueios, bl]; try { await colBloq?.doc(bl.id).set(bl); } catch { /* fica na sessão */ } }
+            if (depois === 'sair') await tocar(d, 'nao', 'Pediu para não receber mais e-mails.', false);
+          }
+        }
+      } catch (e) { erro = erroGmail(e).replace('o envio', 'a leitura').replace('Permita o envio', 'Permita a leitura'); break; }
+      await pausa(250);
+    }
+    const agora = new Date().toISOString(); try { localStorage.setItem(CONF, agora); } catch { /* sem armazenamento */ }
+    ocupado = false; ($('#dpConf') as HTMLButtonElement).disabled = false;
+    const mud = Object.entries(conta).map(([k, v]) => `${v} ${SIT[k as Situacao][0]}`).join(', ');
+    msgConf = erro || (mud ? `Conferido agora: ${mud}.` : `Conferido agora: ${L.length} em aberto, nada mudou.`);
+    avisar(msgConf); recalcular();
   }
 
   async function sair(id: string, modo: 'enviado' | 'rascunho') {
@@ -224,6 +313,7 @@ export function montar(root: HTMLElement): () => void {
     else if (b.id === 'dpEsc') escrever([...sel]);
     else if (b.id === 'dpEnv') lote('enviado');
     else if (b.id === 'dpRas') lote('rascunho');
+    else if (b.id === 'dpConf') conferirGmail();
     else if (b.id === 'dpLimpa') { fila = fila.filter((i) => i.estado === 'escrevendo' || i.estado === 'enviando'); guardar(); renderFila(); }
     else if (d.env && ENVIO_LIBERADO) { const x = porId(d.env), i = fila.find((y) => y.id === d.env); if (x && i && confirm(`Enviar agora para ${x.nome} <${i.email}>?`)) { ocupado = true; await sair(d.env, 'enviado'); ocupado = false; render(); } }
     else if (d.ras) { ocupado = true; await sair(d.ras, 'rascunho'); ocupado = false; render(); }
