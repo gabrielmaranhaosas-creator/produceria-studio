@@ -50,7 +50,7 @@ const etapaTexto = (e: string) => (e ? e.charAt(0) + e.slice(1).toLowerCase() : 
 
 export function montar(root: HTMLElement): () => void {
   root.innerHTML = `<div class="wrap vc tb">
-  <header class="page-head"><span class="eyebrow">Tabela de serviços</span><h1 class="d d-title">Planilha com desconto</h1>
+  <header class="page-head"><span class="eyebrow">Gestão · Oferta da casa</span><h1 class="d d-title">Planilha com desconto</h1>
     <p class="lead measure muted">A planilha do Luciano completa, linha por linha. Preencha o desconto % de cada serviço: ele vale para a equipe toda e entra sozinho em toda proposta e orçamento novo.</p></header>
   <div id="tbK"></div><div id="tbVazio"></div>
   <div class="vc-campos tb-filtros">

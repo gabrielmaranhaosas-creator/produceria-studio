@@ -140,13 +140,16 @@ describe('Casos', () => {
 describe('Central de notícias', () => {
   it('monta com notícias do banco e sem os arquivos publicados', async () => {
     const db = bancoFalso({
-      noticias: { 'nt-1': { data: hoje, titulo: 'Agência Z ganha conta de banco', resumo: 'Fato.', categoria: 'conta', empresas: ['Agência Z'], veiculo: 'M&M', url: 'https://exemplo.com/n', lead: { nome: 'Agência Z', perfil: 'independente', porque: 'ganhou conta' } } },
+      noticias: { 'nt-2': { data: hoje, titulo: 'Prefeitura abre licitação de publicidade', categoria: 'licitacao', empresas: ['Prefeitura K'] }, 'nt-1': { data: hoje, titulo: 'Agência Z ganha conta de banco', resumo: 'Fato.', categoria: 'conta', empresas: ['Agência Z'], veiculo: 'M&M', url: 'https://exemplo.com/n', lead: { nome: 'Agência Z', perfil: 'independente', porque: 'ganhou conta' } } },
       movimentos: {}, alvos: {}, central: {}, b2g: {},
     });
     const { raiz, desmontar } = await montar('central', db);
     await espera(50);
     expect(raiz.querySelectorAll('#cnK .k').length).toBe(4);
     expect(raiz.textContent).toContain('Agência Z ganha conta de banco');
+    // lado privado: licitações e contratos públicos ficam em Licitações e Vencedores
+    expect([...raiz.querySelectorAll('#cnT button')].map((b) => b.textContent)).toEqual(['Tudo', 'Contas', 'Negócios']);
+    expect(raiz.textContent).not.toContain('Prefeitura abre licitação');
     desmontar();
   });
 });
@@ -159,6 +162,23 @@ describe('Mapa de contas', () => {
     expect(raiz.textContent).toContain('Contas encontradas');
     expect(raiz.textContent).toContain('Agência Y');
     desmontar();
+  });
+
+  it('separa as contas privadas das públicas, cada uma na sua tela', async () => {
+    const contas = { 'ct-1': { tipo: 'privada', empresa: 'Agência Y', cliente: 'Marca W', servico: 'Publicidade', fonte: 'x' }, 'ct-2': { tipo: 'publica', empresa: 'Fornecedor P', cliente: 'Prefeitura Q', servico: 'Gráfica', fonte: 'y' } };
+    location.hash = '#contas';
+    let m = await montar('mapa-contas', bancoFalso({ contas, alvos: {} }));
+    await espera(50);
+    expect(m.raiz.textContent).toContain('Agência Y');
+    expect(m.raiz.textContent).not.toContain('Fornecedor P');
+    m.desmontar();
+    location.hash = '#contas-publicas';
+    m = await montar('mapa-contas', bancoFalso({ contas, alvos: {} }));
+    await espera(50);
+    expect(m.raiz.textContent).toContain('Fornecedor P');
+    expect(m.raiz.textContent).not.toContain('Agência Y');
+    m.desmontar();
+    location.hash = '';
   });
 });
 
@@ -259,16 +279,13 @@ describe('Captação', () => {
     expect(Object.values(db.dados.notificacoes || {})[0]?.titulo).toBe('Proposta para Agência Dois');
   });
 
-  it('sinal de licitação de publicidade vira alvo de conta pública', async () => {
+  it('Achar novos aponta só para fontes do lado privado', async () => {
     const db = bancoFalso(inicial());
     const { raiz } = await montar('captacao', db);
     raiz.querySelector<HTMLButtonElement>('[data-aba="achar"]')!.click();
-    expect(raiz.querySelectorAll('.cp-sinal').length).toBe(1);
-    raiz.querySelector<HTMLButtonElement>('[data-sinal="0"]')!.click();
-    await espera();
-    const a = Object.values(db.dados.alvos).find((x) => x.nome === 'Prefeitura X · agência vencedora')!;
-    expect(a.perfil).toBe('publica');
-    expect(raiz.querySelectorAll('.cp-sinal').length).toBe(0);
+    const links = [...raiz.querySelectorAll<HTMLAnchorElement>('[aria-labelledby="cp-sin"] ul a')].map((a) => a.getAttribute('href'));
+    expect(links).toEqual(['#alertas', '#central', '#investigacao', '#bigdata']);
+    expect(Object.values(db.dados.alvos).some((x) => /agência vencedora/.test(String(x.nome)))).toBe(false);
   });
 
   it('triagem descarta com motivo e a proposta soma com o desconto da tabela', async () => {
@@ -787,13 +804,13 @@ describe('Casca própria', () => {
     expect(rotaDe('#b2g')).toBe('b2g'); expect(PAGINA.b2g).toBe('licitacoes');
     expect(rotaDe('#swot')).toBe('estrategia'); expect(rotaDe('#personas')).toBe('painel'); expect(rotaDe('#grafica')).toBe('painel');
     expect(rotaDe('#projetos/abc')).toBe('painel'); expect(rotaDe('')).toBe('painel');
-    expect(nichoDe('funil')?.id).toBe('comercial'); expect(nichoDe('grafica')).toBeUndefined(); expect(nichoDe('casos')?.id).toBe('gestao'); expect(nichoDe('tabela')?.id).toBe('gestao');
+    expect(nichoDe('funil')?.id).toBe('gestao'); expect(nichoDe('central')?.id).toBe('privado'); expect(nichoDe('contas')?.id).toBe('privado'); expect(nichoDe('vencedores')?.id).toBe('publico'); expect(nichoDe('contas-publicas')?.id).toBe('publico'); expect(rotaDe('#contas-publicas')).toBe('contas-publicas'); expect(PAGINA['contas-publicas']).toBe('contas'); expect(nichoDe('grafica')).toBeUndefined(); expect(nichoDe('casos')?.id).toBe('gestao'); expect(nichoDe('tabela')?.id).toBe('gestao');
   });
 
   it('busca Ctrl K acha telas, serviços, alvos e licitações', async () => {
     const { buscarTudo } = await import('../src/casca/casca');
     const d = { alvos: [{ id: 'a', nome: 'Agência Outdoor Brasil', status: 'Mapeado' }], b2g: [{ id: 'b', objeto: 'Locação de outdoor', orgao: 'Prefeitura' }], frentes: [], swot: [] };
-    expect(buscarTudo('', d).length).toBe(23); // as telas e uma amostra de cada base
+    expect(buscarTudo('', d).length).toBe(26); // as telas e uma amostra de cada base
     expect(buscarTudo('', d).filter((x) => x.tipo === 'Alvo')).toHaveLength(1);
     const r = buscarTudo('outdoor', d);
     expect(r.some((x) => x.tipo === 'Serviço')).toBe(true);
@@ -815,11 +832,15 @@ describe('Casca própria', () => {
     iniciarCasca(raiz, { captacao: pag('captacao'), tabela: pag('tabela'), inicio: pag('inicio') }, () => {});
     await espera();
     expect(raiz.querySelector('#conteudo .page-head h1')?.textContent).toBe('Novos negócios');
-    expect(raiz.querySelector('#csNav [aria-current="page"]')?.textContent).toBe('Captação');
+    expect(raiz.querySelector('#csNav [aria-current="page"]')?.textContent).toBe('Prospecção');
+    expect(raiz.querySelector('[data-nicho].on')?.textContent).toBe('Privado');
+    expect([...raiz.querySelectorAll('.cs-abas .tab')].map((a) => a.textContent)).toEqual(['Captação', 'Agenda de contatos', 'Mesa comercial', 'Reação em cadeia']);
+    expect(raiz.querySelector('.cs-abas [aria-current="page"]')?.textContent).toBe('Captação');
     expect(raiz.querySelector('#csAv .badge')?.textContent).toBe('1');
     location.hash = '#tabela'; window.dispatchEvent(new HashChangeEvent('hashchange')); await espera();
     expect(montadas).toEqual(['captacao', 'tabela']);
     expect(raiz.querySelector('[data-nicho].on')?.textContent).toBe('Gestão');
+    expect([...raiz.querySelectorAll('.cs-abas .tab')].map((a) => a.textContent)).toEqual(['Tabela de serviços', 'Casos', 'Biblioteca']);
     location.hash = '';
   });
 });
@@ -833,9 +854,10 @@ describe('Início', () => {
     expect(p.map((x) => x.href)).toEqual(['#captacao', '#b2g', '#funil']);
     const db = bancoFalso({ pipeline: { p: { estagio: 'Contato', valor: 1000 } }, alvos: { a: { nome: 'A', status: 'Cliente' } } });
     const { raiz } = await montar('inicio', db);
-    const k = raiz.querySelectorAll('#inK .k');
-    expect(k.length).toBe(5);
-    expect(k[1].textContent).toContain('1 viraram cliente');
+    const k = raiz.querySelectorAll('#inKpr .k');
+    expect(k.length).toBe(3);
+    expect(k[0].textContent).toContain('1 cliente(s) na carteira');
+    expect(raiz.querySelectorAll('#inKpu .k').length).toBe(3);
   });
 });
 
@@ -1056,10 +1078,26 @@ describe('Alerta do Sid', () => {
     },
   };
   it('deixa o setor público de fora', async () => {
-    const { ehPublico } = await import('../src/paginas/sid');
+    const { ehPublico } = await import('../src/paginas/alertas');
     expect(ehPublico(inicial.alertas['s-1'] as never)).toBe(false);
     expect(ehPublico(inicial.alertas['s-2'] as never)).toBe(true);
     expect(ehPublico(inicial.alertas['s-3'] as never)).toBe(true);
+  });
+  it('Alertas do dia mostram só o privado; Alertas do governo, só o público', async () => {
+    location.hash = '#alertas';
+    let m = await montar('alertas', bancoFalso(JSON.parse(JSON.stringify(inicial))));
+    await espera(50);
+    expect(m.raiz.textContent).not.toContain('Governo abre concorrência');
+    expect(m.raiz.textContent).not.toContain('Petrobras troca agência');
+    m.desmontar();
+    location.hash = '#alertas-publicos';
+    m = await montar('alertas', bancoFalso(JSON.parse(JSON.stringify(inicial))));
+    await espera(50);
+    expect(m.raiz.textContent).toContain('Governo abre concorrência');
+    expect(m.raiz.textContent).toContain('Petrobras troca agência');
+    expect(m.raiz.textContent).not.toContain((inicial.alertas['s-1'] as { titulo: string }).titulo);
+    m.desmontar();
+    location.hash = '';
   });
   it('monta o texto curto para e-mail e WhatsApp', async () => {
     const { textoAlerta, linkWhats } = await import('../src/paginas/sid');

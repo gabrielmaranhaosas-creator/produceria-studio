@@ -16,7 +16,7 @@ export function filtrar(L: Arquivo[], cliente: string, categoria: string) {
 
 export function montar(root: HTMLElement): () => void {
   root.innerHTML = `<div class="wrap vc bi">
-  ${cabecalho('Gestão · Biblioteca', 'Marcas, masters e specs', 'O acervo que faz o craft render: guias de marca, KVs e masters para reaproveitar, fontes, specs de veículos e formatos, regras de texto e os documentos do hub. Quanto mais completo, mais barato e rápido fica adaptar.')}
+  ${cabecalho('Gestão · Oferta da casa', 'Marcas, masters e specs', 'O acervo que faz o craft render: guias de marca, KVs e masters para reaproveitar, fontes, specs de veículos e formatos, regras de texto e os documentos do hub. Quanto mais completo, mais barato e rápido fica adaptar.')}
   <div id="biK"></div>
   <div class="lc-box bi-envio"><span class="lab">Enviar para a biblioteca</span><div id="biU"><p class="note">Conectando o armazenamento de arquivos…</p></div></div>
   <p class="sr" id="biLive" aria-live="polite" aria-atomic="true"></p>

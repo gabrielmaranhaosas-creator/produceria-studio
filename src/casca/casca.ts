@@ -1,4 +1,4 @@
-// Casca própria do Studio: menu lateral (Comercial e Gestão), rotas por hash, busca Ctrl K, avisos,
+// Casca própria do Studio: menu lateral (Privado, Público e Gestão), rotas por hash, busca Ctrl K, avisos,
 // tema e aviso de conexão. Substitui o shell React do legado; cada tela é montada pelo registro de páginas.
 import logo from './logo.svg?raw';
 import { esc, brl } from '../lib/formato';
@@ -10,38 +10,59 @@ import { ouvirHistorico, desfazerUltimo, refazerUltimo, podeDesfazer, podeRefaze
 import type { Montar } from '../paginas/dom';
 import { extrair, pdf, xlsx } from '../lib/saidas';
 
-export interface Item { h: string; l: string; rotas: string[] }
-export interface Nicho { id: string; l: string; home: string; itens: Item[] }
+export interface Item { h: string; l: string; rotas: string[]; abas?: [string, string][] }
+export interface Nicho { id: string; l: string; d: string; home: string; itens: Item[] }
+/** Item de menu: uma tela só, ou várias reunidas em abas (a primeira é a de entrada). */
+const it = (l: string, ...abas: [string, string][]): Item => ({ h: abas[0][0], l, rotas: abas.map((a) => a[0]), abas: abas.length > 1 ? abas : undefined });
+/** Três frentes separadas: o negócio com marcas e agências (quem assina é empresa), o negócio com governo
+ * (quem assina é órgão público) e a gestão, que soma as duas. Nenhuma tela de um lado mostra dado do outro. */
 export const NICHOS: Nicho[] = [
-  { id: 'comercial', l: 'Comercial', home: 'central', itens: [{ h: 'semana', l: 'Semana comercial', rotas: ['semana'] }, { h: 'central', l: 'Central de notícias', rotas: ['central'] }, { h: 'alertas', l: 'Alertas comerciais', rotas: ['alertas'] }, { h: 'bigdata', l: 'Big Data do mercado', rotas: ['bigdata'] }, { h: 'investigacao', l: 'Investigação', rotas: ['investigacao'] }, { h: 'agenda', l: 'Agenda de contatos', rotas: ['agenda'] }, { h: 'captacao', l: 'Captação', rotas: ['captacao'] }, { h: 'disparos', l: 'Mesa comercial', rotas: ['disparos'] }, { h: 'mercado', l: 'Contas e agências', rotas: ['mercado'] }, { h: 'b2g', l: 'Licitações', rotas: ['b2g'] }, { h: 'vencedores', l: 'Vencedores', rotas: ['vencedores'] }, { h: 'contas', l: 'Mapa de contas', rotas: ['contas'] }, { h: 'estrategia', l: 'Estratégia e funil', rotas: ['estrategia', 'funil'] }] },
-  { id: 'gestao', l: 'Gestão', home: 'rotinas', itens: [{ h: 'rotinas', l: 'Rotinas do Claude', rotas: ['rotinas'] }, { h: 'tabela', l: 'Tabela de serviços', rotas: ['tabela'] }, { h: 'biblioteca', l: 'Biblioteca', rotas: ['biblioteca'] }, { h: 'casos', l: 'Casos', rotas: ['casos'] }, { h: 'lixeira', l: 'Lixeira', rotas: ['lixeira'] }, { h: 'ajustes', l: 'Ajustes e dados', rotas: ['ajustes'] }] },
+  { id: 'privado', l: 'Privado', d: 'marcas e agências', home: 'alertas', itens: [
+    it('Sinais do mercado', ['alertas', 'Alertas do dia'], ['central', 'Notícias e trocas de conta']),
+    it('Mercado', ['bigdata', 'Anunciantes e pessoas'], ['mercado', 'Agências e contas'], ['contas', 'Contas cadastradas']),
+    it('Prospecção', ['captacao', 'Captação'], ['agenda', 'Agenda de contatos'], ['disparos', 'Mesa comercial'], ['investigacao', 'Reação em cadeia']),
+  ] },
+  { id: 'publico', l: 'Público', d: 'governo', home: 'alertas-publicos', itens: [
+    it('Alertas do governo', ['alertas-publicos', 'Alertas do governo']),
+    it('Licitações', ['b2g', 'Radar, PCA e carteira']),
+    it('Contratos públicos', ['vencedores', 'Vencedores'], ['contas-publicas', 'Contas públicas']),
+  ] },
+  { id: 'gestao', l: 'Gestão', d: 'os dois lados', home: 'semana', itens: [
+    it('Semana comercial', ['semana', 'Semana comercial']),
+    it('Funil e estratégia', ['funil', 'Funil e receita'], ['estrategia', 'SWOT e frentes']),
+    it('Oferta da casa', ['tabela', 'Tabela de serviços'], ['casos', 'Casos'], ['biblioteca', 'Biblioteca']),
+    it('Rotinas do Claude', ['rotinas', 'Rotinas do Claude']),
+    it('Ajustes', ['ajustes', 'Ajustes e dados'], ['lixeira', 'Lixeira']),
+  ] },
 ];
 /** Rota → página registrada. */
 export const PAGINA: Record<string, string> = {
-  painel: 'inicio', central: 'central', alertas: 'alertas', bigdata: 'bigdata', investigacao: 'investigacao', agenda: 'agenda', casos: 'casos', captacao: 'captacao', disparos: 'disparos', mercado: 'mercado', b2g: 'licitacoes', vencedores: 'vencedores',
-  contas: 'contas', estrategia: 'estrategia', funil: 'funil', rotinas: 'rotinas', tabela: 'tabela', ajustes: 'ajustes',
+  painel: 'inicio', central: 'central', alertas: 'alertas', 'alertas-publicos': 'alertas', bigdata: 'bigdata', investigacao: 'investigacao', agenda: 'agenda', casos: 'casos', captacao: 'captacao', disparos: 'disparos', mercado: 'mercado', b2g: 'licitacoes', vencedores: 'vencedores',
+  contas: 'contas', 'contas-publicas': 'contas', estrategia: 'estrategia', funil: 'funil', rotinas: 'rotinas', tabela: 'tabela', ajustes: 'ajustes',
   biblioteca: 'biblioteca', lixeira: 'lixeira', semana: 'semana',
   sid: 'sid',
 };
-const APELIDOS: Record<string, string> = { diversificacao: 'funil', mapa: 'funil', frentes: 'estrategia', swot: 'estrategia', ia: 'estrategia', agencias: 'mercado', receitas: 'funil' };
+const APELIDOS: Record<string, string> = { diversificacao: 'funil', mapa: 'funil', frentes: 'estrategia', swot: 'estrategia', ia: 'estrategia', agencias: 'mercado', receitas: 'funil', pca: 'b2g' };
 /** Cabeçalho das telas do Comercial que não trazem o próprio. */
 export const CABECALHOS: Record<string, { e: string; t: string; d: string }> = {
-  alertas: { e: 'Comercial · Alertas', t: 'Alertas comerciais', d: 'O que mudou no mercado publicitário e o que a Produceria faz a respeito: contas, verbas, pessoas e negócios B2B, cada alerta com as pessoas envolvidas, a ação comercial proposta e a fonte. Chega todo dia de manhã, para o Sid.' },
-  bigdata: { e: 'Comercial · Big Data', t: 'Quem anuncia, quem atende, quem decide', d: 'Os anunciantes que mais investem, as agências que atendem cada um e as pessoas responsáveis dos dois lados, ligados entre si e com a fonte de cada ligação. Clique num nome para ver a rede dele.' },
-  investigacao: { e: 'Comercial · Investigação', t: 'Reação em cadeia', d: 'O mapa da prospecção: parta da PRODUCERIA ou de qualquer empresa, agência ou pessoa e siga as ramificações (quem atende quem, quem trabalha onde, por onde passou, qual extinta virou qual). Cada ponto ganha uma força de possibilidade de negócio e vai direto para o radar da Captação.' },
-  central: { e: 'Comercial · Central', t: 'Notícias e leads', d: 'Tudo o que se move no mercado publicitário num lugar só: contas que trocaram de agência, contratos públicos vencidos, licitações abertas e notícias de negócio. Cada sinal pode virar alvo da Captação com um clique.' },
-  agenda: { e: 'Comercial · Agenda', t: 'Quem contatar hoje', d: 'A cadência de cada alvo em ordem de prazo e prioridade. Registre cada contato aqui: a etapa avança sozinha, o próximo toque é sugerido pela cadência e a conversão por origem passa a ser medida.' },
-  semana: { e: 'Comercial · Semana comercial', t: 'A semana em uma página', d: 'O ritual de segunda: meta e realizado, o que entrou, avançou e travou, sinais que esfriam, previsão do funil, ganhos e perdas e clientes parados. Tudo sai dos dados das outras telas.' },
-  lixeira: { e: 'Gestão · Lixeira', t: 'O que foi apagado', d: 'Tudo o que é apagado no Studio fica aqui e pode ser restaurado por qualquer pessoa da equipe.' },
-  casos: { e: 'Gestão · Casos', t: 'Casos da casa', d: 'O portfólio que vira argumento de venda. Cada caso diz o que a Produceria fez, para quem e com que resultado.' },
-  contas: { e: 'Comercial · Mapa de contas', t: 'Quem detém cada conta', d: 'Empresas e agências que detêm contas públicas e privadas, com cliente, serviço, valor e vigência. Filtre e veja os dashboards.' },
-  disparos: { e: 'Comercial · Mesa comercial', t: 'Disparos com estratégia', d: 'Os contatos de todo o multiverso num lugar só: e-mail publicado (com fonte) e LinkedIn. A diretora comercial da casa escolhe a porta, a ponte e a oferta, escreve cada e-mail sob medida e, depois que você revisa e aprova, deixa o rascunho pronto no Gmail da PRODUCERIA. Por enquanto, nada é enviado pelo Studio.' },
-  captacao: { e: 'Comercial · Captação', t: 'Novos negócios', d: 'Quem procurar, por que agora e o que dizer. Os sinais saem dos seus dados; os alvos, de textos reais que você cola; a abordagem, da IA com as provas da casa. Nada é enviado sem você.' },
-  funil: { e: 'Comercial · Estratégia e funil', t: 'De onde vem a receita', d: 'Receita orçada por canal (privado, público, internacional), concentração por cliente e o funil de oportunidades.' },
-  mercado: { e: 'Comercial · Contas e agências', t: 'Quem atende quem no mercado privado', d: 'Agências, contas e movimentações do mercado publicitário, cada linha com a fonte. Quem acabou de ganhar conta precisa de capacidade de produção: é a hora de abordar.' },
-  vencedores: { e: 'Comercial · Vencedores de licitações', t: 'Quem já ganhou contrato público', d: 'Todos os contratos publicados no PNCP nos últimos 24 meses que tocam o que a Produceria faz: vencedor, valor, vigência e link. Daqui saem as empresas para abordar, os órgãos com contrato vencendo e os preços de referência.' },
-  b2g: { e: 'Comercial · Licitações', t: 'Contratos públicos', d: 'Radar do PNCP filtrado pelas atividades do hub, carteira de certames e habilitação das três empresas.' },
-  estrategia: { e: 'Comercial · Estratégia e funil', t: 'SWOT e frentes', d: 'Forças e fraquezas do hub, oportunidades e ameaças do mercado, cada item com evidência. Os cruzamentos viram frentes de receita.' },
+  alertas: { e: 'Privado · Sinais do mercado', t: 'Alertas do dia', d: 'O que mudou entre marcas e agências e o que a Produceria faz a respeito: contas, verbas, pessoas e negócios, cada alerta com as pessoas envolvidas, a ação comercial proposta e a fonte. Chega todo dia de manhã, para o Sid.' },
+  central: { e: 'Privado · Sinais do mercado', t: 'Notícias e trocas de conta', d: 'O que se move entre marcas e agências: quem ganhou conta, quem montou estrutura interna, notícias de negócio. Cada sinal pode virar alvo da Prospecção com um clique.' },
+  bigdata: { e: 'Privado · Mercado', t: 'Quem anuncia, quem atende, quem decide', d: 'Os anunciantes que mais investem, as agências que atendem cada um e as pessoas responsáveis dos dois lados, ligados entre si e com a fonte de cada ligação. Clique num nome para ver a rede dele.' },
+  mercado: { e: 'Privado · Mercado', t: 'Agências e contas', d: 'Agências, contas e movimentações do mercado publicitário, cada linha com a fonte. Quem acabou de ganhar conta precisa de capacidade de produção: é a hora de abordar.' },
+  contas: { e: 'Privado · Mercado', t: 'Contas cadastradas', d: 'Quem atende cada marca, das trocas de conta da imprensa e das contas que a equipe cadastra ou importa, com serviço, valor e vigência quando divulgados.' },
+  captacao: { e: 'Privado · Prospecção', t: 'Novos negócios', d: 'Quem procurar, por que agora e o que dizer. Os sinais saem dos seus dados; os alvos, de textos reais que você cola; a abordagem, da IA com as provas da casa. Nada é enviado sem você.' },
+  agenda: { e: 'Privado · Prospecção', t: 'Quem contatar hoje', d: 'A cadência de cada alvo em ordem de prazo e prioridade. Registre cada contato aqui: a etapa avança sozinha, o próximo toque é sugerido pela cadência e a conversão por origem passa a ser medida.' },
+  disparos: { e: 'Privado · Prospecção', t: 'Mesa comercial', d: 'Os contatos de todo o multiverso num lugar só: e-mail publicado (com fonte) e LinkedIn. A diretora comercial da casa escolhe a porta, a ponte e a oferta, escreve cada e-mail sob medida e, depois que você revisa e aprova, deixa o rascunho pronto no Gmail da PRODUCERIA. Por enquanto, nada é enviado pelo Studio.' },
+  investigacao: { e: 'Privado · Prospecção', t: 'Reação em cadeia', d: 'O mapa da prospecção: parta da PRODUCERIA ou de qualquer empresa, agência ou pessoa e siga as ramificações (quem atende quem, quem trabalha onde, por onde passou, qual extinta virou qual). Cada ponto ganha uma força de possibilidade de negócio e vai direto para os Alvos.' },
+  'alertas-publicos': { e: 'Público · Alertas do governo', t: 'Alertas do governo', d: 'O que mudou em governo, estatais e licitações e o que a Produceria faz a respeito, cada alerta com a fonte e a ação proposta. Mesma rotina diária dos alertas do lado privado, separada pelo lado do negócio.' },
+  b2g: { e: 'Público · Licitações', t: 'Contratos com o governo', d: 'Radar do PNCP filtrado pelas atividades do hub, o que os órgãos planejam contratar (PCA), carteira de certames e habilitação das três empresas.' },
+  vencedores: { e: 'Público · Contratos públicos', t: 'Quem já ganhou contrato público', d: 'Todos os contratos publicados no PNCP nos últimos 24 meses que tocam o que a Produceria faz: vencedor, valor, vigência e link. Daqui saem os órgãos com contrato vencendo, os preços de referência e as empresas vencedoras.' },
+  'contas-publicas': { e: 'Público · Contratos públicos', t: 'Contas públicas', d: 'Quem detém cada contrato público, por órgão, serviço, valor e vigência, com os vencimentos dos próximos 12 meses. Inclui as contas públicas que a equipe cadastra ou importa.' },
+  semana: { e: 'Gestão · Semana comercial', t: 'A semana em uma página', d: 'O ritual de segunda, somando os dois lados: meta e realizado, o que entrou, avançou e travou, sinais que esfriam, previsão do funil, ganhos e perdas e clientes parados.' },
+  funil: { e: 'Gestão · Funil e estratégia', t: 'De onde vem a receita', d: 'Receita orçada por eixo (privado, público, internacional), concentração por cliente e o funil de oportunidades. Filtre por eixo para ver cada lado em separado.' },
+  estrategia: { e: 'Gestão · Funil e estratégia', t: 'SWOT e frentes', d: 'Forças e fraquezas do hub, oportunidades e ameaças do mercado, cada item com evidência. Os cruzamentos viram frentes de receita.' },
+  casos: { e: 'Gestão · Oferta da casa', t: 'Casos da casa', d: 'O portfólio que vira argumento de venda. Cada caso diz o que a Produceria fez, para quem e com que resultado.' },
+  lixeira: { e: 'Gestão · Ajustes', t: 'O que foi apagado', d: 'Tudo o que é apagado no Studio fica aqui e pode ser restaurado por qualquer pessoa da equipe.' },
 };
 
 /** Hash → rota conhecida (ou o Início). */
@@ -52,12 +73,12 @@ export function rotaDe(hash: string): string {
 }
 export const nichoDe = (rota: string) => NICHOS.find((n) => n.itens.some((i) => i.rotas.includes(rota)));
 
+/** Atalhos da busca: o Início, cada tela do menu (com o lado a que pertence) e a ajuda. Sai do próprio menu, para nunca ficar desatualizado. */
 const IR = [
-  ['Início · o que fazer agora', 'painel'], ['Central de notícias e leads', 'central'], ['Alertas comerciais · ação do dia', 'alertas'], ['Big Data · anunciantes, agências e pessoas', 'bigdata'], ['Investigação · reação em cadeia da prospecção', 'investigacao'], ['Agenda · quem contatar hoje', 'agenda'],
-  ['Casos da casa (portfólio)', 'casos'], ['Captação de novos negócios', 'captacao'], ['Mesa comercial · disparos de e-mail', 'disparos'], ['Contas e agências do mercado', 'mercado'], ['Vencedores de licitações', 'vencedores'],
-  ['Semana comercial · meta e previsão', 'semana'], ['Funil comercial', 'funil'], ['Licitações', 'b2g'], ['Biblioteca · marcas, masters e specs', 'biblioteca'],
-  ['Estratégia · SWOT', 'estrategia'], ['Rotinas do Claude · rodar, pausar', 'rotinas'], ['Tabela de serviços', 'tabela'], ['Lixeira · restaurar o que foi apagado', 'lixeira'], ['Ajustes e dados', 'ajustes'], ['Atalhos de teclado', '?'],
-].map(([titulo, h]) => ({ tipo: 'Ir', titulo, href: '#' + h }));
+  { tipo: 'Ir', titulo: 'Início · o que fazer agora', href: '#painel' },
+  ...NICHOS.flatMap((n) => n.itens.flatMap((i) => (i.abas || [[i.h, i.l]]).map(([h, l]) => ({ tipo: 'Ir', titulo: `${n.l} · ${i.abas && l !== i.l ? i.l + ' › ' + l : l}`, href: '#' + h })))),
+  { tipo: 'Ir', titulo: 'Atalhos de teclado', href: '#?' },
+];
 const sem = (s: unknown) => String(s ?? '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
 const casa = (q: string, ...t: unknown[]) => { const termos = sem(q).split(/\s+/).filter(Boolean), alvo = sem(t.join(' ')); return termos.length > 0 && termos.every((x) => alvo.includes(x)); };
 export interface Achado { tipo: string; titulo: string; sub?: string; href: string }
@@ -93,7 +114,7 @@ export function iniciarCasca(raiz: HTMLElement, paginas: Record<string, Montar>,
     <span class="caption">PRODUCERia Studio · Das ideias à produção.</span>
     <button type="button" class="rail-avisos" id="csAv" aria-haspopup="dialog"></button>
     <a class="rail-inicio" href="#painel" id="csIni">Início <span class="caption">o que fazer agora</span></a>
-    <div class="nichos" role="tablist" aria-label="Nicho de trabalho" id="csN"></div>
+    <div class="nichos" role="tablist" aria-label="Lado do negócio" id="csN"></div><span class="caption nichos-d" id="csND"></span>
     <nav id="csNav" aria-label="Telas"></nav>
     <button type="button" class="rail-busca" id="csBusca"><span>Buscar ou ir para…</span><span class="k">Ctrl K</span></button>
     <button type="button" class="rail-busca cs-ajuda-b" id="csAjB"><span>Atalhos e como voltar</span><span class="k">?</span></button>
@@ -110,12 +131,12 @@ export function iniciarCasca(raiz: HTMLElement, paginas: Record<string, Montar>,
       <tr><th scope="row"><kbd>Esc</kbd></th><td>Fecha janela, busca ou menu</td></tr>
       <tr><th scope="row"><kbd>?</kbd></th><td>Mostra esta ajuda</td></tr>
     </tbody></table>
-    <p class="note">Apagou algo sem querer? Use Desfazer logo em seguida, ou abra <a class="cn-f" href="#lixeira">Gestão › Lixeira</a>: tudo o que é apagado fica lá e pode ser restaurado. Descartes (alvos, licitações, oportunidades perdidas) não apagam: aparecem nos filtros "Descartados" ou "Perdidas" de cada tela, com Reabrir.</p></dialog></div>
+    <p class="note">Apagou algo sem querer? Use Desfazer logo em seguida, ou abra <a class="cn-f" href="#lixeira">Gestão › Ajustes › Lixeira</a>: tudo o que é apagado fica lá e pode ser restaurado. Descartes (alvos, licitações, oportunidades perdidas) não apagam: aparecem nos filtros "Descartados" ou "Perdidas" de cada tela, com Reabrir.</p></dialog></div>
   <div class="toast" role="status" id="csToast" hidden></div><div class="aviso-fixo" role="alert" id="csOff" hidden>Sem conexão. As alterações não serão salvas até voltar.</div>
   <div class="paleta-fundo" id="csPal" hidden><div class="paleta" role="dialog" aria-modal="true" aria-label="Buscar e ir"><input class="paleta-inp" id="csPalQ" placeholder="Buscar serviço, alvo, licitação, frente… ou ir para uma tela" aria-label="Buscar" aria-controls="csPalL" role="combobox" aria-expanded="true" autocomplete="off"><div class="paleta-lista" role="listbox" id="csPalL"></div><div class="paleta-pe caption">↑↓ escolher · Enter abrir · Esc fechar</div></div></div>`;
   const $ = <T extends HTMLElement = HTMLElement>(s: string) => raiz.querySelector(s) as T;
   const main = $('#conteudo'), rail = $('#csRail'), D = $<DialogoComRetorno>('#csAvD');
-  let desmontar: (() => void) | void | null = null, rotaAtual = '', nicho = (() => { try { return localStorage.getItem('studio.nicho') || 'comercial'; } catch { return 'comercial'; } })();
+  let desmontar: (() => void) | void | null = null, rotaAtual = '', nicho = (() => { try { return localStorage.getItem('studio.nicho') || 'privado'; } catch { return 'comercial'; } })();
   let db: Banco | null = null, avisos: Doc[] = [], visto = lerVisto(), soMeus = false, meuNome = '', inicio = new Date().toISOString(), toastT: ReturnType<typeof setTimeout> | null = null;
   const vistos = new Set<string>();
   const dados = { alvos: [] as Doc[], b2g: [] as Doc[], frentes: [] as Doc[], swot: [] as Doc[] };
@@ -128,8 +149,9 @@ export function iniciarCasca(raiz: HTMLElement, paginas: Record<string, Montar>,
   function navegar() {
     const rota = rotaDe(location.hash), n = nichoDe(rota);
     if (n) { nicho = n.id; try { localStorage.setItem('studio.nicho', n.id); } catch { /* sem armazenamento */ } }
-    const atual = NICHOS.find((x) => x.id === nicho) || NICHOS[0];
-    $('#csN').innerHTML = NICHOS.map((x) => `<button type="button" role="tab" aria-selected="${x.id === atual.id}" class="${x.id === atual.id ? 'on' : ''}" data-nicho="${x.id}">${x.l}</button>`).join('');
+    const atual = NICHOS.find((x) => x.id === nicho) || NICHOS[0], item = atual.itens.find((i) => i.rotas.includes(rota));
+    $('#csN').innerHTML = NICHOS.map((x) => `<button type="button" role="tab" aria-selected="${x.id === atual.id}" class="${x.id === atual.id ? 'on' : ''}" data-nicho="${x.id}" title="${x.l}: ${x.d}">${x.l}</button>`).join('');
+    $('#csND').textContent = `${atual.l}: ${atual.d}`;
     $('#csNav').innerHTML = atual.itens.map((i) => `<a href="#${i.h}"${i.rotas.includes(rota) ? ' aria-current="page"' : ''}><span style="flex:1">${i.l}</span></a>`).join('');
     const ini = $('#csIni'); ini.classList.toggle('on', rota === 'painel'); if (rota === 'painel') ini.setAttribute('aria-current', 'page'); else ini.removeAttribute('aria-current');
     menu(false);
@@ -137,8 +159,8 @@ export function iniciarCasca(raiz: HTMLElement, paginas: Record<string, Montar>,
     rotaAtual = rota;
     try { if (typeof desmontar === 'function') desmontar(); } catch { /* a tela já saiu */ }
     const cab = CABECALHOS[rota];
-    main.innerHTML = (cab ? `<header class="page-head"><span class="eyebrow">${esc(cab.e)}</span><h1 class="d d-title">${esc(cab.t)}</h1><p class="lead measure muted">${esc(cab.d)}</p></header>` : '')
-      + (rota === 'funil' || rota === 'estrategia' ? `<nav class="tabs" aria-label="Estratégia e funil"><a class="tab${rota === 'estrategia' ? ' on' : ''}" href="#estrategia"${rota === 'estrategia' ? ' aria-current="page"' : ''}>SWOT e frentes</a><a class="tab${rota === 'funil' ? ' on' : ''}" href="#funil"${rota === 'funil' ? ' aria-current="page"' : ''}>Funil e receita</a></nav>` : '')
+    main.innerHTML = (item?.abas ? `<nav class="tabs cs-abas" aria-label="${esc(item.l)}">${item.abas.map(([h, l]) => `<a class="tab${h === rota ? ' on' : ''}" href="#${h}"${h === rota ? ' aria-current="page"' : ''}>${esc(l)}</a>`).join('')}</nav>` : '')
+      + (cab ? `<header class="page-head"><span class="eyebrow">${esc(cab.e)}</span><h1 class="d d-title">${esc(cab.t)}</h1><p class="lead measure muted">${esc(cab.d)}</p></header>` : '')
       + '<div class="cs-exp" role="group" aria-label="Exportar esta tela"><span class="caption muted">O que está na tela, com os filtros</span><button type="button" class="chip" data-exp="pdf">PDF</button><button type="button" class="chip" data-exp="xlsx">Excel</button></div>'
       + '<div class="mc cn" id="csPag"></div>';
     const alvo = $('#csPag'), m = paginas[PAGINA[rota]];

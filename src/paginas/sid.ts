@@ -2,18 +2,11 @@
 // diz o fato, o que fazer hoje e com quem falar, e sai daqui direto por e-mail ou WhatsApp. O e-mail diário aponta
 // para esta tela (#sid). Lê e grava a mesma coleção "alertas": marcar aqui marca nos Alertas comerciais.
 import { esc, dt } from '../lib/formato';
-import { chave, nomeLegivel } from '../lib/nomes';
+import { nomeLegivel } from '../lib/nomes';
 import { hoje as hojeISO } from '../lib/datas';
 import { banco, type Colecao } from '../lib/db';
 import { seletor, elDe, mensagem, comId } from './dom';
-import type { Alerta, Status } from './alertas';
-
-const PUBLICO = /\b(governo|prefeitura|assembleia|camara municipal|camara dos deputados|senado|ministerio|secretaria|tribunal|estatal|autarquia|petrobras|caixa economica|banco do brasil|correios|bndes|sabesp|sebrae|eletrobras|municipio|estado de)\b/;
-/** Setor público fica de fora: licitações, perfil público e órgãos ou estatais citados. */
-export function ehPublico(a: Alerta): boolean {
-  if (a.tipo === 'licitacao' || a.acao?.perfil === 'publica') return true;
-  return PUBLICO.test(chave([a.titulo, ...(a.empresas || [])].join(' ')));
-}
+import { ehPublico, type Alerta, type Status } from './alertas';
 
 /** Alertas B2B abertos, dos últimos `dias` dias, por data e prioridade. */
 export function doSid(lista: Alerta[], hoje: string, dias = 7): Alerta[] {
@@ -52,7 +45,7 @@ export function montar(root: HTMLElement): () => void {
  </header>
  <p class="sr" id="sidLive" aria-live="polite"></p>
  <div id="sidL" class="sid-lista"></div>
- <p class="note sid-pe">Só mercado privado: governo, estatais e licitações ficam nos <a class="cn-f" href="#alertas">Alertas comerciais</a>. Marcar aqui marca lá também.</p></div>`;
+ <p class="note sid-pe">Só mercado privado: governo, estatais e licitações ficam em <a class="cn-f" href="#alertas-publicos">Público › Alertas do governo</a>. Marcar aqui marca nos <a class="cn-f" href="#alertas">Alertas do dia</a> também.</p></div>`;
   const $ = seletor(root), hoje = hojeISO();
   let A: Alerta[] = [], col: Colecao<Alerta> | null = null, carregando = true, dias = 1;
   try { const v = Number(localStorage.getItem('sid.dias')); if (v === 1 || v === 7) dias = v; } catch { /* sem armazenamento */ }

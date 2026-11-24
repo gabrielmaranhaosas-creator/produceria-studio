@@ -6,7 +6,7 @@ import { ETAPAS } from '../lib/prioridade';
 import { banco, type Colecao } from '../lib/db';
 import { perguntar, ErroIA } from '../lib/ia';
 import { buscar, calcular, itemDe, rotulo, SERVICOS, type ItemProposta } from '../lib/servicos';
-import type { Alvo, Caso, Oportunidade } from '../lib/tipos';
+import type { Alvo, Caso } from '../lib/tipos';
 import { seletor, comId, abaNoEndereco, type Dialogo } from './dom';
 import { vazio, abrirDialogo, devolverFoco, confirmarNoBotao, barras, contar, painel, irPara, barrasFaceta, filtrarFacetas, etiquetasFiltro, cliqueFaceta, type Facetas } from '../componentes';
 
@@ -69,7 +69,7 @@ export function montar(root: HTMLElement): () => void {
   <div id="cpO"></div>
 </div><dialog id="cpD" aria-labelledby="cpDT"></dialog>`;
   const $ = seletor(root);
-  let A: AlvoDoc[] = [], B: Oportunidade[] = [], C: Caso[] = [], funil: { id: string; titulo?: string }[] = [];
+  let A: AlvoDoc[] = [], C: Caso[] = [], funil: { id: string; titulo?: string }[] = [];
   let descontos: Record<string, number> = {};
   let col: Colecao<AlvoDoc> | null = null, db: Awaited<ReturnType<typeof banco>> = null;
   const fc: Facetas = {}, CO = { origem: (a: AlvoDoc) => a.origem || 'Cadastro manual' };
@@ -111,31 +111,16 @@ export function montar(root: HTMLElement): () => void {
     if (!col) render();
   }
 
-  // ---------------------------------------------------------------- sinais nos dados
-  interface Sinal { tipo: string; texto: string; porque: string; alvo: Partial<AlvoDoc> }
-  function sinais(): Sinal[] {
-    const out: Sinal[] = [];
-    const publicidade = B.filter((o) => (o.score ?? 0) > 0 && /publicidade|propaganda|ag[êe]ncia de|comunica[çc][ãa]o institucional/i.test(o.objeto)).slice(0, 8);
-    for (const o of publicidade) {
-      const nome = `${o.orgao} · agência vencedora`;
-      if (existe(nome)) continue;
-      out.push({ tipo: 'Conta pública', texto: o.objeto.slice(0, 120), porque: `${o.orgao} (${o.uf || ''}): a agência que vencer vai precisar de fornecedores de produção cadastrados.`,
-        alvo: { nome, perfil: 'publica', gatilho: `Licitação de publicidade: ${o.objeto.slice(0, 140)}`, fonte: o.url || '', origem: 'Radar de licitações' } });
-    }
-    return out;
-  }
-
   // ---------------------------------------------------------------- render
   function render() {
     try { localStorage.setItem('cp.aba', aba); } catch { /* sem armazenamento */ }
     const vivos = A.filter((a) => a.status !== 'Descartado');
-    const S = sinais();
-    const abas: [Aba, string][] = [['alvos', `Alvos (${int(vivos.length)})`], ['achar', `Achar novos${S.length ? ` (${int(S.length)})` : ''}`], ['atracao', `Atração (${ATRACAO.length})`]];
+    const abas: [Aba, string][] = [['alvos', `Alvos (${int(vivos.length)})`], ['achar', 'Achar novos'], ['atracao', `Atração (${ATRACAO.length})`]];
     $('#cpA').innerHTML = abas.map(([v, t]) => `<button type="button" role="tab" id="cp-tab-${v}" aria-selected="${aba === v}" aria-pressed="${aba === v}" aria-controls="cpO" data-aba="${v}">${t}</button>`).join('');
     const o = $('#cpO');
     o.setAttribute('role', 'tabpanel');
     o.setAttribute('aria-labelledby', 'cp-tab-' + aba);
-    o.innerHTML = aba === 'alvos' ? alvos(vivos) : aba === 'achar' ? achar(S, vivos) : atracao();
+    o.innerHTML = aba === 'alvos' ? alvos(vivos) : aba === 'achar' ? achar(vivos) : atracao();
   }
 
   function alvos(vivos: AlvoDoc[]): string {
@@ -191,11 +176,13 @@ export function montar(root: HTMLElement): () => void {
     }).join('')}</div>`;
   }
 
-  function achar(S: Sinal[], vivos: AlvoDoc[]): string {
+  /** Fontes de alvos do lado privado. As do lado público (licitações e vencedores) ficam em Público. */
+  const FONTES: [string, string, string][] = [['#alertas', 'Alertas do dia', 'O que mudou entre marcas e agências, com a ação proposta.'], ['#central', 'Notícias e trocas de conta', 'Quem ganhou conta precisa de produção agora.'], ['#investigacao', 'Reação em cadeia', 'Quem saiu, para onde foi e quem chegou no lugar.'], ['#bigdata', 'Anunciantes e pessoas', 'Quem anuncia, quem atende e quem decide.']];
+  function achar(vivos: AlvoDoc[]): string {
     return `<div class="grid">
-    <section class="p" aria-labelledby="cp-sin"><div class="ph"><h2 class="d d-sub" id="cp-sin">Sinais nos seus dados</h2><span class="note num">${int(S.length)}</span></div>
-      ${S.length ? `<ul class="lc-l">${S.map((s, i) => `<li class="cp-sinal"><span class="tag">${esc(s.tipo)}</span><div class="lc-c"><b>${esc(s.texto)}</b><span class="note">${esc(s.porque)}</span></div><button type="button" class="ghost sm" data-sinal="${i}">Virar alvo</button></li>`).join('')}</ul>`
-        : '<p class="note">Sem sinais agora. Eles aparecem quando o radar de licitações traz licitações de publicidade pontuadas.</p>'}
+    <section class="p" aria-labelledby="cp-sin"><div class="ph"><h2 class="d d-sub" id="cp-sin">Onde estão os sinais</h2></div>
+      <ul class="lc-l">${FONTES.map(([h, t, d]) => `<li><a class="ini-link" href="${h}"><span class="lc-c"><b>${t}</b><span class="note">${d}</span></span><span aria-hidden="true">→</span></a></li>`).join('')}</ul>
+      <p class="note">Cada uma tem o botão Virar alvo. Agência que ganhou conta pública aparece em Público › Contratos públicos.</p>
     </section>
     <section class="p" aria-labelledby="cp-col"><div class="ph"><h2 class="d d-sub" id="cp-col">Cole e o Claude acha os alvos</h2></div>
       <p class="note">Notícia de conta conquistada, ranking de agências, post de vaga de in-house, lista de expositores. O Claude separa as empresas citadas e o motivo de agora. Nada fora do texto.</p>
@@ -431,7 +418,6 @@ Escreva só três seções em markdown, sem valores (os valores entram numa tabe
     if (d.exp) { if (expandidas.has(d.exp)) expandidas.delete(d.exp); else expandidas.add(d.exp); render(); return; }
     if (d.abre) { ultimoAberto = d.abre; abrir(d.abre, b); return; }
     if (d.mv && d.para) { const a = A.find((x) => x.id === d.mv); if (a) await mover(a, d.para); return; }
-    if (d.sinal) { const s = sinais()[Number(d.sinal)]; if (s && await criar(s.alvo)) render(); return; }
     if (d.funil) {
       const x = ATRACAO[Number(d.funil)];
       if (!db) { avisar('O funil só funciona com o banco do Studio.'); return; }
@@ -483,7 +469,6 @@ ${txt.slice(0, 20000)}`, { json: true });
     col = db.collection<AlvoDoc>('alvos');
     const ver = (f: () => void) => () => { f(); if (!D.open) render(); };
     offs.push(col.onSnapshot((s) => ver(() => { A = s.docs.map(comId); carregando = false; })(), () => { carregando = false; render(); }));
-    offs.push(db.collection<Oportunidade>('b2g').onSnapshot((s) => ver(() => { B = s.docs.map(comId); })(), () => {}));
     offs.push(db.collection<Caso>('casos').onSnapshot((s) => { C = s.docs.map(comId); }, () => {}));
     offs.push(db.collection<{ titulo?: string }>('pipeline').onSnapshot((s) => ver(() => { funil = s.docs.map(comId); })(), () => {}));
     offs.push(db.collection<{ valores?: Record<string, number> }>('config').onSnapshot((s) => { descontos = s.docs.find((d) => d.id === 'descontos')?.data().valores || {}; }, () => {}));
