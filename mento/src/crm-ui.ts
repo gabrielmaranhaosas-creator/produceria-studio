@@ -2,6 +2,7 @@
 // navegador) e avisam a rede quando o Big Data muda.
 import { TIPOS, ETAPAS, ABERTAS, CANAIS, nota, nivelDe, oportunidadeDe, proximaPelaCadencia, agenda, numeros, csv, janelas, contasGanhas, foraDoRadar, type Registro, type Oportunidade, type Atividade, type Etapa, type Canal, type TipoRegistro, type Leitura } from './crm';
 import { mensagemErro, type Loja } from './dados';
+import { dadosDashboard, htmlDashboard } from './dashboard';
 
 const esc = (s: unknown) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!);
 const fmt = (n: number) => n.toLocaleString('pt-BR');
@@ -161,7 +162,8 @@ export function montarCrm(c: Contexto) {
     $('#agL').innerHTML = bloco('Atrasados', A.atrasadas, 'Nada atrasado.') + bloco('Hoje', A.hoje, 'Nada para hoje.') + bloco('Próximos 7 dias', A.semana, 'Nada na semana.') + (A.semData.length ? bloco('Sem data', A.semData, '') : '');
   }
 
-  function tudo() { painel(); bigdata(); funil(); agendaV(); c.aoAtualizar?.(); const n = $('#navFn'); if (n) n.dataset.n = String(agenda(ops, hojeISO()).atrasadas.length || ''); }
+  function dashboard() { const el = document.getElementById('dbG'); if (el) el.innerHTML = htmlDashboard(dadosDashboard(bd, ops, ats, hojeISO())); }
+  function tudo() { painel(); dashboard(); bigdata(); funil(); agendaV(); c.aoAtualizar?.(); const n = $('#navFn'); if (n) n.dataset.n = String(agenda(ops, hojeISO()).atrasadas.length || ''); }
 
   /* ── eventos ── */
   c.raiz.addEventListener('click', (ev) => {
@@ -174,6 +176,15 @@ export function montarCrm(c: Contexto) {
     if (b.dataset.apagarOp) { if (confirmar === b.dataset.apagarOp) { confirmar = ''; const id = b.dataset.apagarOp; selOp = ''; void apaga('funil', id); for (const a of ats.filter((x) => x.opId === id)) void apaga('atividades', a.id); } else { confirmar = b.dataset.apagarOp; funil(); } return; }
     if (b.dataset.bt != null) { bt = b.dataset.bt; bLim = 40; bigdata(); return; }
     if (b.id === 'bdMais') { bLim += 40; bigdata(); return; }
+    if (b.dataset.dash) {
+      const [k, v] = b.dataset.dash.split(':');
+      if (k === 'ir') location.hash = '#' + v;
+      else if (k === 'busca') { bq = v; ($('#bdQ') as HTMLInputElement).value = v; bt = ''; location.hash = '#bigdata'; bigdata(); }
+      else if (k === 'tipo') { bt = v; bq = ''; ($('#bdQ') as HTMLInputElement).value = ''; location.hash = '#bigdata'; bigdata(); }
+      else if (k === 'ordem') { bOrd = v; ($('#bdOrd') as HTMLSelectElement).value = v; location.hash = '#bigdata'; bigdata(); }
+      else if (k === 'decide') { bDecide = true; ($('#bdDec') as HTMLInputElement).checked = true; location.hash = '#bigdata'; bigdata(); }
+      return;
+    }
     if (b.id === 'crmDesf') { const f = desfazer; desfazer = null; f?.(); return; }
     if (b.id === 'jMais') { jLim += 8; painel(); return; }
     if (b.dataset.busca) { bq = b.dataset.busca; ($('#bdQ') as HTMLInputElement).value = bq; bt = ''; location.hash = '#bigdata'; bigdata(); return; }
@@ -191,7 +202,7 @@ export function montarCrm(c: Contexto) {
   const offs = [
     c.loja.ouvir<Registro>('bd', (l) => { bd = l.filter((r) => !foraDoRadar(r)); carregado.bd = true; c.aoMudarBd(bd); tudo(); }, aviso),
     c.loja.ouvir<Oportunidade>('funil', (l) => { ops = l; carregado.funil = true; tudo(); }, aviso),
-    c.loja.ouvir<Atividade>('atividades', (l) => { ats = l; funil(); }, aviso),
+    c.loja.ouvir<Atividade>('atividades', (l) => { ats = l; funil(); dashboard(); c.aoAtualizar?.(); }, aviso),
     c.loja.ouvir<Leitura>('leituras', (l) => { leituras = l; painel(); }, aviso),
   ];
   setTimeout(() => { if (!carregado.bd) aviso('O banco ainda não respondeu. Os dados aparecem assim que ele responder.'); }, 10000);
@@ -226,6 +237,7 @@ export const HTML_CRM = (equipe: string[]) => `
  <div class="dois"><div><h3 class="st">Leituras do mercado</h3><div class="leits" id="pnL"></div></div><div><h3 class="st">Agências que mais ganharam contas no ano</h3><div id="pnG"></div></div></div>
  <div class="dois"><div><h3 class="st">Para hoje</h3><div id="pnH"></div></div><div><h3 class="st">Melhores alvos fora do funil</h3><div id="pnA"></div></div></div>
  <div><h3 class="st">Sinais recentes do mercado</h3><div id="pnS"></div></div></section>
+<section class="vista" data-vista="dashboard" aria-labelledby="vDb" hidden><h2 class="t" id="vDb">Dashboard</h2><p class="nota">O mercado e o comercial da MENTO em números. Cada gráfico tem a tabela por baixo, e clicar numa barra abre o recorte.</p><div id="dbG"></div></section>
 <section class="vista" data-vista="bigdata" aria-labelledby="vBd" hidden><h2 class="t" id="vBd">Big Data</h2>
  <p class="nota">Anunciantes, agências, veículos e quem decide, cada um com a fonte. A nota soma quem decide, ranking de compra de mídia, sinal recente (conta nova, CMO novo, cota comprada) e onde a equipe já trabalhou.</p>
  <div class="ferr2"><input type="search" id="bdQ" placeholder="Buscar nome, empresa, cargo, setor ou sinal" autocomplete="off"><div class="seg" id="bdTipos" role="group" aria-label="Tipo"></div><label class="chk"><input type="checkbox" id="bdDec"> Só quem decide</label><label class="chk"><input type="checkbox" id="bdSin"> Sinal nos últimos 6 meses</label><label class="chk">Ordenar <select id="bdOrd"><option value="nota">pela nota</option><option value="recentes">mais recentes</option><option value="nome">pelo nome</option></select></label><span class="nota" id="bdN" aria-live="polite"></span></div>
