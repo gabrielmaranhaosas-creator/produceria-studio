@@ -7,7 +7,7 @@ import { slug } from '../lib/nomes';
 import { banco, lerBase, type Colecao } from '../lib/db';
 import { montarGrafo, NIVEIS, type MercadoBase, type MovimentoBase, type EmpresaMapa, type AgenciaMapa, type PessoaMapa } from '../lib/grafo';
 import { montarUniverso, reacao, caminho, leads, buscarNo, linhagem, novidades, chegadas, multiverso, ordenarReacao, dadosDoArquivo, ilhas, atalhos, ehEquipe, ORIGEM, TIPOS_LIGACAO, type Novidades, type Ramo, type Universo, type Reacao, type NoU, type PessoaInv, type OrgInv, type Multiverso, type LigacaoInv, type Missao, type TipoLigacao } from '../lib/investigacao';
-import { htmlDoMapa, fontesDaPagina } from '../lib/mapa-arquivo';
+import { htmlDoMapaPronto, fontesDaPagina } from '../lib/mapa-arquivo';
 import { baixarArquivo } from './oficina';
 import type { Alvo } from '../lib/tipos';
 import { contatoDaOrg, levarPara, focoPendente, FOCO_MV, type ContatoOrg } from '../lib/comercial';
@@ -426,7 +426,7 @@ export function montar(root: HTMLElement): () => void {
     const t = btn.textContent; btn.disabled = true; btn.textContent = 'Montando o arquivo…';
     try {
       const agora = new Date(), dados = dadosDoArquivo(U, R, M, { geradoEm: agora.toISOString(), novos });
-      const html = htmlDoMapa(dados, fontesDaPagina());
+      const html = await htmlDoMapaPronto(dados, fontesDaPagina());
       const nome = `mapa-investigacao-${slug(no(M.semente)?.nome || 'produceria')}-${agora.toISOString().slice(0, 10)}.html`;
       const msg = await baixarArquivo(nome, html);
       $('#ivLive').textContent = msg || 'Download cancelado.';

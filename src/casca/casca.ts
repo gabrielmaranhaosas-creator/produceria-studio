@@ -20,7 +20,7 @@ export const NICHOS: Nicho[] = [
   { id: 'privado', l: 'Privado', d: 'marcas e agências', home: 'alertas', itens: [
     it('Sinais do mercado', ['alertas', 'Alertas do dia'], ['central', 'Notícias e trocas de conta']),
     it('Mercado', ['bigdata', 'Anunciantes e pessoas'], ['mercado', 'Agências e contas'], ['contas', 'Contas cadastradas']),
-    it('Prospecção', ['captacao', 'Captação'], ['agenda', 'Agenda de contatos'], ['disparos', 'Mesa comercial'], ['investigacao', 'Reação em cadeia']),
+    it('Prospecção', ['captacao', 'Captação'], ['agenda', 'Agenda de contatos'], ['disparos', 'Mesa comercial'], ['investigacao', 'Reação em cadeia'], ['mento', 'Reação · Mento']),
   ] },
   { id: 'publico', l: 'Público', d: 'governo', home: 'alertas-publicos', itens: [
     it('Alertas do governo', ['alertas-publicos', 'Alertas do governo']),
@@ -37,7 +37,7 @@ export const NICHOS: Nicho[] = [
 ];
 /** Rota → página registrada. */
 export const PAGINA: Record<string, string> = {
-  painel: 'inicio', central: 'central', alertas: 'alertas', 'alertas-publicos': 'alertas', bigdata: 'bigdata', investigacao: 'investigacao', agenda: 'agenda', casos: 'casos', captacao: 'captacao', disparos: 'disparos', mercado: 'mercado', b2g: 'licitacoes', vencedores: 'vencedores',
+  painel: 'inicio', central: 'central', alertas: 'alertas', 'alertas-publicos': 'alertas', bigdata: 'bigdata', investigacao: 'investigacao', mento: 'mento', agenda: 'agenda', casos: 'casos', captacao: 'captacao', disparos: 'disparos', mercado: 'mercado', b2g: 'licitacoes', vencedores: 'vencedores',
   contas: 'contas', 'contas-publicas': 'contas', estrategia: 'estrategia', funil: 'funil', rotinas: 'rotinas', tabela: 'tabela', ajustes: 'ajustes',
   biblioteca: 'biblioteca', lixeira: 'lixeira', semana: 'semana',
   sid: 'sid',

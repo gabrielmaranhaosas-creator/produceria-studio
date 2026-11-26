@@ -111,3 +111,11 @@
     .md) e Integrações.
   - Nenhum painel foi aberto ainda dentro do Photoshop (não há Photoshop nesta máquina): a primeira rodada de
     testes é da equipe.
+- ~~Reação em cadeia e multiverso para outra casa: MENTO Publicidade~~ Preparado em 26/11/2026 para o teste com os
+  LinkedIns de duas pessoas (passo a passo em `docs/MENTO.md`). A Investigação ganhou a ideia de **casa** dona da
+  prospecção (`src/lib/casa.ts`: PRODUCERIA, padrão, e MENTO): ponto zero, quem é equipe, a marca da ponte, a narrativa
+  e a identidade visual do mapa baixado. Nova aba Prospecção › **Reação · Mento** (`src/paginas/mento.ts`): cola-se o
+  perfil (texto da página ou do PDF do LinkedIn, lido por `src/lib/linkedin.ts`), confere-se a trajetória e a reação
+  abre MENTO → equipe → casas da trajetória → Big Data (`src/lib/reacao-casa.ts`), com pontes em comum, radar com
+  caminho, multiverso navegável na tela e para baixar (HTML na identidade da Mento) e planilha do radar. Para caber nos
+  880 KB, o visor do multiverso e a fonte foram para a coleção `kit_plugins`.

@@ -810,7 +810,7 @@ describe('Casca própria', () => {
   it('busca Ctrl K acha telas, serviços, alvos e licitações', async () => {
     const { buscarTudo } = await import('../src/casca/casca');
     const d = { alvos: [{ id: 'a', nome: 'Agência Outdoor Brasil', status: 'Mapeado' }], b2g: [{ id: 'b', objeto: 'Locação de outdoor', orgao: 'Prefeitura' }], frentes: [], swot: [] };
-    expect(buscarTudo('', d).length).toBe(26); // as telas e uma amostra de cada base
+    expect(buscarTudo('', d).length).toBe(27); // as telas e uma amostra de cada base
     expect(buscarTudo('', d).filter((x) => x.tipo === 'Alvo')).toHaveLength(1);
     const r = buscarTudo('outdoor', d);
     expect(r.some((x) => x.tipo === 'Serviço')).toBe(true);
@@ -834,7 +834,7 @@ describe('Casca própria', () => {
     expect(raiz.querySelector('#conteudo .page-head h1')?.textContent).toBe('Novos negócios');
     expect(raiz.querySelector('#csNav [aria-current="page"]')?.textContent).toBe('Prospecção');
     expect(raiz.querySelector('[data-nicho].on')?.textContent).toBe('Privado');
-    expect([...raiz.querySelectorAll('.cs-abas .tab')].map((a) => a.textContent)).toEqual(['Captação', 'Agenda de contatos', 'Mesa comercial', 'Reação em cadeia']);
+    expect([...raiz.querySelectorAll('.cs-abas .tab')].map((a) => a.textContent)).toEqual(['Captação', 'Agenda de contatos', 'Mesa comercial', 'Reação em cadeia', 'Reação · Mento']);
     expect(raiz.querySelector('.cs-abas [aria-current="page"]')?.textContent).toBe('Captação');
     expect(raiz.querySelector('#csAv .badge')?.textContent).toBe('1');
     location.hash = '#tabela'; window.dispatchEvent(new HashChangeEvent('hashchange')); await espera();
@@ -1118,6 +1118,41 @@ describe('Alerta do Sid', () => {
     raiz.querySelector<HTMLButtonElement>('[data-x="feito"]')!.click();
     await espera();
     expect(db.dados.alertas['s-1'].status).toBe('feito');
+    desmontar();
+  });
+});
+
+describe('Reação · Mento', () => {
+  it('lê os dois LinkedIns, roda a reação a partir da MENTO e mostra pontes, ramificações e radar', async () => {
+    try { localStorage.removeItem('studio.mento.perfis'); } catch { /* sem armazenamento */ }
+    const db = bancoFalso({
+      movimentos: { m1: { data: '2026-10-01', anunciante: 'Itaú', agencia: 'Africa Creative DDB', fonte: 'https://exemplo.com/m1' }, m2: { data: '2026-09-01', anunciante: 'Heineken', agencia: 'Publicis Brasil', fonte: 'https://exemplo.com/m2' } },
+      mapa_agencias: { 'ag-africa': { nome: 'Africa Creative DDB' }, 'ag-publicis': { nome: 'Publicis Brasil' } },
+      mapa_empresas: { 'em-itau': { nome: 'Itaú' }, 'em-heineken': { nome: 'Heineken' } },
+      mapa_pessoas: { 'pe-1': { nome: 'Diretora Itaú', cargo: 'Gerente de Produção', organizacao: 'Itaú', trajetoria: 'Publicis Brasil' } },
+      mapa_ligacoes: {}, alvos: {},
+    });
+    const { raiz, desmontar } = await montar('mento', db);
+    await espera(40);
+    expect(raiz.querySelector('.mt-marca')!.textContent).toContain('MENTO');
+    raiz.querySelector<HTMLButtonElement>('[data-exemplo]')!.click();
+    await espera();
+    expect(raiz.querySelectorAll('.mt-exp tbody tr').length).toBe(6);
+    // corrigir uma passagem à mão vale para a reação
+    const org = raiz.querySelector<HTMLInputElement>('.mt-exp input[data-k="org"][data-p="0"][data-e="2"]')!;
+    org.value = 'Publicis Brasil'; org.dispatchEvent(new Event('input', { bubbles: true }));
+    raiz.querySelector<HTMLButtonElement>('[data-rodar]')!.click();
+    await espera();
+    expect(raiz.querySelector<HTMLElement>('#mtRes')!.hidden).toBe(false);
+    const cols = [...raiz.querySelectorAll('.mt-col')];
+    expect(cols[0].textContent).toContain('MENTO');
+    expect(cols[1].textContent).toContain('Fulana de Tal');
+    expect(cols[2].textContent).toContain('Africa Creative DDB');
+    expect(raiz.querySelector('#mtCm')!.textContent).toContain('Publicis Brasil'); // as duas passaram pela Publicis
+    expect(raiz.querySelector('#mtL')!.textContent).toContain('Itaú');
+    expect(raiz.querySelector('#mtL .mt-cam')!.textContent).toContain('MENTO');
+    expect(raiz.querySelector('[data-ver-mv]')!.getAttribute('aria-expanded')).toBe('false'); // o multiverso abre aqui sob pedido (conferido no navegador)
+    expect(JSON.parse(localStorage.getItem('studio.mento.perfis')!)[0].perfil.experiencias[2].org).toBe('Publicis Brasil');
     desmontar();
   });
 });
