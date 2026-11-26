@@ -12,6 +12,7 @@ import { EQUIPE_PUBLICA } from './publico';
 import { paraRede, type Registro } from './crm';
 import { abrirLoja } from './dados';
 import { montarCrm, HTML_CRM } from './crm-ui';
+import { montarUx } from './ux';
 
 const esc = (s: unknown) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!);
 const fmt = (n: number) => n.toLocaleString('pt-BR');
@@ -25,7 +26,7 @@ document.head.insertAdjacentHTML('beforeend', `<style>${face('Saira Stencil', sa
 const LOGO = logo.replace('<svg ', '<svg role="img" aria-label="MENTO" ');
 const raiz = document.getElementById('app')!;
 const VISTAS: [string, string][] = [['painel', 'Painel'], ['bigdata', 'Big Data'], ['rede', 'Rede'], ['funil', 'Funil'], ['agenda', 'Agenda'], ['equipe', 'Equipe']];
-raiz.innerHTML = `<div class="mt app">
+raiz.innerHTML = `<div class="mt app" id="conteudo">
 <header class="topo"><a href="#painel" class="lg" aria-label="MENTO · Painel">${LOGO}</a><nav class="nav" id="nav" aria-label="Seções">${VISTAS.map(([k, t]) => `<a href="#${k}" data-v="${k}"${k === 'funil' ? ' id="navFn"' : ''}>${t}</a>`).join('')}</nav><span class="modo" id="modo"></span></header>
 <p class="msg aviso-topo" id="crmMsg" role="status" hidden></p>
 ${HTML_CRM(EQUIPE_PUBLICA.map((p) => p.nome.split(' ')[0]))}
@@ -110,7 +111,7 @@ const quemDe = (n: No) => n.quem.map((id) => no(id).nome.split(' ')[0]).join(' e
 function resultado() {
   const r = R!, todos = [...r.nos.values()], cont = todos.filter((n) => n.tipo === 'contato'), emp = todos.filter((n) => n.tipo === 'empresa');
   const soma = r.equipe.reduce((t, p) => t + p.conexoes.length, 0), comum = emComum(r);
-  $('#kpis').innerHTML = [[soma, 'conexões somadas', `${fmt(cont.length)} pessoas únicas fora da MENTO`], [comum.length, 'em comum', 'conhecidas pelas duas pessoas'], [emp.length, 'empresas', `${fmt(emp.filter((e) => !e.agencia).length)} sem contar agências`], [cont.filter((c) => c.nivel === 'decide').length, 'decidem', 'cargos que contratam agência e mídia'], [M!.voltas.length - 1, 'voltas', 'da MENTO até o ponto mais distante']]
+  $('#kpis').innerHTML = [[soma, 'conexões somadas', `${fmt(cont.length)} pessoas únicas fora da MENTO`], [comum.length, 'em comum', 'conhecidas pelas duas pessoas'], [emp.length, 'empresas', `${fmt(emp.filter((e) => !e.agencia).length)} sem contar agências`], [cont.filter((c) => c.nivel === 'decide').length, 'decidem', 'cargos que contratam agência e mídia'], [M!.voltas.length - 1, 'voltas', 'da MENTO até o ponto mais distante'], [M!.fora.length, 'sem ponte ainda', 'no Big Data, esperando uma ligação']]
     .map(([v, t, d], i) => `<li${i ? '' : ' class="on"'}><b>${fmt(Number(v))}</b><span>${esc(t)}</span><small>${esc(d)}</small></li>`).join('');
   const empC = emp.filter((e) => e.quem.length > 1).sort((a, b) => b.nota - a.nota);
   $('#comum').innerHTML = `<div><h3 class="st">Pessoas <span class="n">${fmt(comum.length)}</span></h3>${lista(comum.slice(0, 12))}</div><div><h3 class="st">Empresas <span class="n">${fmt(empC.length)}</span></h3>${lista(empC.slice(0, 12))}</div>`;
@@ -124,8 +125,10 @@ function resultado() {
 const lista = (L: No[]) => L.length ? `<ul class="li">${L.map((n) => `<li><button type="button" data-ir="${esc(n.id)}"><b>${esc(n.nome)}</b><span>${esc(curto(n.tipo === 'contato' ? [n.sub, n.empresa].filter(Boolean).join(' · ') : n.fatos[0] || '', 70))}</span></button><em>${n.nota}</em></li>`).join('')}</ul>` : '<p class="nota">Nada em comum ainda.</p>';
 
 /* ── 05 · multiverso radial ── */
-const RAIO = [0, 120, 330, 500];
+/** Raio de cada volta: equipe perto do centro, as voltas seguintes para fora, e o anel "sem ponte ainda" por último. */
+const raioDe = (g: number) => [0, 120, 300, 450, 580, 690, 790][g] ?? 790 + (g - 6) * 90;
 const pos = new Map<string, { x: number; y: number; r: number; a: number }>();
+let RAIOS: number[] = [], RFORA = 0, VB0 = 560;
 function layout() {
   pos.clear(); const m = M!, r = R!;
   pos.set(ZERO, { x: 0, y: 0, r: 22, a: 0 });
@@ -133,42 +136,63 @@ function layout() {
   // setores da equipe proporcionais ao tamanho da rede de cada um
   const peso = eq.map((id) => Math.max(1, (m.voltas[2] || []).filter((x) => m.pai.get(x)?.id === id).length)), tot = peso.reduce((a, b) => a + b, 0);
   let a0 = -Math.PI / 2; const setor = new Map<string, [number, number]>();
-  eq.forEach((id, i) => { const da = (peso[i] / tot) * Math.PI * 2; setor.set(id, [a0, a0 + da]); const a = a0 + da / 2; pos.set(id, { x: Math.cos(a) * RAIO[1], y: Math.sin(a) * RAIO[1], r: 11, a }); a0 += da; });
-  const OURO = 0.6180339887;
-  for (const g of [2, 3]) {
+  eq.forEach((id, i) => { const da = (peso[i] / tot) * Math.PI * 2; setor.set(id, [a0, a0 + da]); const a = a0 + da / 2; pos.set(id, { x: Math.cos(a) * raioDe(1), y: Math.sin(a) * raioDe(1), r: 11, a }); a0 += da; });
+  const OURO = 0.6180339887, tam = (n: No, esc2: number) => (n.tipo === 'empresa' ? (2.8 + n.nota / 12) * Math.max(0.6, esc2) : (1.6 + n.nota / 26) * esc2 + 0.6);
+  RAIOS = [0, raioDe(1)];
+  for (let g = 2; g < m.voltas.length; g++) {
     const v = m.voltas[g] || []; if (!v.length) continue;
-    const esc2 = Math.min(1, Math.sqrt(500 / v.length)); // rede grande: pontos menores
+    const esc2 = Math.min(1, Math.sqrt(500 / v.length)), R0 = raioDe(g); RAIOS[g] = R0;
     if (g === 2) for (const id of eq) {
       // os mais fortes se espalham pelo setor (passo áureo), em vez de se amontoar no começo dele
       const fil = v.filter((x) => m.pai.get(x)?.id === id).sort((p, q) => r.nos.get(q)!.nota - r.nos.get(p)!.nota), [s, e] = setor.get(id)!;
-      fil.forEach((x, k) => { const f = fil.length > 1 ? (k * OURO) % 1 : 0.5, a = s + (e - s) * (0.02 + f * 0.96), n = r.nos.get(x)!, rr = RAIO[2] + (((k * 7919) % 11) - 5) * (fil.length > 60 ? 9 : 4);
-        pos.set(x, { x: Math.cos(a) * rr, y: Math.sin(a) * rr, r: (n.tipo === 'empresa' ? 3.5 + n.nota / 14 : 1.6 + n.nota / 26) * (n.tipo === 'empresa' ? 1 : esc2) + (n.tipo === 'empresa' ? 0 : 0.6), a }); });
+      fil.forEach((x, k) => { const f = fil.length > 1 ? (k * OURO) % 1 : 0.5, a = s + (e - s) * (0.02 + f * 0.96), rr = R0 + (((k * 7919) % 11) - 5) * (fil.length > 60 ? 9 : 4); pos.set(x, { x: Math.cos(a) * rr, y: Math.sin(a) * rr, r: tam(r.nos.get(x)!, esc2), a }); });
     } else {
-      // empresas: o anel inteiro, na ordem do ângulo médio de quem as traz (ficam perto dos seus conhecidos)
-      const ang = v.map((x) => { let sx = 0, sy = 0; for (const a of r.adj.get(x) || []) { const p = pos.get(a.b); if (p && a.b.startsWith('c:')) { sx += Math.cos(p.a); sy += Math.sin(p.a); } } return { x, a: Math.atan2(sy, sx) }; }).sort((p, q) => p.a - q.a);
-      ang.forEach(({ x }, k) => { const a = -Math.PI / 2 + (k + 0.5) / ang.length * Math.PI * 2, n = r.nos.get(x)!, rr = RAIO[3] + (ang.length > 80 ? ((k % 3) - 1) * 14 : 0); pos.set(x, { x: Math.cos(a) * rr, y: Math.sin(a) * rr, r: (2.5 + n.nota / 11) * Math.max(0.55, esc2), a }); });
+      // da 3ª volta em diante: o anel inteiro, na ordem do ângulo de quem trouxe cada ponto (fica perto do pai)
+      const ang = v.map((x) => { const p = pos.get(m.pai.get(x)?.id || ''); return { x, a: p ? p.a : 0 }; }).sort((p, q) => p.a - q.a);
+      ang.forEach(({ x }, k) => { const a = -Math.PI / 2 + (k + 0.5) / ang.length * Math.PI * 2, rr = R0 + (ang.length > 80 ? ((k % 3) - 1) * 14 : 0); pos.set(x, { x: Math.cos(a) * rr, y: Math.sin(a) * rr, r: tam(r.nos.get(x)!, esc2), a }); });
     }
   }
+  // sem ponte ainda: um anel próprio, por fora, agrupado por ligação entre si (anunciante perto da agência)
+  const F = m.fora; RFORA = F.length ? raioDe(m.voltas.length) + 40 : 0;
+  if (F.length) {
+    const fset = new Set(F), ordem: string[] = [], feito = new Set<string>();
+    for (const id of F) { if (feito.has(id)) continue; const fila = [id]; feito.add(id); while (fila.length) { const x = fila.shift()!; ordem.push(x); for (const a of r.adj.get(x) || []) if (fset.has(a.b) && !feito.has(a.b)) { feito.add(a.b); fila.push(a.b); } } }
+    const esc2 = Math.min(1, Math.sqrt(400 / F.length));
+    ordem.forEach((x, k) => { const a = -Math.PI / 2 + (k + 0.5) / ordem.length * Math.PI * 2, rr = RFORA + ((k % 3) - 1) * 16; pos.set(x, { x: Math.cos(a) * rr, y: Math.sin(a) * rr, r: tam(r.nos.get(x)!, esc2), a }); });
+  }
+  VB0 = Math.max(560, (RFORA || RAIOS[RAIOS.length - 1] || 450) + 140);
 }
 let vb = { x: -560, y: -560, w: 1120 };
+const vbInicial = () => ({ x: -VB0, y: -VB0, w: VB0 * 2 });
 const svg = () => $<SVGSVGElement>('#svg');
 const aplicarVb = () => svg().setAttribute('viewBox', `${vb.x} ${vb.y} ${vb.w} ${vb.w}`);
 function visivel(n: No) { return filtro === 'tudo' || n.tipo === 'zero' || n.tipo === 'equipe' || (filtro === 'decide' ? (n.tipo === 'contato' ? n.nivel === 'decide' : n.fatos.some((f) => /decide/.test(f))) : n.quem.length > 1); }
 function desenharMv() {
-  layout(); const r = R!, m = M!, aceso = new Set(sel ? caminho(m, sel) : []);
+  const antes = VB0; layout(); const r = R!, m = M!, aceso = new Set(sel ? caminho(m, sel) : []);
+  if (antes !== VB0 && !sel) { vb = vbInicial(); aplicarVb(); }
+  const foraSet = new Set(m.fora);
   const top = new Set([...r.nos.values()].filter((n) => n.tipo !== 'zero' && n.tipo !== 'equipe').sort((a, b) => b.nota - a.nota).slice(0, 24).map((n) => n.id));
   let fios = '', pts = '', rots = '';
   for (const [id, p] of m.pai) { const a = pos.get(id), b = pos.get(p.id); if (!a || !b || !visivel(r.nos.get(id)!)) continue; fios += `<line x1="${b.x.toFixed(1)}" y1="${b.y.toFixed(1)}" x2="${a.x.toFixed(1)}" y2="${a.y.toFixed(1)}" class="fio${aceso.has(id) && aceso.has(p.id) ? ' on' : ''}"/>`; }
+  // ligações entre os pontos sem ponte (anunciante ↔ agência, pessoa ↔ empresa), tracejadas; acendem com a seleção
+  const visto2 = new Set<string>();
+  for (const id of m.fora) for (const ar of r.adj.get(id) || []) {
+    if (!foraSet.has(ar.b)) continue; const k = id < ar.b ? id + '|' + ar.b : ar.b + '|' + id; if (visto2.has(k)) continue; visto2.add(k);
+    const a = pos.get(id), b = pos.get(ar.b); if (!a || !b || !visivel(r.nos.get(id)!) || !visivel(r.nos.get(ar.b)!)) continue;
+    fios += `<line x1="${a.x.toFixed(1)}" y1="${a.y.toFixed(1)}" x2="${b.x.toFixed(1)}" y2="${b.y.toFixed(1)}" class="fio fora${sel === id || sel === ar.b ? ' on' : ''}"/>`;
+  }
   for (const [id, p] of pos) {
     const n = r.nos.get(id)!; if (!visivel(n)) continue;
-    const cls = `p t-${n.tipo}${n.nivel === 'decide' ? ' dec' : ''}${n.quem.length > 1 ? ' com' : ''}${n.agencia ? ' ag' : ''}${aceso.has(id) ? ' on' : ''}${id === sel ? ' sel' : ''}`;
-    pts += `<circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="${p.r.toFixed(1)}" class="${cls}" data-ir="${esc(id)}" tabindex="${n.tipo === 'zero' || n.tipo === 'equipe' || top.has(id) ? 0 : -1}"><title>${esc(n.nome)}${n.sub && n.tipo !== 'zero' ? ' · ' + esc(n.sub) : ''}</title></circle>`;
+    const cls = `p t-${n.tipo}${foraSet.has(id) ? ' longe' : ''}${n.nivel === 'decide' ? ' dec' : ''}${n.quem.length > 1 ? ' com' : ''}${n.agencia ? ' ag' : ''}${aceso.has(id) ? ' on' : ''}${id === sel ? ' sel' : ''}`;
+    pts += `<circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="${p.r.toFixed(1)}" class="${cls}" data-ir="${esc(id)}" role="button" aria-label="${esc(n.nome)}${n.sub && n.tipo !== 'zero' ? ', ' + esc(n.sub) : ''}" tabindex="${n.tipo === 'zero' || n.tipo === 'equipe' || top.has(id) ? 0 : -1}"><title>${esc(n.nome)}${n.sub && n.tipo !== 'zero' ? ' · ' + esc(n.sub) : ''}</title></circle>`;
     if (n.tipo === 'zero' || n.tipo === 'equipe' || top.has(id) || aceso.has(id)) {
       const dx = n.tipo === 'zero' ? 0 : Math.cos(p.a) * (p.r + 6), dy = n.tipo === 'zero' ? p.r + 22 : Math.sin(p.a) * (p.r + 6) + 4, ali = n.tipo === 'zero' || Math.abs(Math.cos(p.a)) < 0.3 ? 'middle' : Math.cos(p.a) > 0 ? 'start' : 'end';
       rots += `<text x="${(p.x + dx).toFixed(1)}" y="${(p.y + dy).toFixed(1)}" text-anchor="${ali}" class="rot t-${n.tipo}${aceso.has(id) ? ' on' : ''}">${esc(curto(n.tipo === 'equipe' ? n.nome.split(' ')[0] : n.nome, 26))}</text>`;
     }
   }
-  const aneis = RAIO.slice(1).map((rr, i) => `<circle r="${rr}" class="anel"/><text y="${-rr - 8}" class="anel-t">${['equipe', 'conhecidos e trajetória', 'empresas dos conhecidos'][i]} · ${fmt((m.voltas[i + 1] || []).length)}</text>`).join('');
+  const NOMEV = ['', 'equipe', 'conhecidos e trajetória', 'onde estão hoje'];
+  const aneis = RAIOS.map((rr, g) => (g && rr ? `<circle r="${rr}" class="anel"/><text y="${-rr - 8}" class="anel-t">${NOMEV[g] || g + 'ª volta'} · ${fmt((m.voltas[g] || []).length)}</text>` : '')).join('')
+    + (RFORA ? `<circle r="${RFORA}" class="anel fora"/><text y="${-RFORA - 26}" class="anel-t">sem ponte ainda · ${fmt(m.fora.length)}</text>` : '');
   svg().innerHTML = `<g>${aneis}</g><g>${fios}</g><g>${pts}</g><g>${rots}</g>`;
 }
 function dossie() {
@@ -179,7 +203,7 @@ function dossie() {
   ${n.tipo === 'contato' || n.tipo === 'empresa' ? `<div class="nota-b"><span><i style="width:${n.nota}%"></i></span><b>${n.nota}</b></div>` : ''}
   ${n.fatos.length ? `<ul class="fatos">${n.fatos.map((f) => `<li>${esc(f)}</li>`).join('')}</ul>` : ''}
   ${n.quem.length && n.tipo !== 'equipe' ? `<p class="sub">Quem conhece: <b>${esc(quemDe(n))}</b></p>` : ''}
-  ${c.length > 1 ? `<span class="lab">Caminho</span><p class="cam">${c.map(chip).join('<em>→</em>')}</p>` : ''}
+  ${c.length > 1 ? `<span class="lab">Caminho</span><p class="cam">${c.map(chip).join('<em>→</em>')}</p>` : n.tipo !== 'zero' && n.tipo !== 'equipe' ? `<p class="aviso">Sem ponte com a MENTO ainda. Pergunte à equipe quem conhece alguém aqui, ou suba o LinkedIn de quem conhece: a ligação aparece sozinha.</p>` : ''}
   ${n.tipo === 'empresa' ? `<span class="lab">Quem está lá</span>${lista((R!.adj.get(n.id) || []).map((a) => no(a.b)).filter((x) => x.tipo === 'contato').sort((a, b) => b.nota - a.nota).slice(0, 8))}` : ''}
   ${n.url && /^https:/.test(n.url) ? `<p><a href="${esc(n.url)}" target="_blank" rel="noopener">Perfil no LinkedIn ↗</a></p>` : ''}${n.fonte && /^https:/.test(n.fonte) && n.fonte !== n.url ? `<p class="sub">Fonte: <a href="${esc(n.fonte)}" target="_blank" rel="noopener">${esc(n.fonte.replace(/^https:\/\/(www\.)?/, '').split('/')[0])} ↗</a></p>` : ''}${n.email ? `<p class="sub">${esc(n.email)}</p>` : ''}${n.tipo === 'contato' || n.tipo === 'empresa' ? `<div class="acoes"><button type="button" class="btn sec" data-funil-rede="${esc(n.id)}">Levar ao funil</button></div>` : ''}`;
 }
@@ -238,9 +262,9 @@ raiz.addEventListener('click', (ev) => {
   if (b.dataset.f) { filtro = b.dataset.f; b.parentElement!.querySelectorAll('button').forEach((x) => x.setAttribute('aria-pressed', String(x === b))); desenharMv(); return; }
   if (b.dataset.r) { rf = b.dataset.r; lim = 20; b.parentElement!.querySelectorAll('button').forEach((x) => x.setAttribute('aria-pressed', String(x === b))); desenharRadar(); return; }
   if (b.id === 'mais') { lim += 20; desenharRadar(); return; }
-  if (b.dataset.z) { const k = Number(b.dataset.z); if (!k) vb = { x: -560, y: -560, w: 1120 }; else { const cx = vb.x + vb.w / 2, cy = vb.y + vb.w / 2; vb.w = Math.min(2400, Math.max(80, vb.w / k)); vb.x = cx - vb.w / 2; vb.y = cy - vb.w / 2; } aplicarVb(); return; }
+  if (b.dataset.z) { const k = Number(b.dataset.z); if (!k) vb = vbInicial(); else { const cx = vb.x + vb.w / 2, cy = vb.y + vb.w / 2; vb.w = Math.min(2400, Math.max(80, vb.w / k)); vb.x = cx - vb.w / 2; vb.y = cy - vb.w / 2; } aplicarVb(); return; }
   if (b.hasAttribute('data-csv') && R) { void baixar(`mento-radar-${dia()}.csv`, csvRadar(R, M!, listaRadar()), 'text/csv;charset=utf-8'); return; }
-  if (b.hasAttribute('data-svg') && R) { const s = svg().cloneNode(true) as SVGSVGElement; s.setAttribute('xmlns', 'http://www.w3.org/2000/svg'); s.setAttribute('viewBox', '-560 -560 1120 1120'); s.insertAdjacentHTML('afterbegin', `<style>${SVG_CSS}</style><rect x="-560" y="-560" width="1120" height="1120" fill="#000"/>`); void baixar(`mento-multiverso-${dia()}.svg`, s.outerHTML, 'image/svg+xml'); }
+  if (b.hasAttribute('data-svg') && R) { const s = svg().cloneNode(true) as SVGSVGElement; s.setAttribute('xmlns', 'http://www.w3.org/2000/svg'); s.setAttribute('viewBox', `${-VB0} ${-VB0} ${VB0 * 2} ${VB0 * 2}`); s.insertAdjacentHTML('afterbegin', `<style>${SVG_CSS}</style><rect x="${-VB0}" y="${-VB0}" width="${VB0 * 2}" height="${VB0 * 2}" fill="#000"/>`); void baixar(`mento-multiverso-${dia()}.svg`, s.outerHTML, 'image/svg+xml'); }
 });
 function buscar(q: string) {
   if (!R || q.trim().length < 2) return;
@@ -262,8 +286,10 @@ svg().addEventListener('keydown', (ev) => { const c = (ev.target as Element).clo
 
 const SVG_CSS = `.anel{fill:none;stroke:#2a2a2a;stroke-dasharray:2 6}.anel-t{fill:#777;font:10px sans-serif;letter-spacing:.12em;text-transform:uppercase;text-anchor:middle}.fio{stroke:#2b2b2b;stroke-width:.6}.fio.on{stroke:#0BCF55;stroke-width:2}.p{fill:#777}.p.t-zero,.p.t-equipe{fill:#0BCF55}.p.t-empresa{fill:#fff}.p.ag{fill:none;stroke:#fff}.p.dec{fill:#fff}.p.com{stroke:#0BCF55;stroke-width:1.5}.p.on{fill:#0BCF55}.rot{fill:#fff;font:11px Inter,sans-serif;paint-order:stroke;stroke:#000;stroke-width:3px}.rot.t-zero{font:500 22px 'Saira Stencil',sans-serif}`;
 desenharSlots();
+let ux: ReturnType<typeof montarUx> | null = null;
 function rota() {
   const v = location.hash.slice(1), ok = VISTAS.some(([k]) => k === v) ? v : 'painel';
+  ux?.aoTrocar(ok);
   raiz.querySelectorAll<HTMLElement>('.vista').forEach((x) => { x.hidden = x.dataset.vista !== ok; });
   raiz.querySelectorAll<HTMLElement>('#nav a').forEach((a) => { if (a.dataset.v === ok) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current'); });
   if (ok === 'rede' && R) desenharMv();
@@ -278,7 +304,15 @@ void abrirLoja().then((loja) => {
     trajetoria: () => new Set(slots.flatMap((x) => x.pessoa?.posicoes || []).map((p) => p.empresa.toLowerCase().trim()).filter((e) => e && !/\bmento\b/.test(e))),
     aoMudarBd: (regs) => { bdAtual = regs; rodar(false); },
     verNaRede: (nome) => { location.hash = '#rede'; setTimeout(() => buscar(nome), 50); },
+    aoAtualizar: () => ux?.passos(),
   });
+  ux = montarUx({
+    raiz, vistas: VISTAS, bd: () => crm!.bd(), ops: () => crm!.ops(),
+    temConexoes: () => slots.some((x) => (x.pessoa?.conexoes.length || 0) > 0),
+    abrirOp: (id) => crm!.abrirOp(id), buscarBd: (q) => crm!.buscarBd(q),
+    verNaRede: (nome) => { location.hash = '#rede'; setTimeout(() => buscar(nome), 50); },
+  });
+  ux.aoTrocar(VISTAS.some(([k]) => k === location.hash.slice(1)) ? location.hash.slice(1) : 'painel'); ux.passos();
   crm.definirBaixar((nome, dados) => baixar(nome, dados, 'text/csv;charset=utf-8'));
 });
 rodar(false);

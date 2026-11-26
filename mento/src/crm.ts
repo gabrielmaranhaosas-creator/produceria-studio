@@ -3,7 +3,7 @@
  * prospecção (alvo → abordado → reunião → proposta → ganho/perdido), as atividades de cada conversa e a agenda dos
  * próximos passos. Regras puras, sem tela e sem banco, para testar.
  */
-import { nivelDoCargo, type Nivel } from './rede';
+import { nivelDoCargo, type Nivel, type OrgPublica } from './rede';
 import type { Pista, LigacaoPublica } from './publico';
 
 export type TipoRegistro = 'anunciante' | 'agencia' | 'veiculo' | 'pessoa';
@@ -16,7 +16,8 @@ export interface Registro {
   ranking?: string;
   /** veículos em que o anunciante comprou mídia, e agências que o atendem */
   anunciaEm?: string[]; agencias?: string[];
-  criadoEm?: string;
+  /** quando entrou e quando mudou (ISO), gravados pela varredura diária e pela equipe */
+  criadoEm?: string; atualizadoEm?: string;
 }
 export const TIPOS: [TipoRegistro, string][] = [['anunciante', 'Anunciante'], ['agencia', 'Agência'], ['veiculo', 'Veículo'], ['pessoa', 'Pessoa']];
 
@@ -72,14 +73,15 @@ export function nota(r: Registro, o: { hoje: string; porNome?: Map<string, Regis
 }
 
 /** O Big Data vira pistas e ligações para a rede (reação em cadeia e multiverso). */
-export function paraRede(regs: Registro[]): { pistas: Pista[]; ligacoes: LigacaoPublica[] } {
+export function paraRede(regs: Registro[]): { pistas: Pista[]; ligacoes: LigacaoPublica[]; orgs: OrgPublica[] } {
   const pistas: Pista[] = regs.filter((r) => r.tipo === 'pessoa' && r.empresa).map((r) => ({ nome: r.nome, cargo: r.cargo || '', empresa: r.empresa!, url: r.linkedin, fonte: r.fonte || '', data: r.data }));
   const ligacoes: LigacaoPublica[] = [];
   for (const r of regs) if (r.tipo === 'anunciante') {
     for (const v of r.anunciaEm || []) ligacoes.push({ a: v, b: r.nome, rotulo: r.sinal || 'anuncia aqui', fonte: r.fonte || '', data: r.data, tipoB: 'anunciante' });
     for (const a of r.agencias || []) ligacoes.push({ a, b: r.nome, rotulo: 'atende a conta', fonte: r.fonte || '', data: r.data, tipoB: 'anunciante' });
   }
-  return { pistas, ligacoes };
+  const orgs: OrgPublica[] = regs.filter((r) => r.tipo !== 'pessoa').map((r) => ({ nome: r.nome, tipo: r.tipo as OrgPublica['tipo'], setor: r.setor, fonte: r.fonte, sinal: r.sinal }));
+  return { pistas, ligacoes, orgs };
 }
 
 /** Um registro do Big Data (ou um ponto da rede) vira oportunidade no funil, na etapa Alvo. */

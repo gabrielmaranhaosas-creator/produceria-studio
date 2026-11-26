@@ -47,7 +47,10 @@ const primeiro = (n: string) => n.split(' ')[0] || n;
 /** Veículo de mídia (TV, rádio, jornal, canais): parceiro de venda da MENTO, não concorrente. */
 const VEICULO = /\b(networks?|band|bandeirantes|tv|r[aá]dio|fm|globo|sbt|record|destak|jornal|revista|canal|channel|history|lifetime|cnn|bandnews|omega m[ií]dia|uber advertising)\b/i;
 
-export function montarRede(equipe: Pessoa[], o: { hoje?: string; casa?: string; pistas?: Pista[]; ligacoes?: LigacaoPublica[] } = {}): Rede {
+/** Organização do Big Data que entra na rede mesmo sem ligação com a equipe (fica no anel "sem ponte ainda"). */
+export interface OrgPublica { nome: string; tipo: 'anunciante' | 'agencia' | 'veiculo'; setor?: string; fonte?: string; sinal?: string }
+
+export function montarRede(equipe: Pessoa[], o: { hoje?: string; casa?: string; pistas?: Pista[]; ligacoes?: LigacaoPublica[]; orgs?: OrgPublica[] } = {}): Rede {
   const hoje = o.hoje || new Date().toISOString().slice(0, 10), umAno = antes(hoje, 365);
   const nos = new Map<string, No>(), adj = new Map<string, Aresta[]>();
   const add = (n: No) => { if (!nos.has(n.id)) { nos.set(n.id, n); adj.set(n.id, []); } return nos.get(n.id)!; };
@@ -81,6 +84,13 @@ export function montarRede(equipe: Pessoa[], o: { hoje?: string; casa?: string; 
       ligar(mid, cid, `conexão de ${primeiro(p.nome)}${c.desde ? ' desde ' + c.desde : ''}`, c.desde);
       const e = empresa(c.empresa); if (e) { ligar(cid, e.id, c.cargo || 'trabalha em'); }
     }
+  }
+  // organizações do Big Data: o tipo declarado vale mais que o palpite pelo nome
+  for (const g of o.orgs || []) {
+    const e = empresa(g.nome); if (!e) continue;
+    e.anunciante = g.tipo === 'anunciante'; e.agencia = g.tipo === 'agencia'; e.veiculo = g.tipo === 'veiculo';
+    e.sub = g.tipo === 'anunciante' ? 'Anunciante' + (g.setor ? ' · ' + g.setor : '') : g.tipo === 'agencia' ? 'Agência' : 'Veículo de mídia' + (g.setor ? ' · ' + g.setor : '');
+    e.fonte ||= g.fonte;
   }
   // pesquisa pública: quem decide ou vende nas casas (sem ligação direta com a equipe) e quem anuncia onde
   for (const p of o.pistas || []) {
@@ -160,7 +170,7 @@ export function reacao(R: Rede, limites = [10, 30, 24, 30]): Reacao {
 }
 
 /* ───────────── Multiverso: tudo o que as ligações alcançam, sem corte ───────────── */
-export interface Multiverso { voltas: string[][]; pai: Map<string, { id: string; rotulo: string }>; total: number }
+export interface Multiverso { voltas: string[][]; pai: Map<string, { id: string; rotulo: string }>; total: number; /** pontos sem caminho até a MENTO, do mais forte ao mais fraco */ fora: string[] }
 export function multiverso(R: Rede): Multiverso {
   const visto = new Set([ZERO]), pai = new Map<string, { id: string; rotulo: string }>(), voltas: string[][] = [[ZERO]];
   for (let fila = [ZERO]; fila.length;) {
@@ -181,7 +191,8 @@ export function multiverso(R: Rede): Multiverso {
     if (!prox.length) break;
     voltas.push(prox); fila = prox;
   }
-  return { voltas, pai, total: R.nos.size - 1 };
+  const fora = [...R.nos.keys()].filter((id) => !visto.has(id)).sort((a, b) => R.nos.get(b)!.nota - R.nos.get(a)!.nota);
+  return { voltas, pai, total: R.nos.size - 1, fora };
 }
 
 /** O caminho da MENTO até um ponto (pelo pai do multiverso). */
