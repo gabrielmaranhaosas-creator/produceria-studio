@@ -46,3 +46,24 @@ describe('Funil e agenda', () => {
     expect(proximaPelaCadencia('proposta', H)).toBe('2026-11-30');
   });
 });
+
+describe('Inteligência', () => {
+  it('as contas trocadas puxam as agências para o Big Data, ligadas ao anunciante', async () => {
+    const { agenciasDasContas, contasGanhas } = await import('../src/crm');
+    const omni = SEMENTE.find((r) => r.nome === 'Omnicom Media')!;
+    expect(omni).toMatchObject({ tipo: 'agencia', sinal: 'Ganhou a conta de PicPay' });
+    expect(agenciasDasContas(SEMENTE)).toEqual([]); // nada sobrando: todas já estão na base
+    const g = contasGanhas(SEMENTE, '2026-01');
+    expect(g.get('omnicom media')!.contas.map((c) => c.nome).sort()).toEqual(['IBM', 'PicPay']);
+    expect(g.get('vml')!.contas.map((c) => c.nome)).toEqual(expect.arrayContaining(['Espaçolaser', 'Amstel']));
+  });
+  it('janelas: conta nova e decisor novo viram ação, com quem procurar quando a base sabe', async () => {
+    const { janelas } = await import('../src/crm');
+    const J = janelas(SEMENTE, H);
+    const amstel = J.find((j) => j.titulo.startsWith('Amstel'))!;
+    expect(amstel.acao).toContain('VML');
+    expect(J.find((j) => j.titulo.startsWith('José Maurício Lilla'))!.acao).toContain('20 minutos');
+    expect(J.filter((j) => j.titulo.startsWith('Midea'))).toHaveLength(0); // abril: fora dos 150 dias
+    expect(J[0].peso).toBeGreaterThanOrEqual(J[J.length - 1].peso);
+  });
+});

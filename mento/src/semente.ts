@@ -3,6 +3,8 @@
 // direto, sem banco, a página usa esta mesma base. Cargos de notícias antigas podem ter mudado: a data vai junto.
 import type { Registro } from './crm';
 import { PISTAS } from './publico';
+import { CONTAS_2026, BETS_2026, PESSOAS_2026, EMPRESAS_2026 } from './semente-2026';
+import { agenciasDasContas } from './crm';
 
 const MM_ANUNC = 'https://www.meioemensagem.com.br/dropsaea/ranking-dos-20-maiores-anunciantes-brasil';
 const CENP = 'https://www.meioemensagem.com.br/comunicacao/cenp-africa-lidera-ranking-de-compra-de-midia-em-2025';
@@ -11,7 +13,7 @@ const COPA_BAND = 'https://www.meioemensagem.com.br/midia/radio-bandeirantes-e-b
 const slug = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 60);
 const r = (x: Omit<Registro, 'id'> & { id?: string }): Registro => ({ id: x.id || `${x.tipo.slice(0, 2)}-${slug(x.nome + (x.empresa ? '-' + x.empresa : ''))}`, ...x });
 
-export const SEMENTE: Registro[] = [
+const BASE: Registro[] = [
   // veículos por onde o Pet passou
   r({ tipo: 'veiculo', nome: 'Band', setor: 'TV aberta, rádio e digital (Grupo Bandeirantes)', fonte: 'https://www.meioemensagem.com.br/gente/grupo-bandeirantes-tem-novo-lider-comercial' }),
   r({ tipo: 'veiculo', nome: 'A+E Networks', setor: 'TV paga (A&E, History, Lifetime)', sinal: 'Passa a vender a publicidade da AMC na América Latina', data: '2026-03', fonte: 'https://senalnews.com/es/tv/ae-networks-representara-las-ventas-publicitarias-de-amc-networks-en-america-latina' }),
@@ -63,3 +65,8 @@ export const SEMENTE: Registro[] = [
   r({ tipo: 'pessoa', nome: 'Juliana Roque', cargo: 'Diretora-executiva de Mídia', empresa: 'Leo', sinal: 'Promovida a diretora-executiva de mídia', data: '2026-06', fonte: 'https://propmark.com.br/agencias/leo-promove-juliana-roque-a-diretora-executiva-de-midia/' }),
   r({ tipo: 'pessoa', nome: 'Ana Sanchez', cargo: 'Vice-presidente de Mídia', empresa: 'Publicis Brasil', sinal: 'Ganhou quatro novos diretores de mídia na equipe', data: '2026-02', fonte: 'https://propmark.com.br/agencias/publicis-brasil-reforca-area-de-midia-com-quatro-novos-diretores/' }),
 ];
+
+/** A base inteira: a primeira coleta, a varredura de novembro e as agências que entram pelas contas. Sem repetição. */
+const unicos = (l: Registro[]) => { const v = new Set<string>(); return l.filter((x) => !v.has(x.id) && !!v.add(x.id)); };
+const JUNTOS = unicos([...BASE, ...CONTAS_2026.filter((c) => c.nome !== 'Midea Carrier'), ...BETS_2026, ...PESSOAS_2026, ...EMPRESAS_2026]);
+export const SEMENTE: Registro[] = [...JUNTOS, ...agenciasDasContas(JUNTOS)];

@@ -112,5 +112,49 @@ export function numeros(ops: Oportunidade[]) {
   return { por, abertas: abertas.length, pipeline: abertas.reduce((t, o) => t + (o.valor || 0), 0), ponderado: Math.round(abertas.reduce((t, o) => t + (o.valor || 0) * prob[o.etapa], 0)), ganho: por.ganho.valor, conversao: fechadas ? Math.round((por.ganho.n / fechadas) * 100) : null };
 }
 
+/* ───────────── Inteligência: o dado vira ação ───────────── */
+/** Leitura de mercado: o dado, o que ele quer dizer e o que a MENTO faz com isso. */
+export interface Leitura { id: string; titulo: string; dado: string; implicacao: string; fonte?: string; data?: string }
+export interface Janela { id: string; titulo: string; porque: string; acao: string; regId: string; data: string; peso: number }
+const chaveN = (s?: string) => (s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
+
+/** Agências citadas nas contas que ainda não estão no Big Data entram ligadas ao anunciante (com o sinal da conta ganha). */
+export function agenciasDasContas(regs: Registro[]): Registro[] {
+  const tem = new Set(regs.map((r) => chaveN(r.nome))), out = new Map<string, Registro>();
+  for (const r of regs) if (r.tipo === 'anunciante') for (const a of r.agencias || []) {
+    const k = chaveN(a); if (tem.has(k)) continue;
+    const ja = out.get(k);
+    if (ja) { if ((r.data || '') > (ja.data || '')) Object.assign(ja, { sinal: `Ganhou a conta de ${r.nome}`, data: r.data, fonte: r.fonte }); continue; }
+    out.set(k, { id: 'ag-' + k.replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, ''), tipo: 'agencia', nome: a, sinal: `Ganhou a conta de ${r.nome}`, data: r.data, fonte: r.fonte });
+  }
+  return [...out.values()];
+}
+
+/** Quem ganhou conta desde uma data: agência → anunciantes. */
+export function contasGanhas(regs: Registro[], desde: string): Map<string, { agencia: string; contas: Registro[] }> {
+  const m = new Map<string, { agencia: string; contas: Registro[] }>();
+  for (const r of regs) if (r.tipo === 'anunciante' && r.agencias?.length && (r.data || '') >= desde.slice(0, (r.data || '').length || 10)) for (const a of r.agencias) {
+    const k = chaveN(a), x = m.get(k) || { agencia: a, contas: [] }; x.contas.push(r); m.set(k, x);
+  }
+  return m;
+}
+
+/** As janelas de oportunidade do momento: conta que acabou de trocar, decisor que acabou de chegar, veículo em movimento. */
+export function janelas(regs: Registro[], hoje: string): Janela[] {
+  const out: Janela[] = [], pessoasEm = (emp: string) => regs.filter((p) => p.tipo === 'pessoa' && chaveN(p.empresa) === chaveN(emp) && nivelDe(p) === 'decide');
+  for (const r of regs) {
+    if (r.tipo === 'anunciante' && r.agencias?.length && recente(r.data, hoje, 150)) {
+      const ag = r.agencias.length > 1 ? r.agencias.slice(0, -1).join(', ') + ' e ' + r.agencias[r.agencias.length - 1] : r.agencias[0], gente = r.agencias.flatMap(pessoasEm);
+      out.push({ id: 'j-' + r.id, regId: r.id, data: r.data || '', peso: 80 + (r.ranking ? 10 : 0), titulo: `${r.nome}: conta nova na ${ag}`, porque: r.sinal || 'Troca de agência recente',
+        acao: gente.length ? `Falar com ${gente.map((p) => `${p.nome} (${p.cargo})`).join(', ')} enquanto o plano de mídia de ${r.nome} é revisado.` : `Apresentar a MENTO à ${ag} e ao marketing de ${r.nome} enquanto o plano de mídia é revisado.` });
+    } else if (r.tipo === 'pessoa' && nivelDe(r) === 'decide' && r.sinal && recente(r.data, hoje, 240)) {
+      out.push({ id: 'j-' + r.id, regId: r.id, data: r.data || '', peso: 70, titulo: `${r.nome} chegou: ${r.cargo} na ${r.empresa}`, porque: r.sinal, acao: 'Os primeiros meses no cargo são quando se revisam agências e fornecedores. Pedir 20 minutos para apresentar a MENTO.' });
+    } else if (r.tipo === 'veiculo' && r.sinal && recente(r.data, hoje, 240)) {
+      out.push({ id: 'j-' + r.id, regId: r.id, data: r.data || '', peso: 50, titulo: `${r.nome}: ${r.sinal}`, porque: r.setor || 'Veículo em movimento', acao: 'Veículo em mudança negocia projetos e representação. Abrir conversa de parceria.' });
+    }
+  }
+  return out.sort((a, b) => b.peso - a.peso || b.data.localeCompare(a.data));
+}
+
 const celula = (v: unknown) => { const s = String(v ?? ''); return /[";\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s; };
 export const csv = (linhas: unknown[][]) => '﻿' + linhas.map((l) => l.map(celula).join(';')).join('\r\n');

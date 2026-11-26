@@ -1,16 +1,17 @@
 // Onde os dados do comercial moram. No artefato do claude.ai: o banco compartilhado (a equipe toda vê e edita, ao
 // vivo). No arquivo aberto direto: o navegador de quem usa, começando pela base inicial. Mesma interface nos dois.
-import type { Registro, Oportunidade, Atividade } from './crm';
+import type { Registro, Oportunidade, Atividade, Leitura } from './crm';
 import { SEMENTE } from './semente';
+import { LEITURAS } from './semente-2026';
 
-export type Colecao = 'bd' | 'funil' | 'atividades';
+export type Colecao = 'bd' | 'funil' | 'atividades' | 'leituras';
 export interface Loja {
   compartilhada: boolean;
   ouvir<T extends { id: string }>(col: Colecao, cb: (lista: T[]) => void, erro?: (msg: string) => void): () => void;
   salvar(col: Colecao, doc: { id: string }): Promise<void>;
   apagar(col: Colecao, id: string): Promise<void>;
 }
-export type Doc = Registro | Oportunidade | Atividade;
+export type Doc = Registro | Oportunidade | Atividade | Leitura;
 
 type Snap = { docs: { id: string; data(): Record<string, unknown> | undefined }[]; metadata?: { fromCache?: boolean } };
 type Db = { collection(p: string): { onSnapshot(n: (s: Snap) => void, e?: (x: { code: string; message: string }) => void): () => void; doc(id: string): { set(d: Record<string, unknown>): Promise<void>; delete(): Promise<void> } } };
@@ -32,9 +33,10 @@ export function lojaDoBanco(db: Db): Loja {
 
 export function lojaLocal(): Loja {
   const CH = 'mento.crm.v1', ouvintes = new Map<Colecao, Set<(l: never[]) => void>>();
-  let mem: Record<Colecao, Record<string, { id: string }>> = { bd: {}, funil: {}, atividades: {} };
-  try { const g = JSON.parse(localStorage.getItem(CH) || 'null'); if (g?.bd) mem = g; else mem.bd = Object.fromEntries(SEMENTE.map((r) => [r.id, r])); } catch { mem.bd = Object.fromEntries(SEMENTE.map((r) => [r.id, r])); }
-  const gravar = () => { try { localStorage.setItem(CH, JSON.stringify(mem)); } catch { /* sem armazenamento: vale nesta visita */ } };
+  const CH2 = 'mento.crm.v2', base = () => ({ bd: Object.fromEntries(SEMENTE.map((r) => [r.id, r])), funil: {}, atividades: {}, leituras: Object.fromEntries(LEITURAS.map((l) => [l.id, l])) });
+  let mem: Record<Colecao, Record<string, { id: string }>> = base();
+  try { const g2 = JSON.parse(localStorage.getItem(CH2) || 'null'), g1 = g2 ? null : JSON.parse(localStorage.getItem(CH) || 'null'); if (g2?.bd) mem = { ...base(), ...g2 }; else if (g1?.bd) { mem = { ...base(), ...g1, leituras: base().leituras }; for (const r of SEMENTE) mem.bd[r.id] ||= r; } } catch { /* fica a base */ }
+  const gravar = () => { try { localStorage.setItem(CH2, JSON.stringify(mem)); } catch { /* sem armazenamento: vale nesta visita */ } };
   const avisar = (col: Colecao) => { const l = Object.values(mem[col]) as never[]; ouvintes.get(col)?.forEach((f) => f(l)); };
   return {
     compartilhada: false,

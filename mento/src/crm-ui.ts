@@ -1,6 +1,6 @@
 // Telas do comercial: Painel, Big Data, Funil e Agenda. Leem e gravam pela Loja (banco compartilhado do artefato ou
 // navegador) e avisam a rede quando o Big Data muda.
-import { TIPOS, ETAPAS, ABERTAS, CANAIS, nota, nivelDe, oportunidadeDe, proximaPelaCadencia, agenda, numeros, csv, type Registro, type Oportunidade, type Atividade, type Etapa, type Canal, type TipoRegistro } from './crm';
+import { TIPOS, ETAPAS, ABERTAS, CANAIS, nota, nivelDe, oportunidadeDe, proximaPelaCadencia, agenda, numeros, csv, janelas, contasGanhas, type Registro, type Oportunidade, type Atividade, type Etapa, type Canal, type TipoRegistro, type Leitura } from './crm';
 import { mensagemErro, type Loja } from './dados';
 
 const esc = (s: unknown) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!);
@@ -26,10 +26,10 @@ export interface Contexto {
 
 export function montarCrm(c: Contexto) {
   const $ = <T extends Element = HTMLElement>(s: string) => c.raiz.querySelector(s) as T;
-  let bd: Registro[] = [], ops: Oportunidade[] = [], ats: Atividade[] = [], selOp = '', bq = '', bt = '', bDecide = false, bSinal = false, bLim = 40, confirmar = '';
+  let bd: Registro[] = [], ops: Oportunidade[] = [], ats: Atividade[] = [], leituras: Leitura[] = [], jLim = 8, selOp = '', bq = '', bt = '', bDecide = false, bSinal = false, bLim = 40, confirmar = '';
   const carregado = { bd: false, funil: false };
   const aviso = (t: string) => { const el = $('#crmMsg'); el.textContent = t; el.hidden = !t; if (t) setTimeout(() => { if (el.textContent === t) el.hidden = true; }, 6000); };
-  const grava = async (col: 'bd' | 'funil' | 'atividades', d: { id: string }) => { try { await c.loja.salvar(col, d); return true; } catch (e) { aviso(mensagemErro(e)); return false; } };
+  const grava = async (col: 'bd' | 'funil' | 'atividades' | 'leituras', d: { id: string }) => { try { await c.loja.salvar(col, d); return true; } catch (e) { aviso(mensagemErro(e)); return false; } };
   const apaga = async (col: 'bd' | 'funil' | 'atividades', id: string) => { try { await c.loja.apagar(col, id); } catch (e) { aviso(mensagemErro(e)); } };
 
   const porNome = () => new Map(bd.filter((r) => r.tipo !== 'pessoa').map((r) => [r.nome.toLowerCase().trim(), r]));
@@ -55,13 +55,19 @@ export function montarCrm(c: Contexto) {
     const alvos = bd.filter((r) => !noFunil(r)).sort((a, b) => ns.get(b.id)!.nota - ns.get(a.id)!.nota).slice(0, 8);
     $('#pnA').innerHTML = alvos.length ? `<ul class="li">${alvos.map((r) => linhaBd(r, ns.get(r.id)!, true)).join('')}</ul>` : '<p class="nota">O Big Data ainda está vazio.</p>';
     const sinais = bd.filter((r) => r.sinal && r.data).sort((a, b) => (b.data || '').localeCompare(a.data || '')).slice(0, 8);
+    // inteligência: janelas de oportunidade, agências em alta e leituras de mercado
+    const J = janelas(bd, hojeISO());
+    $('#pnJ').innerHTML = J.length ? `<ol class="jan">${J.slice(0, jLim).map((j) => { const r = bd.find((x) => x.id === j.regId)!, f = r && noFunil(r); return `<li><div><b>${esc(j.titulo)}</b><p class="nota">${esc(j.porque)}${j.data ? ` · ${esc(j.data)}` : ''}</p><p class="ac">${esc(j.acao)}</p></div><div class="bd-a">${f ? `<button type="button" class="acao on" data-op="${esc(f.id)}">No funil · ${esc(ETQ[f.etapa])}</button>` : `<button type="button" class="acao" data-funil="${esc(j.regId)}">Levar ao funil</button>`}<button type="button" class="acao" data-rede="${esc(r?.nome || '')}">Na rede</button></div></li>`; }).join('')}</ol>${J.length > jLim ? `<button type="button" class="lnk" id="jMais">Mostrar mais ${Math.min(8, J.length - jLim)} (${fmt(J.length - jLim)} restantes)</button>` : ''}` : '<p class="nota">Nenhuma janela aberta agora.</p>';
+    const G = [...contasGanhas(bd, String(new Date().getFullYear()) + '-01').values()].sort((a, b) => b.contas.length - a.contas.length).slice(0, 10);
+    $('#pnG').innerHTML = G.length ? `<ul class="li">${G.map((g) => `<li><button type="button" data-busca="${esc(g.agencia)}"><b>${esc(g.agencia)}</b><span>${esc(g.contas.map((c) => c.nome).join(', '))}</span></button><em class="dt">${g.contas.length}</em></li>`).join('')}</ul>` : '<p class="nota">Sem trocas de conta registradas neste ano.</p>';
+    $('#pnL').innerHTML = leituras.length ? leituras.slice().sort((a, b) => (b.data || '').localeCompare(a.data || '')).map((l) => `<article class="leit"><h4>${esc(l.titulo)}</h4><p>${esc(l.dado)}</p><p class="imp"><b>Para a MENTO:</b> ${esc(l.implicacao)}</p>${l.fonte ? `<p class="fo">Fonte: ${link(l.fonte)}</p>` : ''}</article>`).join('') : '<p class="nota">Sem leituras de mercado ainda.</p>';
     $('#pnS').innerHTML = sinais.length ? `<ul class="li">${sinais.map((r) => `<li><button type="button" data-bd="${esc(r.id)}"><b>${esc(r.tipo === 'pessoa' ? `${r.nome} · ${r.empresa}` : r.nome)}</b><span>${esc(curto(r.sinal, 90))}</span></button><em class="dt">${esc(r.data!.length > 7 ? dataBR(r.data) : r.data)}</em></li>`).join('')}</ul>` : '<p class="nota">Sem sinais com data.</p>';
   }
   const linhaOp = (o: Oportunidade) => { const h = hojeISO(), at = (o.proximaData || '') < h; return `<li><button type="button" data-op="${esc(o.id)}"><b>${esc(o.nome)}${o.contato ? ` · ${esc(o.contato)}` : ''}</b><span>${esc(ETQ[o.etapa])} · ${esc(o.proximoPasso || 'sem próximo passo')}${o.responsavel ? ` · ${esc(o.responsavel)}` : ''}</span></button><em class="dt${at ? ' atr' : ''}">${esc(dataBR(o.proximaData) || '—')}</em></li>`; };
   const linhaBd = (r: Registro, n: { nota: number; motivos: string[] }, curta = false) => {
     const f = noFunil(r);
     return `<li class="bd-l"><b class="f">${n.nota}</b><div class="bd-c"><div class="bd-t"><button type="button" class="nm" data-bd="${esc(r.id)}">${esc(r.nome)}</button><span class="tag t-${r.tipo}">${esc(TIP[r.tipo])}</span>${r.tipo === 'pessoa' && nivelDe(r) === 'decide' ? '<span class="tag dec">decide</span>' : ''}</div>
-    <span class="m">${esc(r.tipo === 'pessoa' ? [r.cargo, r.empresa].filter(Boolean).join(' · ') : r.setor || '')}</span>${curta ? '' : `<span class="mot">${esc(n.motivos.join(' · '))}</span>`}${!curta && r.fonte ? `<span class="fo">Fonte: ${link(r.fonte)}${r.data ? ` · ${esc(r.data)}` : ''}</span>` : ''}</div>
+    <span class="m">${esc(r.tipo === 'pessoa' ? [r.cargo, r.empresa].filter(Boolean).join(' · ') : r.tipo === 'anunciante' && r.agencias?.length ? [r.setor, 'agência: ' + r.agencias.join(', ')].filter(Boolean).join(' · ') : r.setor || '')}</span>${r.tipo === 'agencia' ? (() => { const cs = bd.filter((x) => x.tipo === 'anunciante' && (x.agencias || []).some((a) => a.toLowerCase() === r.nome.toLowerCase())); return cs.length ? `<span class="m">Contas: ${esc(cs.map((x) => x.nome).join(', '))}</span>` : ''; })() : ''}${curta ? '' : `<span class="mot">${esc(n.motivos.join(' · '))}</span>`}${!curta && r.fonte ? `<span class="fo">Fonte: ${link(r.fonte)}${r.data ? ` · ${esc(r.data)}` : ''}</span>` : ''}</div>
     <div class="bd-a">${f ? `<button type="button" class="acao on" data-op="${esc(f.id)}">No funil · ${esc(ETQ[f.etapa])}</button>` : `<button type="button" class="acao" data-funil="${esc(r.id)}">Levar ao funil</button>`}${curta ? '' : `<button type="button" class="acao" data-rede="${esc(r.tipo === 'pessoa' ? r.nome : r.nome)}">Na rede</button><button type="button" class="acao perigo" data-apagar-bd="${esc(r.id)}">${confirmar === r.id ? 'Confirmar' : 'Apagar'}</button>`}</div></li>`;
   };
 
@@ -157,6 +163,8 @@ export function montarCrm(c: Contexto) {
     if (b.dataset.apagarOp) { if (confirmar === b.dataset.apagarOp) { confirmar = ''; const id = b.dataset.apagarOp; selOp = ''; void apaga('funil', id); for (const a of ats.filter((x) => x.opId === id)) void apaga('atividades', a.id); } else { confirmar = b.dataset.apagarOp; funil(); } return; }
     if (b.dataset.bt != null) { bt = b.dataset.bt; bLim = 40; bigdata(); return; }
     if (b.id === 'bdMais') { bLim += 40; bigdata(); return; }
+    if (b.id === 'jMais') { jLim += 8; painel(); return; }
+    if (b.dataset.busca) { bq = b.dataset.busca; ($('#bdQ') as HTMLInputElement).value = bq; bt = ''; location.hash = '#bigdata'; bigdata(); return; }
     if (b.id === 'bdCsv') { void baixar(`mento-big-data-${hojeISO()}.csv`, csv([['Nota', 'Tipo', 'Nome', 'Cargo', 'Empresa', 'Setor', 'Sinal', 'Data', 'Motivos', 'LinkedIn', 'Fonte'], ...bd.map((r) => { const n = notas().get(r.id)!; return [n.nota, TIP[r.tipo], r.nome, r.cargo, r.empresa, r.setor, r.sinal, r.data, n.motivos.join(' · '), r.linkedin, r.fonte]; }).sort((a, b) => Number(b[0]) - Number(a[0]))])); return; }
     if (b.id === 'fnCsv') { void baixar(`mento-funil-${hojeISO()}.csv`, csv([['Empresa', 'Contato', 'Cargo', 'Etapa', 'Responsável', 'Valor', 'Próximo passo', 'Próximo contato', 'Origem', 'Criado em'], ...ops.map((o) => [o.nome, o.contato, o.cargo, ETQ[o.etapa], o.responsavel, o.valor || '', o.proximoPasso, o.proximaData, o.origem, o.criadoEm.slice(0, 10)])])); }
   });
@@ -172,6 +180,7 @@ export function montarCrm(c: Contexto) {
     c.loja.ouvir<Registro>('bd', (l) => { bd = l; carregado.bd = true; c.aoMudarBd(bd); tudo(); }, aviso),
     c.loja.ouvir<Oportunidade>('funil', (l) => { ops = l; carregado.funil = true; tudo(); }, aviso),
     c.loja.ouvir<Atividade>('atividades', (l) => { ats = l; funil(); }, aviso),
+    c.loja.ouvir<Leitura>('leituras', (l) => { leituras = l; painel(); }, aviso),
   ];
   setTimeout(() => { if (!carregado.bd) aviso('O banco ainda não respondeu. Os dados aparecem assim que ele responder.'); }, 10000);
   tudo();
@@ -181,6 +190,8 @@ export function montarCrm(c: Contexto) {
 /** O HTML das telas do comercial (as views ficam dentro do app, alternadas pelo menu). */
 export const HTML_CRM = (equipe: string[]) => `
 <section class="vista" data-vista="painel" aria-labelledby="vPn"><h2 class="t" id="vPn">Painel</h2><ul class="kpis" id="pnK"></ul>
+ <div><h3 class="st">Janelas de oportunidade</h3><p class="nota">Calculadas do Big Data: conta que acabou de trocar de agência, decisor que acabou de chegar, veículo em movimento. Cada uma com a ação da semana.</p><div id="pnJ"></div></div>
+ <div class="dois"><div><h3 class="st">Leituras do mercado</h3><div class="leits" id="pnL"></div></div><div><h3 class="st">Agências que mais ganharam contas no ano</h3><div id="pnG"></div></div></div>
  <div class="dois"><div><h3 class="st">Para hoje</h3><div id="pnH"></div></div><div><h3 class="st">Melhores alvos fora do funil</h3><div id="pnA"></div></div></div>
  <div><h3 class="st">Sinais recentes do mercado</h3><div id="pnS"></div></div></section>
 <section class="vista" data-vista="bigdata" aria-labelledby="vBd" hidden><h2 class="t" id="vBd">Big Data</h2>
