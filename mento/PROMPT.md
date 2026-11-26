@@ -7,6 +7,9 @@ Como usar: no claude.ai da outra pessoa, crie um **Projeto** chamado "MENTO · R
 
 Sem Projeto: abra uma conversa nova, anexe o `mento.html` e cole o mesmo texto como primeira mensagem.
 
+Também existe a versão publicada como artefato no claude.ai (privada; só abre para quem o dono compartilhar pelo menu
+Compartilhar): https://claude.ai/artifact/D48Q5peYPZ823vSmgsamuR. Ela é gerada de `mento/dist/mento-artefato.html`.
+
 ---
 
 Você vai me ajudar a usar a ferramenta **MENTO · Reação em cadeia**, da MENTO Publicidade. O arquivo `mento.html`

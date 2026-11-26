@@ -13,4 +13,7 @@ const html = `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><met
 <meta name="robots" content="noindex"></head><body><div id="app"></div><script>${js}</script></body></html>`;
 mkdirSync(aqui('./dist'), { recursive: true });
 writeFileSync(aqui('./dist/mento.html'), html);
-console.log(`mento/dist/mento.html: ${(Buffer.byteLength(html) / 1024).toFixed(0)} KB`);
+// versão para publicar como artefato no claude.ai: sem o esqueleto (o claude.ai põe o dele), com o título e a meta de margem
+const artefato = `<title>Mento Reação em Cadeia</title><meta name="claude:viewport-fit-sides" content="cover"><meta name="robots" content="noindex"><div id="app"></div><script>${js}</script>`;
+writeFileSync(aqui('./dist/mento-artefato.html'), artefato);
+console.log(`mento/dist/mento.html: ${(Buffer.byteLength(html) / 1024).toFixed(0)} KB · mento/dist/mento-artefato.html`);

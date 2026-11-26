@@ -189,7 +189,17 @@ function desenharRadar() {
 }
 
 /* ── downloads ── */
-function baixar(nome: string, dados: string, tipo: string) {
+/** Dentro do claude.ai o download passa pelo próprio claude.ai (o viewer confirma); no arquivo aberto direto, link comum. */
+type Downloads = { save(o: { filename: string; data: string }): Promise<unknown> };
+const cl = (window as unknown as { claude?: { use(n: string): Promise<unknown> } }).claude;
+const dlPronto: Promise<Downloads | null> = cl ? cl.use('downloads').then((d) => (d as Downloads) || null).catch(() => null) : Promise.resolve(null);
+async function baixar(nome: string, dados: string, tipo: string) {
+  if (cl) {
+    const d = await dlPronto;
+    if (!d) { msg('O download não está disponível nesta visualização. Abra o artefato no navegador do computador.'); return; }
+    try { await d.save({ filename: nome, data: dados }); } catch (e) { const c = (e as { code?: string }).code; if (c && c !== 'declined') msg(c === 'host_unavailable' ? 'Este app não salva arquivos: abra o artefato no navegador do computador.' : 'Não deu para salvar o arquivo agora. Tente de novo em instantes.'); }
+    return;
+  }
   const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([dados], { type: tipo })); a.download = nome; document.body.appendChild(a); a.click();
   setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
 }
@@ -216,8 +226,8 @@ raiz.addEventListener('click', (ev) => {
   if (b.dataset.r) { rf = b.dataset.r; lim = 20; b.parentElement!.querySelectorAll('button').forEach((x) => x.setAttribute('aria-pressed', String(x === b))); desenharRadar(); return; }
   if (b.id === 'mais') { lim += 20; desenharRadar(); return; }
   if (b.dataset.z) { const k = Number(b.dataset.z); if (!k) vb = { x: -560, y: -560, w: 1120 }; else { const cx = vb.x + vb.w / 2, cy = vb.y + vb.w / 2; vb.w = Math.min(2400, Math.max(80, vb.w / k)); vb.x = cx - vb.w / 2; vb.y = cy - vb.w / 2; } aplicarVb(); return; }
-  if (b.hasAttribute('data-csv') && R) { baixar(`mento-radar-${dia()}.csv`, csvRadar(R, M!, listaRadar()), 'text/csv;charset=utf-8'); return; }
-  if (b.hasAttribute('data-svg') && R) { const s = svg().cloneNode(true) as SVGSVGElement; s.setAttribute('xmlns', 'http://www.w3.org/2000/svg'); s.setAttribute('viewBox', '-560 -560 1120 1120'); s.insertAdjacentHTML('afterbegin', `<style>${SVG_CSS}</style><rect x="-560" y="-560" width="1120" height="1120" fill="#000"/>`); baixar(`mento-multiverso-${dia()}.svg`, s.outerHTML, 'image/svg+xml'); }
+  if (b.hasAttribute('data-csv') && R) { void baixar(`mento-radar-${dia()}.csv`, csvRadar(R, M!, listaRadar()), 'text/csv;charset=utf-8'); return; }
+  if (b.hasAttribute('data-svg') && R) { const s = svg().cloneNode(true) as SVGSVGElement; s.setAttribute('xmlns', 'http://www.w3.org/2000/svg'); s.setAttribute('viewBox', '-560 -560 1120 1120'); s.insertAdjacentHTML('afterbegin', `<style>${SVG_CSS}</style><rect x="-560" y="-560" width="1120" height="1120" fill="#000"/>`); void baixar(`mento-multiverso-${dia()}.svg`, s.outerHTML, 'image/svg+xml'); }
 });
 function buscar(q: string) {
   if (!R || q.trim().length < 2) return;

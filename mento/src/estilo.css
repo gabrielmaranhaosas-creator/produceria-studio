@@ -3,12 +3,13 @@
 :root{--bg:#000;--bg2:#0c0c0c;--ink:#fff;--mut:#a3a3a3;--fra:#6b6b6b;--lin:#222;--lin2:#3a3a3a;--acc:#0BCF55;--acc-ink:#000;
   --fd:"Saira Stencil","Arial Narrow",Arial,sans-serif;--ft:Inter,-apple-system,BlinkMacSystemFont,"Helvetica Neue","Segoe UI",Arial,sans-serif;color-scheme:dark}
 *{box-sizing:border-box}
-html,body{margin:0;background:var(--bg);color:var(--ink);font:400 15px/1.55 var(--ft);-webkit-font-smoothing:antialiased}
+html,body{margin:0;}
+body{padding-left:max(16px, env(safe-area-inset-left, 0px));padding-right:max(16px, env(safe-area-inset-right, 0px));background:var(--bg);color:var(--ink);font:400 15px/1.55 var(--ft);-webkit-font-smoothing:antialiased}
 button,input{font:inherit;color:inherit}
 a{color:var(--ink)}
 :focus-visible{outline:2px solid var(--acc);outline-offset:3px}
 h1,h2,h3,p{margin:0}
-.mt{max-width:1320px;margin:0 auto;padding:clamp(24px,5vw,72px) clamp(16px,4vw,48px);display:flex;flex-direction:column;gap:clamp(40px,6vw,80px)}
+.mt{max-width:1320px;margin:0 auto;padding-block:clamp(24px,5vw,72px);padding-inline:clamp(0px,3vw,32px);display:flex;flex-direction:column;gap:clamp(40px,6vw,80px)}
 .nota{font-size:13px;color:var(--mut);max-width:80ch}
 .aviso{font-size:13px;border-left:3px solid var(--acc);padding:6px 12px;background:var(--bg2)}
 .lab{display:block;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--mut);margin-bottom:8px}
