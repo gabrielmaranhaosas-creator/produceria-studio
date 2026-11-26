@@ -51,5 +51,8 @@ npx vitest run mento       # testes do leitor do arquivo e da rede
 ```
 
 Código: `src/exportacao.ts` (zip e CSV do LinkedIn), `src/rede.ts` (rede, notas, reação, multiverso, radar),
-`src/main.ts` (página), `src/estilo.css` (identidade: preto, branco, verde `#0BCF55`, stencil Big Shoulders, SIL OFL 1.1
-em `src/fonte/OFL.txt`), `montar.mjs` (página única).
+`src/main.ts` (página), `src/estilo.css` e `src/logo.svg` (identidade: logo vetorizado do arquivo oficial da MENTO,
+títulos em Saira Stencil 500, texto em Inter, preto, branco e verde `#0BCF55`; fontes SIL OFL 1.1, licenças em
+`src/fonte/`), `montar.mjs` (página única).
+
+Para configurar no Claude de outra pessoa: `PROMPT.md`.

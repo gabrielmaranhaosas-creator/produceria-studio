@@ -5,7 +5,7 @@ import { mkdirSync, writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 
 const aqui = (p) => fileURLToPath(new URL(p, import.meta.url));
-const r = buildSync({ entryPoints: [aqui('./src/main.ts')], bundle: true, minify: true, format: 'iife', target: 'es2020', write: false, loader: { '.css': 'text', '.b64': 'text' }, legalComments: 'none' });
+const r = buildSync({ entryPoints: [aqui('./src/main.ts')], bundle: true, minify: true, format: 'iife', target: 'es2020', write: false, loader: { '.css': 'text', '.b64': 'text', '.svg': 'text' }, legalComments: 'none' });
 const js = r.outputFiles[0].text;
 if (/<\/script/i.test(js)) throw new Error('O script contém "</script".');
 const html = `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">

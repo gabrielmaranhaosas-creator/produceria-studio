@@ -3,7 +3,10 @@
 import { lerArquivos, pessoaDosArquivos, type Pessoa } from './exportacao';
 import { montarRede, reacao, multiverso, radar, emComum, caminho, csvRadar, ZERO, type Rede, type Multiverso, type Reacao, type No } from './rede';
 import estilo from './estilo.css';
-import fonte from './fonte/stencil-700.woff2.b64';
+import saira from './fonte/saira-stencil-500.woff2.b64';
+import inter400 from './fonte/inter-400.woff2.b64';
+import inter500 from './fonte/inter-500.woff2.b64';
+import logo from './logo.svg';
 import { EXEMPLO } from './exemplo-dados';
 
 const esc = (s: unknown) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!);
@@ -12,12 +15,15 @@ const curto = (s = '', n = 60) => (s.length > n ? s.slice(0, n - 1) + '…' : s)
 const pl = (n: number, um: string, v: string) => `${fmt(n)} ${n === 1 ? um : v}`;
 const GUARDA = 'mento.rede.v1';
 
-document.head.insertAdjacentHTML('beforeend', `<style>@font-face{font-family:"Mento Stencil";src:url(data:font/woff2;base64,${fonte.trim()}) format("woff2");font-weight:100 900;font-display:swap}${estilo}</style>`);
+const face = (fam: string, b64: string, w: number) => `@font-face{font-family:"${fam}";src:url(data:font/woff2;base64,${b64.trim()}) format("woff2");font-weight:${w};font-style:normal;font-display:swap}`;
+document.head.insertAdjacentHTML('beforeend', `<style>${face('Saira Stencil', saira, 500)}${face('Inter', inter400, 400)}${face('Inter', inter500, 500)}${estilo}</style>`);
+/** O logo exato da MENTO (vetorizado do arquivo oficial), com o ℗ no canto. */
+const LOGO = logo.replace('<svg ', '<svg role="img" aria-label="MENTO" ');
 const raiz = document.getElementById('app')!;
 raiz.innerHTML = `<div class="mt">
 <header class="hero">
  <p class="eb"><i></i>Estratégia. Mídia. Pessoas. · reação em cadeia</p>
- <h1 class="marca" aria-label="MENTO">MENTO<sup>®</sup></h1>
+ <h1 class="marca">${LOGO}</h1>
  <p class="h2">Conexões que <em>movem marcas.</em></p>
  <p class="lead">Cada pessoa da equipe baixa o arquivo de dados do próprio LinkedIn e entrega aqui. A página junta as redes, põe a MENTO no centro e abre a reação: <b>MENTO → equipe → quem cada um conhece e por onde passou → as empresas onde essas pessoas estão hoje</b>. Cada ponto ganha uma nota de oportunidade e o caminho até a MENTO.</p>
  <p class="priv"><b>Privado por construção.</b> Os arquivos são lidos neste navegador e não são enviados a lugar nenhum. Só o perfil, os cargos e as conexões são lidos; mensagens e o resto do arquivo, nunca.</p>
@@ -100,7 +106,7 @@ function resultado() {
   const NOMES = ['Ponto zero', 'Equipe', 'Quem conhecem e onde passaram', 'Empresas que se abrem', 'Quem mais está nessas empresas'];
   $('#rc').innerHTML = Q!.geracoes.map((col, g) => `<div class="col"><h3 class="ct">${esc(NOMES[g] || g + 'ª volta')}<span>${fmt(col.length)}${Q!.ocultos[g] ? ` de ${fmt(col.length + Q!.ocultos[g])}` : ''}</span></h3>${col.map((x) => {
     const n = no(x.id), pai = x.pais[0];
-    return `<button type="button" class="card t-${n.tipo}" data-ir="${esc(n.id)}"><span class="k">${n.tipo === 'zero' ? 'Ponto zero' : n.tipo === 'equipe' ? 'Equipe' : n.tipo === 'empresa' ? (n.agencia ? 'Agência' : 'Empresa') : n.nivel === 'decide' ? 'Decide' : 'Pessoa'}</span><b>${esc(n.nome)}</b>${n.tipo === 'contato' ? `<span class="m">${esc(curto([n.sub, n.empresa].filter(Boolean).join(' · '), 64))}</span>` : n.tipo === 'empresa' ? `<span class="m">${esc(n.fatos[0] || '')}</span>` : ''}${g > 1 && pai ? `<span class="de">via ${esc(curto(no(pai.id).nome, 26))}${x.pais.length > 1 ? ` e mais ${x.pais.length - 1}` : ''}</span>` : ''}${g > 1 ? `<span class="f">${x.forca}</span>` : ''}</button>`;
+    return `<button type="button" class="card t-${n.tipo}" data-ir="${esc(n.id)}"><span class="k">${n.tipo === 'zero' ? 'Ponto zero' : n.tipo === 'equipe' ? 'Equipe' : n.tipo === 'empresa' ? (n.agencia ? 'Agência' : 'Empresa') : n.nivel === 'decide' ? 'Decide' : 'Pessoa'}</span>${n.tipo === 'zero' ? `<span class="lz">${LOGO}</span>` : `<b>${esc(n.nome)}</b>`}${n.tipo === 'contato' ? `<span class="m">${esc(curto([n.sub, n.empresa].filter(Boolean).join(' · '), 64))}</span>` : n.tipo === 'empresa' ? `<span class="m">${esc(n.fatos[0] || '')}</span>` : ''}${g > 1 && pai ? `<span class="de">via ${esc(curto(no(pai.id).nome, 26))}${x.pais.length > 1 ? ` e mais ${x.pais.length - 1}` : ''}</span>` : ''}${g > 1 ? `<span class="f">${x.forca}</span>` : ''}</button>`;
   }).join('')}</div>`).join('');
   desenharMv(); dossie(); desenharRadar();
 }
@@ -231,6 +237,6 @@ svg().addEventListener('pointermove', (ev) => { if (!arr) return; const B = svg(
 svg().addEventListener('pointerup', () => { arr = null; });
 svg().addEventListener('keydown', (ev) => { const c = (ev.target as Element).closest?.('[data-ir]') as SVGElement | null; if (c && (ev.key === 'Enter' || ev.key === ' ')) { ev.preventDefault(); escolher(c.dataset.ir || ''); } });
 
-const SVG_CSS = `.anel{fill:none;stroke:#2a2a2a;stroke-dasharray:2 6}.anel-t{fill:#777;font:10px sans-serif;letter-spacing:.12em;text-transform:uppercase;text-anchor:middle}.fio{stroke:#2b2b2b;stroke-width:.6}.fio.on{stroke:#0BCF55;stroke-width:2}.p{fill:#777}.p.t-zero,.p.t-equipe{fill:#0BCF55}.p.t-empresa{fill:#fff}.p.ag{fill:none;stroke:#fff}.p.dec{fill:#fff}.p.com{stroke:#0BCF55;stroke-width:1.5}.p.on{fill:#0BCF55}.rot{fill:#fff;font:11px sans-serif;paint-order:stroke;stroke:#000;stroke-width:3px}.rot.t-zero{font:700 22px sans-serif}`;
+const SVG_CSS = `.anel{fill:none;stroke:#2a2a2a;stroke-dasharray:2 6}.anel-t{fill:#777;font:10px sans-serif;letter-spacing:.12em;text-transform:uppercase;text-anchor:middle}.fio{stroke:#2b2b2b;stroke-width:.6}.fio.on{stroke:#0BCF55;stroke-width:2}.p{fill:#777}.p.t-zero,.p.t-equipe{fill:#0BCF55}.p.t-empresa{fill:#fff}.p.ag{fill:none;stroke:#fff}.p.dec{fill:#fff}.p.com{stroke:#0BCF55;stroke-width:1.5}.p.on{fill:#0BCF55}.rot{fill:#fff;font:11px Inter,sans-serif;paint-order:stroke;stroke:#000;stroke-width:3px}.rot.t-zero{font:500 22px 'Saira Stencil',sans-serif}`;
 desenharSlots();
 if (slots.some((s) => s.pessoa)) msg('Os arquivos da última visita estão aqui (você marcou "Lembrar neste navegador").');

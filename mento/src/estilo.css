@@ -1,6 +1,7 @@
-/* MENTO · identidade: preto, branco, verde #0BCF55 (medido no site), títulos em stencil condensado. */
+/* MENTO · identidade: preto, branco, verde #0BCF55 (medido no site); logo vetorizado do arquivo oficial; títulos em
+   Saira Stencil 500 e texto em Inter, as do site da Mento (SIL OFL 1.1, licenças em src/fonte). */
 :root{--bg:#000;--bg2:#0c0c0c;--ink:#fff;--mut:#a3a3a3;--fra:#6b6b6b;--lin:#222;--lin2:#3a3a3a;--acc:#0BCF55;--acc-ink:#000;
-  --fd:"Mento Stencil","Arial Narrow",Arial,sans-serif;--ft:-apple-system,BlinkMacSystemFont,"Helvetica Neue","Segoe UI",Arial,sans-serif;color-scheme:dark}
+  --fd:"Saira Stencil","Arial Narrow",Arial,sans-serif;--ft:Inter,-apple-system,BlinkMacSystemFont,"Helvetica Neue","Segoe UI",Arial,sans-serif;color-scheme:dark}
 *{box-sizing:border-box}
 html,body{margin:0;background:var(--bg);color:var(--ink);font:400 15px/1.55 var(--ft);-webkit-font-smoothing:antialiased}
 button,input{font:inherit;color:inherit}
@@ -15,9 +16,9 @@ h1,h2,h3,p{margin:0}
 .hero{display:flex;flex-direction:column;gap:16px;border-bottom:1px solid var(--lin);padding-bottom:clamp(28px,5vw,56px)}
 .eb{font-size:11px;letter-spacing:.18em;text-transform:uppercase;display:flex;align-items:center;gap:10px}
 .eb i{width:7px;height:7px;border-radius:50%;background:var(--acc)}
-.marca{font:700 clamp(84px,17vw,220px)/.8 var(--fd);letter-spacing:.04em}
-.marca sup{font:400 .13em/1 var(--ft);vertical-align:top;border:2px solid currentColor;border-radius:50%;padding:.2em .34em;margin-left:.2em}
-.h2{font:700 clamp(30px,4.4vw,56px)/1 var(--fd);text-transform:uppercase;letter-spacing:.02em}
+.marca{line-height:0;color:var(--ink)}
+.marca svg{display:block;width:min(100%,680px);height:auto}
+.h2{font:500 clamp(30px,4.4vw,56px)/1 var(--fd);text-transform:uppercase;letter-spacing:.02em}
 .h2 em{font-style:normal;color:var(--acc)}
 .lead{max-width:70ch;color:var(--mut)}
 .lead b{color:var(--ink);font-weight:500}
@@ -25,9 +26,9 @@ h1,h2,h3,p{margin:0}
 .priv b{color:var(--acc);font-weight:500}
 /* passos */
 .passo{display:flex;flex-direction:column;gap:18px}
-.t{font:700 clamp(32px,4vw,48px)/1 var(--fd);text-transform:uppercase;letter-spacing:.02em;display:flex;align-items:baseline;gap:16px}
+.t{font:500 clamp(32px,4vw,48px)/1 var(--fd);text-transform:uppercase;letter-spacing:.02em;display:flex;align-items:baseline;gap:16px}
 .t span{font:400 11px/1 var(--ft);letter-spacing:.16em;color:var(--mut)}
-.st{font:700 22px/1.1 var(--fd);text-transform:uppercase;letter-spacing:.03em;display:flex;flex-wrap:wrap;gap:6px 10px;align-items:baseline}
+.st{font:500 22px/1.1 var(--fd);text-transform:uppercase;letter-spacing:.03em;display:flex;flex-wrap:wrap;gap:6px 10px;align-items:baseline}
 .st b{color:var(--acc);font-weight:700}
 .st .n{font:400 12px/1 var(--ft);color:var(--mut);letter-spacing:0}
 .como{border:1px solid var(--lin);padding:14px 18px;background:var(--bg2)}
@@ -47,7 +48,7 @@ h1,h2,h3,p{margin:0}
 .campo input{background:var(--bg2);border:1px solid var(--lin2);padding:10px 12px;font-size:15px;letter-spacing:0;text-transform:none}
 .campo input:focus{border-color:var(--acc);outline:none}
 .lido{list-style:none;margin:0;padding:0;display:flex;flex-wrap:wrap;gap:8px 24px;color:var(--mut);font-size:13px}
-.lido b{display:block;font:700 34px/1 var(--fd);color:var(--ink)}
+.lido b{display:block;font:500 34px/1 var(--fd);color:var(--ink)}
 /* botões */
 .acoes{display:flex;flex-wrap:wrap;gap:10px 16px;align-items:center}
 .btn{font-weight:500;font-size:14px;background:var(--acc);color:var(--acc-ink);border:1px solid var(--acc);border-radius:999px;padding:13px 22px;min-height:46px;cursor:pointer;display:inline-flex;align-items:center;gap:10px}
@@ -68,7 +69,7 @@ h1,h2,h3,p{margin:0}
 /* números */
 .kpis{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:1px;background:var(--lin);border:1px solid var(--lin)}
 .kpis li{background:var(--bg);padding:18px;display:flex;flex-direction:column;gap:4px}
-.kpis b{font:700 clamp(42px,5vw,64px)/.9 var(--fd);font-variant-numeric:tabular-nums}
+.kpis b{font:500 clamp(42px,5vw,64px)/.9 var(--fd);font-variant-numeric:tabular-nums}
 .kpis li.on b{color:var(--acc)}
 .kpis span{font-size:11px;letter-spacing:.14em;text-transform:uppercase}
 .kpis small{font-size:12px;color:var(--fra)}
@@ -80,7 +81,7 @@ h1,h2,h3,p{margin:0}
 .li button b{font-weight:500}
 .li button:hover b{color:var(--acc)}
 .li button span{font-size:12px;color:var(--mut)}
-.li em{font:700 22px/1 var(--fd);font-style:normal;color:var(--acc)}
+.li em{font:500 22px/1 var(--fd);font-style:normal;color:var(--acc)}
 .chip{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--lin2);border-radius:999px;padding:3px 10px;font-size:12px;background:none;color:var(--ink);white-space:nowrap;cursor:pointer}
 .chip::before{content:'';width:7px;height:7px;border-radius:50%;border:1.5px solid currentColor}
 .chip.t-empresa::before{background:currentColor}
@@ -90,20 +91,20 @@ h1,h2,h3,p{margin:0}
 /* reação */
 .rc{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(230px,1fr);gap:16px;overflow-x:auto;padding-bottom:10px;max-height:760px;overflow-y:auto;align-items:start}
 .col{display:flex;flex-direction:column;gap:8px;min-width:0}
-.ct{font:700 18px/1.1 var(--fd);text-transform:uppercase;letter-spacing:.03em;display:flex;justify-content:space-between;gap:8px;border-bottom:2px solid var(--acc);padding-bottom:8px;position:sticky;top:0;background:var(--bg);z-index:1}
+.ct{font:500 18px/1.1 var(--fd);text-transform:uppercase;letter-spacing:.03em;display:flex;justify-content:space-between;gap:8px;border-bottom:2px solid var(--acc);padding-bottom:8px;position:sticky;top:0;background:var(--bg);z-index:1}
 .ct span{font:400 12px/1 var(--ft);color:var(--mut);align-self:center}
 .card{position:relative;display:flex;flex-direction:column;gap:3px;border:1px solid var(--lin);padding:10px 46px 10px 12px;background:var(--bg2);text-align:left;cursor:pointer;color:var(--ink)}
 .card:hover{border-color:var(--lin2)}
 .card b{font-weight:500;line-height:1.25;overflow-wrap:anywhere}
 .card.t-zero{background:var(--acc);color:var(--acc-ink);border-color:var(--acc)}
-.card.t-zero b{font:700 32px/1 var(--fd);letter-spacing:.04em}
+.card.t-zero b{font:500 32px/1 var(--fd);letter-spacing:.04em}
 .card.t-zero .k{color:var(--acc-ink)}
 .card.t-equipe{border-color:var(--acc)}
 .card.t-empresa{border-left:3px solid var(--ink)}
 .k{font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--mut)}
 .m{font-size:12px;color:var(--mut)}
 .de{font-size:11px;color:var(--fra)}
-.f{font:700 24px/1 var(--fd);color:var(--acc);font-variant-numeric:tabular-nums}
+.f{font:500 24px/1 var(--fd);color:var(--acc);font-variant-numeric:tabular-nums}
 .card .f{position:absolute;top:8px;right:10px}
 /* multiverso */
 .mv{display:grid;grid-template-columns:minmax(0,1fr) 340px;border:1px solid var(--lin);min-height:640px}
@@ -128,17 +129,17 @@ h1,h2,h3,p{margin:0}
 .p.on{fill:var(--acc)}
 .p.sel{stroke:var(--ink);stroke-width:3}
 .rot{fill:var(--ink);font:500 11px var(--ft);paint-order:stroke;stroke:var(--bg);stroke-width:3.5px;pointer-events:none}
-.rot.t-zero{font:700 26px var(--fd);letter-spacing:.04em}
+.rot.t-zero{font:500 26px var(--fd);letter-spacing:.04em}
 .rot.t-equipe{fill:var(--acc);font-size:13px}
 .rot.on{fill:var(--acc);font-weight:700}
 .dossie{border-left:1px solid var(--lin);padding:20px;overflow:auto;max-height:760px;display:flex;flex-direction:column;gap:10px}
-.dossie h3{font:700 28px/1.05 var(--fd);text-transform:uppercase;overflow-wrap:anywhere}
+.dossie h3{font:500 28px/1.05 var(--fd);text-transform:uppercase;overflow-wrap:anywhere}
 .dossie .sub{font-size:13px;color:var(--mut)}
 .dossie .sub b{color:var(--ink);font-weight:500}
 .nota-b{display:flex;align-items:center;gap:10px}
 .nota-b span{flex:1;height:6px;background:var(--lin);position:relative}
 .nota-b i{position:absolute;inset:0 auto 0 0;background:var(--acc)}
-.nota-b b{font:700 28px/1 var(--fd)}
+.nota-b b{font:500 28px/1 var(--fd)}
 .fatos{margin:0;padding-left:18px;font-size:13px}
 .cam{display:flex;flex-wrap:wrap;gap:6px;align-items:center;font-size:12px}
 .cam em{font-style:normal;color:var(--fra)}
@@ -154,3 +155,4 @@ h1,h2,h3,p{margin:0}
 .rod{border-top:1px solid var(--lin);padding-top:20px;font-size:12px;color:var(--fra)}
 @media (max-width:900px){.mv{grid-template-columns:1fr}.dossie{border-left:0;border-top:1px solid var(--lin);max-height:none}.palco svg{min-height:420px}.mv{min-height:0}}
 @media (max-width:560px){.radar>li{grid-template-columns:42px minmax(0,1fr)}.ferr input{min-width:0;flex:1 1 100%}.priv{border-radius:12px}}
+.card .lz svg{display:block;width:130px;height:auto;margin-top:6px}
