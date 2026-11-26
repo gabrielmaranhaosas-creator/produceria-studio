@@ -4,22 +4,13 @@
 // pelo texto do banco e confere o hash (ver `completar` em src/oficina/kit-plugins.ts). Os manifest.json ficam na
 // página porque o catálogo lê versão e nome deles ao abrir. `npm run kit` gera os documentos para gravar no banco.
 import { readFileSync, readdirSync, statSync, mkdirSync, writeFileSync, rmSync } from 'node:fs';
-import { transformSync } from 'esbuild';
 import { createHash } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import { join, relative, sep } from 'node:path';
 
 export const RAIZ = fileURLToPath(new URL('..', import.meta.url));
 export const MARCA = '\u0000kit:';
-const PASTAS = ['plugins/photoshop', 'plugins/after-effects', 'src/oficina/bridge', 'src/lib/fontes'];
-// Peças que só vão para arquivos baixados (o visor do multiverso), importadas com `?mini`: no banco vão minificadas,
-// com as mesmas opções de scripts/texto-mini.mjs, e o hash é o do texto minificado.
-const MINI = ['src/lib/mapa-visor.js', 'src/lib/mapa-visor.css'];
-export const minificar = (rel, texto) => {
-  const loader = rel.endsWith('.css') ? 'css' : 'js';
-  return transformSync(texto, { loader, minify: true, legalComments: 'none', ...(loader === 'js' ? { target: 'es2017' } : {}) }).code.trim();
-};
-const marca = (rel, texto) => `export default ${JSON.stringify(MARCA + rel + ':' + hash(texto))}`;
+const PASTAS = ['plugins/photoshop', 'plugins/after-effects', 'src/oficina/bridge'];
 
 export const hash = (texto) => createHash('sha1').update(texto).digest('hex').slice(0, 12);
 export const idDoc = (caminho) => caminho.replace(/\//g, '~');
@@ -32,14 +23,10 @@ export default function kitFora() {
     name: 'kit-fora',
     enforce: 'pre',
     load(id) {
-      if (id.startsWith('\0mini:')) { // id virtual de scripts/texto-mini.mjs
-        const rel = relativo(id.slice(6, -5));
-        return MINI.includes(rel) ? marca(rel, minificar(rel, readFileSync(join(RAIZ, rel), 'utf8'))) : null;
-      }
       if (!id.endsWith('?raw')) return null;
       const rel = relativo(id.slice(0, -4));
       if (!doKit(rel) || fica(rel)) return null;
-      return marca(rel, readFileSync(join(RAIZ, rel), 'utf8'));
+      return `export default ${JSON.stringify(MARCA + rel + ':' + hash(readFileSync(join(RAIZ, rel), 'utf8')))}`;
     },
   };
 }
@@ -52,9 +39,9 @@ function arquivos(pasta) {
 export function documentosDoBanco(saida = join(RAIZ, 'dist/kit-banco')) {
   rmSync(saida, { recursive: true, force: true });
   mkdirSync(saida, { recursive: true });
-  const docs = [...PASTAS.flatMap((p) => arquivos(join(RAIZ, p))).map(relativo).filter((r) => !fica(r) && !/\.txt$/.test(r)), ...MINI].sort();
+  const docs = PASTAS.flatMap((p) => arquivos(join(RAIZ, p))).map(relativo).filter((r) => !fica(r)).sort();
   for (const caminho of docs) {
-    const bruto = readFileSync(join(RAIZ, caminho), 'utf8'), texto = MINI.includes(caminho) ? minificar(caminho, bruto) : bruto;
+    const texto = readFileSync(join(RAIZ, caminho), 'utf8');
     writeFileSync(join(saida, idDoc(caminho) + '.json'), JSON.stringify({ caminho, hash: hash(texto), texto }));
   }
   return docs;

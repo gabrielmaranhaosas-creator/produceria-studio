@@ -122,8 +122,7 @@ ABC Whyte e PTYPE vão embutidas.
 
 Limite de tamanho (17/11/2026): a revisão de compartilhamento recusa página grande ("grande ou complexa demais"): 826 e
 885 KB passaram, 1.055 e 1.218 KB não. Por isso o Studio do claude.ai sai de um build próprio (`vite build --mode
-enxuto`): sem o texto dos arquivos dos plugins nem do visor do multiverso e da fonte da MENTO (ficam no banco, ver
-`scripts/kit-fora.mjs`; o download do mapa os busca com `htmlDoMapaPronto`), com a tabela de serviços em
+enxuto`): sem o texto dos arquivos dos plugins (ficam no banco, ver `scripts/kit-fora.mjs`), com a tabela de serviços em
 colunas (`scripts/tabela-compacta.mjs`) e minificado pelo esbuild. `scripts/montar.mjs` para o build acima de 880 KB (885 KB passou na revisão em 17/11).
 A cópia de consulta e o legado usam o build completo.
 

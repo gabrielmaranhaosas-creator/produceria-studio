@@ -10,8 +10,7 @@ const commit = (() => { try { return execSync('git rev-parse --short HEAD').toSt
 // dist/enxuto, para o Studio no claude.ai), sem os arquivos dos plugins, que ficam no banco (scripts/kit-fora.mjs).
 export default defineConfig(({ mode }) => ({
   define: { __VERSAO__: JSON.stringify(`${process.env.npm_package_version}+${commit}`) },
-  // o kit-fora vem antes do texto-mini: no enxuto, o visor do multiverso (`?mini`) também sai da página para o banco
-  plugins: [...(mode === 'enxuto' ? [kitFora()] : []), textoMini(), tabelaCompacta()],
+  plugins: [textoMini(), tabelaCompacta(), ...(mode === 'enxuto' ? [kitFora()] : [])],
   build: {
     outDir: mode === 'enxuto' ? 'dist/enxuto' : 'dist/modulos',
     emptyOutDir: true,

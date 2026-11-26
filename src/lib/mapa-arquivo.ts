@@ -3,9 +3,6 @@
  * busca, dossiê, radar, ramificações). As fontes da casa vão embutidas quando a página do Studio as tem.
  */
 import type { MapaArquivo } from './investigacao';
-import { PRODUCERIA, fontesDaCasa, type Casa } from './casa';
-import { completar } from './kit-banco';
-import stencil from './fontes/mento-stencil-700.woff2.b64?raw';
 import visor from './mapa-visor.js?mini';
 import estilo from './mapa-visor.css?mini';
 
@@ -20,39 +17,22 @@ export function fontesDaPagina(doc: Document = document): string {
   return out.join('\n');
 }
 
-/** O visor, o estilo e a fonte stencil do arquivo. Na página publicada vêm do banco (scripts/kit-fora.mjs). */
-export interface Pecas { visor: string; estilo: string; stencil: string }
-export async function pecasDoMapa(): Promise<Pecas> {
-  const [[, v], [, e], [, f]] = await completar([['visor', visor], ['estilo', estilo], ['stencil', stencil]]);
-  return { visor: v, estilo: e, stencil: f };
-}
-/** Só a fonte da casa, para a tela do Studio (sem a fonte, os títulos caem na condensada do sistema). */
-export async function fonteDaCasa(casa: Casa): Promise<string> {
-  if (casa.id !== 'mento') return '';
-  try { return fontesDaCasa(casa, (await completar([['stencil', stencil]]))[0][1]); } catch { return ''; }
-}
-/** O arquivo pronto para baixar, com as peças trazidas do banco quando a página não as tem. */
-export async function htmlDoMapaPronto(d: MapaArquivo, fontes = '', casa: Casa = PRODUCERIA): Promise<string> {
-  return htmlDoMapa(d, fontes, casa, await pecasDoMapa());
-}
-
-export function htmlDoMapa(d: MapaArquivo, fontes = '', casa: Casa = PRODUCERIA, P: Pecas = { visor, estilo, stencil }): string {
+export function htmlDoMapa(d: MapaArquivo, fontes = ''): string {
   const titulo = `Multiverso · ${d.sementeNome}`;
-  const dados = { ...d, casa: { id: casa.id, nome: casa.nome, nomeLongo: casa.nomeLongo, problema: casa.problema, contrata: casa.contrata, icp: casa.icp } };
   return `<!doctype html>
-<html lang="pt-BR" data-tema="escuro" data-casa="${esc(casa.id)}">
+<html lang="pt-BR" data-tema="escuro">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>${esc(titulo)} · ${esc(casa.nome)}</title>
-<meta name="description" content="Mapa da prospecção da ${esc(casa.nome)}: ${d.alcance} pontos alcançados a partir de ${esc(d.sementeNome)}, em ${d.camadas.length - 1} ramificações.">
-<style>${fontes}${fontesDaCasa(casa, P.stencil)}
-${P.estilo}</style>
+<title>${esc(titulo)} · PRODUCERIA</title>
+<meta name="description" content="Mapa da prospecção da PRODUCERIA: ${d.alcance} pontos alcançados a partir de ${esc(d.sementeNome)}, em ${d.camadas.length - 1} ramificações.">
+<style>${fontes}
+${estilo}</style>
 </head>
 <body>
 <div class="app">
  <header class="topo">
-  <div class="marca"><span class="eyebrow"><i></i>${esc(casa.assinatura)}</span><h1>${esc(titulo)}</h1></div>
+  <div class="marca"><span class="eyebrow"><i></i>PRODUCERIA · Investigação · reação em cadeia</span><h1>${esc(titulo)}</h1></div>
   <ul class="numeros" id="num" aria-label="Tamanho do multiverso"></ul>
  </header>
  <main class="palco" aria-label="Mapa radial: o ponto de partida no centro, uma volta por ramificação">
@@ -77,8 +57,8 @@ ${P.estilo}</style>
  </aside>
 </div>
 <p class="sr" id="vivo" aria-live="polite"></p>
-<script type="application/json" id="dados">${jsonSeguro(dados)}</script>
-<script>${P.visor.replace(/<\/script/gi, '<\\/script')}</script>
+<script type="application/json" id="dados">${jsonSeguro(d)}</script>
+<script>${visor.replace(/<\/script/gi, '<\\/script')}</script>
 </body>
 </html>`;
 }

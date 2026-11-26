@@ -27,10 +27,7 @@ Contratos públicos e mercado ficam no banco em blocos (`base_vencedores`, `base
 campos pequenos e a contagem de cada lista, e documentos `<lista>-NN` com até ~260 itens), lidos por `lerBase` documento a
 documento. A cópia de consulta continua servindo `vencedores.json` e `mercado.json` de `consulta/export/`. Os arquivos dos
 plugins da casa e do Bridge ficam na coleção `kit_plugins` (um documento por arquivo, `{caminho, hash, texto}`, gerados
-por `npm run build` em `dist/kit-banco/`). Desde 26/11/2026 a mesma coleção guarda as peças que só vão para arquivos
-baixados: o visor do multiverso (`src/lib/mapa-visor.js` e `.css`, minificados) e a fonte stencil da MENTO
-(`src/lib/fontes/mento-stencil-700.woff2.b64`). Os perfis colados em Reação · Mento ficam só no navegador
-(`localStorage`, chave `studio.mento.perfis`), nunca no banco. Os scripts das rotinas (`jobs/*`) ficam no artefato só de scripts https://claude.ai/artifact/1k7uacyGKxSJ4D6ujmQDBp.
+por `npm run build` em `dist/kit-banco/`). Os scripts das rotinas (`jobs/*`) ficam no artefato só de scripts https://claude.ai/artifact/1k7uacyGKxSJ4D6ujmQDBp.
 
 ## Backup
 

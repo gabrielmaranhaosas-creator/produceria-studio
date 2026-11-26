@@ -6,16 +6,12 @@
  */
 import { chave, mesmaEmpresa } from './nomes';
 import { nivelDe, type Nivel } from './grafo';
-import { PRODUCERIA, type Casa } from './casa';
-import type { Experiencia } from './linkedin';
 
 export interface PessoaInv {
   id: string; nome: string; cargo?: string; organizacao?: string; nivel?: Nivel; area?: string;
   conexao?: string; trajetoria?: string; linkedin?: string; fonte?: string; data?: string; atualizadoEm?: string;
   /** "Marca · campanha" em que a pessoa trabalhou (a ligação com a marca é comprovada pela fonte da pessoa). */
   campanha?: string;
-  /** Passagens lidas do LinkedIn (cargo, casa e período), quando a pessoa entrou por um perfil colado. */
-  experiencias?: Experiencia[];
 }
 /** Ligação registrada à mão no Studio (coleção mapa_ligacoes), sempre com fonte. Ponte: de = ORIGEM, quem = id da equipe. */
 export type TipoLigacao = 'trabalha' | 'passou' | 'atende' | 'campanha' | 'grupo' | 'ponte';
@@ -40,9 +36,9 @@ const PONTE = /ponte produceria/;
  * Quem da equipe um texto cita. Nome completo ou nome e sobrenome valem em qualquer texto; só o primeiro nome vale
  * depois de "Ponte PRODUCERIA" e quando nenhum outro da equipe tem o mesmo primeiro nome.
  */
-export function citados(texto: unknown, equipe: PessoaInv[], ponte: RegExp = PONTE): string[] {
+export function citados(texto: unknown, equipe: PessoaInv[]): string[] {
   const t = norm(texto); if (!t) return [];
-  const iPonte = t.search(ponte), resto = iPonte >= 0 ? t.slice(iPonte) : '';
+  const iPonte = t.search(PONTE), resto = iPonte >= 0 ? t.slice(iPonte) : '';
   const primeiro = (p: PessoaInv) => norm(p.nome).split(/\s+/)[0];
   const r: string[] = [];
   for (const p of equipe) {
@@ -122,13 +118,11 @@ export type TipoNo = 'origem' | 'empresa' | 'agencia' | 'pessoa';
 export interface NoU {
   id: string; tipo: TipoNo; nome: string; sub: string; nota: number; fatos: string[];
   extinta?: boolean; nivel?: Nivel; org?: string; fontes: string[]; recente?: string; alvo?: boolean;
-  /** Pessoa da casa (só aparece no mapa quando a casa pede a equipe à mostra): é ponte, não possibilidade de negócio. */
-  equipe?: boolean;
   /** Dia (AAAA-MM-DD) em que a coleta diária gravou ou atualizou a pessoa. */
   chegou?: string;
 }
 export interface Aresta { a: string; b: string; rotulo: string; data?: string; fonte?: string }
-export interface Universo { nos: Map<string, NoU>; adj: Map<string, Aresta[]>; /** nome da casa do ponto zero */ casa?: string }
+export interface Universo { nos: Map<string, NoU>; adj: Map<string, Aresta[]> }
 export interface OrgGrafo { k: string; nome: string; ligacoes: { empresa: string; agencia: string; disciplina?: string; tipo?: string; data?: string; fonte?: string }[]; fontes?: string[]; site?: string; linkedin?: string; grupo?: string; perfil?: string; setor?: string; ranking?: number | null; radar?: { criterios?: string[]; sinais?: { texto: string; data?: string; fonte?: string }[]; acao?: string } | null; nota?: string }
 export const ORIGEM = 'origem';
 const PESOS: Record<string, number> = { imagem: 20, lancamentos: 20, varejo: 20, multicanal: 15, porta: 15, verba: 10 };
@@ -139,15 +133,7 @@ const dm = (d?: string) => (d && /^\d{4}-\d{2}-\d{2}/.test(d) ? `${d.slice(8, 10
 
 export function montarUniverso(d: {
   empresas: OrgGrafo[]; agencias: OrgGrafo[]; pessoas: PessoaInv[]; orgsInv: OrgInv[]; alvos?: { nome: string }[]; hoje?: string; ligacoes?: LigacaoInv[];
-  /** A casa do ponto zero (padrão: PRODUCERIA). */
-  casa?: Casa;
-  /** Quem conta como equipe da casa além de quem declara trabalhar nela (ex.: os perfis colados no teste da Mento). */
-  equipeIds?: string[];
-  /** A equipe aparece no mapa (1ª ramificação), e as casas por onde cada um passou saem dela, não do ponto zero. */
-  equipeNoMapa?: boolean;
 }): Universo {
-  const casa = d.casa || PRODUCERIA, CASA = casa.nome, ponteRe = casa.ponte, CONTRATA = casa.contrata.charAt(0).toUpperCase() + casa.contrata.slice(1);
-  const ehDaCasa = (p: PessoaInv) => (d.equipeIds || []).includes(p.id) || casa.equipe.test(String(p.organizacao || ''));
   const hoje = d.hoje || new Date().toISOString().slice(0, 10), d120 = antes(hoje, 120);
   const nos = new Map<string, NoU>(), adj = new Map<string, Aresta[]>();
   const add = (n: NoU) => { if (!nos.has(n.id)) { nos.set(n.id, n); adj.set(n.id, []); } return nos.get(n.id)!; };
@@ -159,10 +145,10 @@ export function montarUniverso(d: {
   const ehAlvo = (nome: string) => (d.alvos || []).some((x) => mesmaEmpresa(x.nome, nome));
   const inv = (nome: string) => d.orgsInv.find((o) => chave(base(o.nome)) === chave(base(nome))) || d.orgsInv.find((o) => mesmaEmpresa(base(o.nome), base(nome)));
   const idOrg = (nome: string) => 'o:' + chave(base(nome));
-  add({ id: ORIGEM, tipo: 'origem', nome: CASA, sub: 'ponto zero', nota: 0, fatos: [], fontes: [] });
+  add({ id: ORIGEM, tipo: 'origem', nome: 'PRODUCERIA', sub: 'ponto zero', nota: 0, fatos: [], fontes: [] });
   // organizações: agências primeiro (quem aparece nas duas listas fica como agência)
   for (const [lista, tipo] of [[d.agencias, 'agencia'], [d.empresas, 'empresa']] as const) for (const o of lista) {
-    if (!chave(o.nome) || casa.equipe.test(o.nome)) continue;
+    if (!chave(o.nome) || /produceria/i.test(o.nome)) continue;
     const x = inv(o.nome), id = idOrg(o.nome); if (nos.has(id)) continue;
     add({ id, tipo, nome: o.nome, sub: [tipo === 'agencia' ? 'Agência' : (o.setor || 'Anunciante'), o.grupo].filter(Boolean).join(' · '), nota: 0, fatos: [], extinta: x?.perfil === 'extinta' || o.perfil === 'extinta', fontes: [...(o.fontes || []), ...(x?.fontes || [])].filter(Boolean), alvo: ehAlvo(o.nome) });
   }
@@ -172,7 +158,7 @@ export function montarUniverso(d: {
   // extinta → herdeira
   for (const o of d.orgsInv) if (o.sucessora) { const h = d.orgsInv.find((y) => y.id === o.sucessora); if (h) ligar(idOrg(o.nome), idOrg(h.nome), 'virou'); }
   // pessoas (a equipe fica dentro do ponto zero)
-  const equipe = d.pessoas.filter(ehDaCasa), outros = d.pessoas.filter((p) => !ehDaCasa(p) && p.nome);
+  const equipe = d.pessoas.filter(ehEquipe), outros = d.pessoas.filter((p) => !ehEquipe(p) && p.nome);
   const orgs = [...nos.values()].filter((n) => n.tipo === 'agencia' || n.tipo === 'empresa');
   const achaOrg = (nome?: string) => { const b = base(nome); if (!chave(b)) return undefined; return nos.get(idOrg(b)) || orgs.find((n) => mesmaEmpresa(base(n.nome), b)); };
   for (const p of outros) {
@@ -181,20 +167,7 @@ export function montarUniverso(d: {
     if (o) ligar('p:' + p.id, o.id, p.cargo || 'trabalha em', p.data, p.fonte);
     else if (chave(base(p.organizacao))) { const id = idOrg(p.organizacao!); add({ id, tipo: 'empresa', nome: base(p.organizacao), sub: 'Organização', nota: 0, fatos: [], fontes: [], alvo: ehAlvo(p.organizacao!) }); orgs.push(nos.get(id)!); ligar('p:' + p.id, id, p.cargo || 'trabalha em', p.data, p.fonte); }
   }
-  // a equipe à mostra: cada pessoa da casa vira ponto da 1ª ramificação, e as casas por onde passou (lidas do LinkedIn)
-  // entram no mapa ligadas a ela, mesmo as que o Big Data ainda não conhece
-  const naMesa = !!d.equipeNoMapa, daEquipe = (id: string) => (naMesa ? 'p:' + id : ORIGEM);
-  if (naMesa) for (const m of equipe) {
-    add({ id: 'p:' + m.id, tipo: 'pessoa', nome: m.nome, sub: m.cargo || '', nota: 0, fatos: [`Equipe da ${CASA}`], org: CASA, fontes: [m.linkedin, m.fonte].filter(Boolean) as string[], equipe: true });
-    ligar(ORIGEM, 'p:' + m.id, 'equipe da ' + CASA);
-    for (const e of m.experiencias || []) {
-      if (!chave(base(e.org)) || casa.equipe.test(e.org)) continue;
-      let o = achaOrg(e.org);
-      if (!o) { const id = idOrg(e.org), ag = AGENCIA.test(e.org); o = add({ id, tipo: ag ? 'agencia' : 'empresa', nome: base(e.org), sub: ag ? 'Agência' : 'Organização', nota: 0, fatos: [], fontes: [], alvo: ehAlvo(e.org) }); orgs.push(o); }
-      ligar('p:' + m.id, o.id, (e.atual ? '' : 'passou por: ') + (e.cargo || (e.atual ? 'trabalha em' : 'passagem')) + (e.periodo ? ` (${e.periodo})` : ''), undefined, m.linkedin);
-    }
-  }
-  // por onde a pessoa passou (trajetória) e pontes da casa
+  // por onde a pessoa passou (trajetória) e pontes da PRODUCERIA
   const reNome = (n: string) => new RegExp(`(^|[^a-z])${norm(base(n)).replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}([^a-z]|$)`);
   // a conta que a pessoa atende, quando o cargo diz (ex.: "Gerente de Projetos - Natura & Avon")
   for (const p of outros) if (p.cargo) {
@@ -217,34 +190,33 @@ export function montarUniverso(d: {
   // ligações registradas no Studio, sempre com fonte
   const ROT_LIG = Object.fromEntries(TIPOS_LIGACAO) as Record<TipoLigacao, string>;
   for (const l of d.ligacoes || []) {
-    if (l.tipo === 'ponte') { const m = equipe.find((x) => x.id === l.quem); ligar(m ? daEquipe(m.id) : ORIGEM, l.para, 'ponte: ' + (m?.nome.split(' ')[0] || CASA) + ' (registrada)', l.criadoEm?.slice(0, 10), l.fonte); }
+    if (l.tipo === 'ponte') { const m = equipe.find((x) => x.id === l.quem); ligar(ORIGEM, l.para, 'ponte: ' + (m?.nome.split(' ')[0] || 'PRODUCERIA') + ' (registrada)', l.criadoEm?.slice(0, 10), l.fonte); }
     else ligar(l.de, l.para, ROT_LIG[l.tipo] || 'ligação registrada', l.criadoEm?.slice(0, 10), l.fonte);
   }
   const primeiro = (ids: string[]) => ids.map((i) => equipe.find((m) => m.id === i)?.nome.split(' ')[0]).filter(Boolean).join(', ');
   for (const o of orgs) {
-    const x = inv(o.nome), ids = new Set(citados(x?.nota, equipe, ponteRe));
+    const x = inv(o.nome), ids = new Set(citados(x?.nota, equipe));
     for (const m of equipe) if (m.trajetoria && norm(base(o.nome)).length >= 3 && reNome(o.nome).test(norm(m.trajetoria))) ids.add(m.id);
-    if (ids.size) { if (naMesa) for (const id of ids) ligar('p:' + id, o.id, 'passou por'); else ligar(ORIGEM, o.id, 'ponte: ' + primeiro([...ids])); }
+    if (ids.size) ligar(ORIGEM, o.id, 'ponte: ' + primeiro([...ids]));
   }
   // a ponte de um contato abre a casa onde ele trabalha (a pessoa vem na ramificação seguinte, com a casa)
   const pontePessoa = new Set<string>();
-  for (const p of outros) if (ponteRe.test(norm(p.conexao))) {
+  for (const p of outros) if (PONTE.test(norm(p.conexao))) {
     pontePessoa.add('p:' + p.id);
-    const ids = citados(p.conexao, equipe, ponteRe), quem = ids.length ? primeiro(ids) : CASA;
-    const de = naMesa && ids.length ? 'p:' + ids[0] : ORIGEM;
+    const ids = citados(p.conexao, equipe), quem = ids.length ? primeiro(ids) : 'PRODUCERIA';
     const o = (adj.get('p:' + p.id) || []).find((a) => a.rotulo !== 'passou por' && nos.get(a.b)?.tipo !== 'pessoa');
-    if (o) { if (!adj.get(de)!.some((a) => a.b === o.b)) ligar(de, o.b, `ponte: ${quem} (via ${p.nome.split(' ')[0]})`); }
-    else ligar(de, 'p:' + p.id, 'ponte: ' + quem);
+    if (o) { if (!adj.get(ORIGEM)!.some((a) => a.b === o.b)) ligar(ORIGEM, o.b, `ponte: ${quem} (via ${p.nome.split(' ')[0]})`); }
+    else ligar(ORIGEM, 'p:' + p.id, 'ponte: ' + quem);
   }
   // nota de cada ponto como possibilidade de negócio, com os fatos que a explicam
   const porNome = new Map([...d.agencias, ...d.empresas].map((o) => [idOrg(o.nome), o]));
   for (const n of nos.values()) {
-    if (n.tipo === 'origem' || n.equipe) continue;
+    if (n.tipo === 'origem') continue;
     const viz = adj.get(n.id)!, F: string[] = []; let s = 10;
     if (n.tipo === 'pessoa') {
       s = n.nivel === 'contrata' ? 50 : n.nivel === 'aprova' ? 35 : 20;
-      F.push(n.nivel === 'contrata' ? CONTRATA : n.nivel === 'aprova' ? 'Aprova fornecedor' : 'Alta liderança');
-      if (pontePessoa.has(n.id)) { s += 20; F.push(`Tem ponte com a ${CASA}`); }
+      F.push(n.nivel === 'contrata' ? 'Contrata produção' : n.nivel === 'aprova' ? 'Aprova fornecedor' : 'Alta liderança');
+      if (pontePessoa.has(n.id)) { s += 20; F.push('Tem ponte com a PRODUCERIA'); }
       const org = viz.find((a) => a.rotulo !== 'passou por' && nos.get(a.b)?.tipo !== 'pessoa' && a.b !== ORIGEM);
       const on = org && nos.get(org.b); if (on?.extinta) { s -= 25; F.push('Organização extinta: procurar onde está hoje'); }
     } else if (n.extinta) {
@@ -263,15 +235,13 @@ export function montarUniverso(d: {
         if (o?.perfil && /independente/i.test(o.perfil)) { s += 10; F.push('Independente: escolhe o fornecedor'); }
       }
       const portas = viz.filter((a) => nos.get(a.b)?.nivel === 'contrata').length;
-      if (portas) { s += Math.min(15, portas * 5); F.push(`${portas} pessoa(s) que ${casa.contrata.replace(/^contrata/, 'contratam')}`); }
-      if (viz.some((a) => a.b === ORIGEM || nos.get(a.b)?.equipe)) { s += 10; F.push(`Já tem ponte com a ${CASA}`); }
+      if (portas) { s += Math.min(15, portas * 5); F.push(`${portas} pessoa(s) que contratam produção`); }
+      if (viz.some((a) => a.b === ORIGEM)) { s += 10; F.push('Já tem ponte com a PRODUCERIA'); }
     }
     n.nota = Math.max(0, Math.min(100, s)); n.fatos = F;
   }
-  return { nos, adj, casa: CASA };
+  return { nos, adj };
 }
-/** Nome que denuncia agência (para casas que só aparecem na trajetória de alguém da equipe). */
-const AGENCIA = /\b(ag[eê]ncia|publicidade|propaganda|comunica[cç][aã]o|creative|criativ[ao]|ddb|ogilvy|publicis|mccann|wpp|havas|leo burnett|fcb|vml|wunderman|dentsu|grey|bbdo|tbwa|lew.?lara|almap|africa|talent|nbs|artplan|propeg|binder|gut|jwt|y&r|isobar|r\/ga|wieden|soko|mutato|cappuccino|david)\b/i;
 const dia = (s?: string) => (s && /^\d{4}-\d{2}-\d{2}/.test(s) ? s.slice(0, 10) : '');
 const curto2 = (s: string, n = 90) => (s.length > n ? s.slice(0, n - 1) + '…' : s);
 
@@ -317,7 +287,7 @@ export function caminho(R: Reacao, id: string): { id: string; rotulo: string }[]
 
 /** Possibilidades de negócio da reação, da mais forte para a mais fraca (sem a semente e sem as extintas). */
 export function leads(U: Universo, R: Reacao): (Ramo & { no: NoU })[] {
-  return R.geracoes.slice(1).flat().map((r) => ({ ...r, no: U.nos.get(r.id)! })).filter((x) => !x.no.extinta && !x.no.equipe).sort((a, b) => b.forca - a.forca);
+  return R.geracoes.slice(1).flat().map((r) => ({ ...r, no: U.nos.get(r.id)! })).filter((x) => !x.no.extinta).sort((a, b) => b.forca - a.forca);
 }
 
 /** Busca de pontos do universo pelo nome (para escolher o ponto de partida). */
@@ -428,7 +398,7 @@ function missoesDe(U: Universo, n: NoU, perto: string): Missao[] {
   if (n.tipo === 'pessoa') {
     if (!viz.some((a) => a.rotulo === 'passou por')) out.push({ tipo: 'trajetoria', alvo: n.id, texto: `Ler por onde ${n.nome} passou: uma casa antiga que já está ${perto} liga tudo`, link: linkedinDe(n) });
   } else if (!n.extinta) {
-    out.push({ tipo: 'equipe', alvo: n.id, texto: `Perguntar à equipe quem conhece alguém em ${n.nome}: vira ponte direta com a ${U.casa || 'PRODUCERIA'}` });
+    out.push({ tipo: 'equipe', alvo: n.id, texto: `Perguntar à equipe quem conhece alguém em ${n.nome}: vira ponte direta com a PRODUCERIA` });
     if (n.tipo === 'empresa' && !viz.some((a) => U.nos.get(a.b)?.tipo === 'agencia')) out.push({ tipo: 'agencia', alvo: n.id, texto: `Descobrir a agência de ${n.nome} (notícia, Cenp ou ficha técnica de campanha)` });
   }
   return out;
@@ -486,7 +456,7 @@ export function ordenarReacao(R: Reacao): Ramo[][] {
 export interface MapaArquivo {
   geradoEm: string; semente: string; sementeNome: string; total: number; alcance: number; fora: number;
   camadas: { ger: number; n: number; empresas: number; agencias: number; pessoas: number; abertos: number }[];
-  nos: { id: string; t: TipoNo; n: string; s: string; o?: string; nv?: Nivel; x?: 1; nota: number; g: number; p?: string; r?: string; f?: number; fa: string[]; fo: string[]; novo?: 1; alvo?: 1; eq?: 1 }[];
+  nos: { id: string; t: TipoNo; n: string; s: string; o?: string; nv?: Nivel; x?: 1; nota: number; g: number; p?: string; r?: string; f?: number; fa: string[]; fo: string[]; novo?: 1; alvo?: 1 }[];
   extras: [string, string, string][];
 }
 export function dadosDoArquivo(U: Universo, R: Reacao, M: Multiverso, o: { geradoEm: string; novos?: Set<string> }): MapaArquivo {
@@ -497,7 +467,7 @@ export function dadosDoArquivo(U: Universo, R: Reacao, M: Multiverso, o: { gerad
     const n = U.nos.get(id)!, p = M.pai.get(id);
     nos.push({ id, t: n.tipo, n: n.nome, s: n.sub, ...(n.org && n.tipo === 'pessoa' ? { o: n.org } : {}), ...(n.nivel && n.tipo === 'pessoa' ? { nv: n.nivel } : {}), ...(n.extinta ? { x: 1 as const } : {}),
       nota: n.nota, g: c.ger, ...(p ? { p: p.id, r: p.rotulo } : {}), ...(forca.has(id) ? { f: forca.get(id) } : {}), fa: n.fatos.slice(0, 4), fo: [...new Set(n.fontes)].filter((u) => /^https?:/.test(u)).slice(0, 3),
-      ...(o.novos?.has(id) ? { novo: 1 as const } : {}), ...(n.alvo ? { alvo: 1 as const } : {}), ...(n.equipe ? { eq: 1 as const } : {}) });
+      ...(o.novos?.has(id) ? { novo: 1 as const } : {}), ...(n.alvo ? { alvo: 1 as const } : {}) });
   }
   for (const id of M.foraIds) {
     const n = U.nos.get(id)!; ger.set(id, -1);

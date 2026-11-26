@@ -13,8 +13,7 @@
   var curto = function (s, n) { s = String(s || ''); return s.length > n ? s.slice(0, n - 1) + '…' : s; };
   var GER = function (g) { return g < 0 ? 'Fora de alcance' : g ? g + 'ª ramificação' : 'Ponto de partida'; };
   var TIPO = { origem: 'Ponto zero', empresa: 'Anunciante', agencia: 'Agência', pessoa: 'Pessoa' };
-  var CASA = D.casa || { nome: 'PRODUCERIA', problema: '', contrata: 'contrata produção' };
-  var NIVEL = { contrata: CASA.contrata || 'contrata produção', aprova: 'aprova fornecedor', lidera: 'alta liderança' };
+  var NIVEL = { contrata: 'contrata produção', aprova: 'aprova fornecedor', lidera: 'alta liderança' };
   var host = function (u) { try { return new URL(u).hostname.replace(/^www\./, ''); } catch (e) { return 'fonte'; } };
   var dt = function (iso) { var d = new Date(iso); return isNaN(d) ? '' : d.toLocaleDateString('pt-BR') + ' às ' + d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }); };
   var forcaDe = function (n) { return n.f != null ? n.f : Math.round(n.nota * 0.6); };
@@ -96,8 +95,8 @@
     vis.forEach(function (n) {
       var q = pos[n.id]; if (!q) return;
       var z = n.id === raiz, dir = Math.cos(q.a) >= 0;
-      var cls = 'no ' + (z ? 'zero' : n.t === 'pessoa' ? 'pe' + (n.nv === 'contrata' ? ' ct' : '') : n.t === 'agencia' ? 'ag' : 'em') + (n.x ? ' ext' : '') + (n.f == null && !z ? ' fechado' : '') + (n.g < 0 ? ' longe' : '') + (n.novo ? ' novo' : '') + (n.alvo ? ' alvo' : '') + (n.eq ? ' eq' : '');
-      var lab = z ? '<text class="rot mostra fixo" x="' + q.x + '" y="' + (q.y + q.r + 17) + '" text-anchor="middle">' + esc(curto(n.t === 'origem' ? CASA.nome : n.n, 30)) + '</text>'
+      var cls = 'no ' + (z ? 'zero' : n.t === 'pessoa' ? 'pe' + (n.nv === 'contrata' ? ' ct' : '') : n.t === 'agencia' ? 'ag' : 'em') + (n.x ? ' ext' : '') + (n.f == null && !z ? ' fechado' : '') + (n.g < 0 ? ' longe' : '') + (n.novo ? ' novo' : '') + (n.alvo ? ' alvo' : '');
+      var lab = z ? '<text class="rot mostra fixo" x="' + q.x + '" y="' + (q.y + q.r + 17) + '" text-anchor="middle">' + esc(curto(n.t === 'origem' ? 'PRODUCERIA' : n.n, 30)) + '</text>'
         : '<text class="rot" x="' + (q.x + (dir ? q.r + 5 : -q.r - 5)).toFixed(1) + '" y="' + (q.y + 4).toFixed(1) + '" text-anchor="' + (dir ? 'start' : 'end') + '">' + esc(curto(n.n, 28)) + '</text>';
       nos += '<g class="' + cls + '" data-id="' + esc(n.id) + '" tabindex="0" role="button" style="--v:' + q.v + '" aria-label="' + esc(n.n + ', ' + TIPO[n.t] + (n.t === 'pessoa' && n.s ? ', ' + n.s : '') + (q.v ? ', ' + GER(n.g) + ', força ' + forcaDe(n) : '')) + '">' +
         (n.novo ? '<circle class="pulso" cx="' + q.x.toFixed(1) + '" cy="' + q.y.toFixed(1) + '" r="' + (q.r + 4).toFixed(1) + '"></circle>' : '') + '<circle class="c" cx="' + q.x.toFixed(1) + '" cy="' + q.y.toFixed(1) + '" r="' + q.r.toFixed(1) + '"></circle>' + lab + '</g>';
@@ -239,7 +238,7 @@
   function nums() {
     var esc0 = D.camadas.slice(1).filter(function (c) { return escondidas[c.ger]; }).length, soFora = esc0 === D.camadas.length - 1;
     var on = { total: modo === 'todos' && foraOn && !destaque && !esc0, alcance: modo === 'todos' && !foraOn && !destaque && !esc0, fora: foraOn && soFora && !destaque, ram: false, abertos: modo === 'abertos' && !foraOn && !destaque, portas: destaque === 'portas' };
-    $('#num').innerHTML = [['total', D.total, 'pontos no mapa', 'Mostrar todos os pontos'], ['alcance', D.alcance, 'alcançados daqui', 'Mostrar só os alcançados a partir de ' + D.sementeNome], ['fora', D.fora, 'fora de alcance', 'Mostrar os pontos sem ligação'], ['ram', D.camadas.length - 1, 'ramificações', 'Ir para as ramificações'], ['abertos', abertos.length, 'abertos na reação', 'Mostrar só a reação aberta'], ['portas', portas, 'pessoas que contratam', 'Acender quem ' + NIVEL.contrata]]
+    $('#num').innerHTML = [['total', D.total, 'pontos no mapa', 'Mostrar todos os pontos'], ['alcance', D.alcance, 'alcançados daqui', 'Mostrar só os alcançados a partir de ' + D.sementeNome], ['fora', D.fora, 'fora de alcance', 'Mostrar os pontos sem ligação'], ['ram', D.camadas.length - 1, 'ramificações', 'Ir para as ramificações'], ['abertos', abertos.length, 'abertos na reação', 'Mostrar só a reação aberta'], ['portas', portas, 'pessoas que contratam', 'Acender quem contrata produção']]
       .filter(function (x) { return x[0] !== 'fora' || x[1]; })
       .map(function (x) { return '<li><button type="button" data-num="' + x[0] + '" aria-pressed="' + !!on[x[0]] + '" title="' + esc(x[3]) + '"><b>' + x[1] + '</b><span>' + x[2] + '</span></button></li>'; }).join('');
   }
@@ -262,10 +261,10 @@
     var fmt = function (v) { return Number(v).toLocaleString('pt-BR'); };
     var passo = function (t, h, li) { return '<div class="np"><b>' + t + '</b><p>' + h + '</p>' + (li ? '<ul>' + li.map(function (x) { return '<li><span>' + x[0] + '</span>' + x[1] + '</li>'; }).join('') + '</ul>' : '') + '</div>'; };
     $('#narrc').innerHTML =
-      passo('1 · Problema', esc(CASA.problema || 'A ' + CASA.nome + ' não tem um funil de vendas com receita previsível: clientes novos não entram de forma organizada, então não dá para projetar o crescimento da receita.')) +
-      passo('2 · Tratamento', CASA.nome === 'PRODUCERIA' ? 'Investigamos por que o funil não existe e mapeamos:' : 'Investigamos de onde vêm as conexões da ' + esc(CASA.nome) + ' e mapeamos:', [
-        ['Perfil de cliente ideal', esc(CASA.icp || 'agência independente, conta pública, in-house enxuta, rede e EUA, cada um com dor, gatilho e porta de entrada')],
-        ['Stakeholders', fmt(ags) + ' agências, ' + fmt(emp) + ' anunciantes e ' + fmt(pes) + ' pessoas, ' + fmt(portas) + ' delas ' + (CASA.contrata === 'contrata produção' ? 'contratam produção' : 'contratam fornecedor')],
+      passo('1 · Problema', 'A PRODUCERIA não tem um funil de vendas com receita previsível: clientes novos não entram de forma organizada, então não dá para projetar o crescimento da receita.') +
+      passo('2 · Tratamento', 'Investigamos por que o funil não existe e mapeamos:', [
+        ['Perfil de cliente ideal', 'agência independente, conta pública, in-house enxuta, rede e EUA, cada um com dor, gatilho e porta de entrada'],
+        ['Stakeholders', fmt(ags) + ' agências, ' + fmt(emp) + ' anunciantes e ' + fmt(pes) + ' pessoas, ' + fmt(portas) + ' delas contratam produção'],
         ['Conexões', fmt(D.alcance) + ' pontos ao alcance de ' + esc(D.sementeNome) + ' em ' + (D.camadas.length - 1) + ' ramificações, ' + fmt(pontes) + ' com ponte do time, ' + fmt(D.fora) + ' ainda fora de alcance'],
         ['Sinais de compra', fmt(novas) + ' contas novas e ' + fmt(trocas) + ' trocas de agência recentes, somados na nota de cada ponto']]) +
       passo('3 · Solução', 'Com o multiverso, o time resolve:', [
@@ -303,9 +302,9 @@
   }
   var limite = 20;
   function radar() {
-    var L = (destaque === 'portas' ? NOS.filter(function (n) { return n.nv === 'contrata'; }) : abertos.filter(function (n) { return !n.x && !n.eq; }))
+    var L = (destaque === 'portas' ? NOS.filter(function (n) { return n.nv === 'contrata'; }) : abertos.filter(function (n) { return !n.x; }))
       .sort(function (a, b) { return forcaDe(b) - forcaDe(a) || a.n.localeCompare(b.n, 'pt-BR'); });
-    $('#radarT').textContent = destaque === 'portas' ? 'Pessoas que ' + NIVEL.contrata.replace(/^contrata/, 'contratam') + ' · ' + L.length : 'Radar · mais fortes da reação';
+    $('#radarT').textContent = destaque === 'portas' ? 'Pessoas que contratam produção · ' + L.length : 'Radar · mais fortes da reação';
     $('#radar').innerHTML = L.slice(0, limite).map(function (n) {
       return '<li><button type="button" data-ir="' + esc(n.id) + '" aria-pressed="' + (n.id === sel) + '"><b class="n">' + forcaDe(n) + '</b><span><b>' + esc(n.n) + '</b>' + (n.novo ? '<span class="tag">novo</span>' : '') + ident(n, true) + '<small>' + esc(n.fa[0] || '') + '</small></span></button></li>';
     }).join('') + (L.length > limite ? '<li><button type="button" id="rmais"><b class="n">+</b><span>Mostrar mais ' + Math.min(20, L.length - limite) + ' (' + (L.length - limite) + ' restantes)</span></button></li>' : '');
@@ -367,7 +366,7 @@
   $('#q').addEventListener('focus', sugerir);
   $('#q').addEventListener('keydown', function (e) { if (e.key === 'Escape') { $('#sug').innerHTML = ''; } });
   document.addEventListener('click', function (e) { if (!e.target.closest || !e.target.closest('.busca')) $('#sug').innerHTML = ''; });
-  $('#rodape').textContent = 'Gerado pelo PRODUCERia Studio' + (CASA.nome !== 'PRODUCERIA' ? ' para a ' + (CASA.nomeLongo || CASA.nome) : '') + ' em ' + dt(D.geradoEm) + '. Pontos e ligações do Big Data do mercado (notícias, Cenp, LinkedIn e as fontes de cada ponto). Cada ponto aparece na primeira ramificação em que é alcançado; a força soma quem ' + NIVEL.contrata + ', conta nova ou mudança recente, encaixe do craft e ponte com a ' + CASA.nome + '.';
+  $('#rodape').textContent = 'Gerado pelo PRODUCERia Studio em ' + dt(D.geradoEm) + '. Pontos e ligações do Big Data do mercado (notícias, Cenp, LinkedIn e as fontes de cada ponto). Cada ponto aparece na primeira ramificação em que é alcançado; a força soma quem contrata produção, conta nova ou mudança recente, encaixe do craft e ponte com a PRODUCERIA.';
 
   marcarModo(); voltas(); dossie(); radar(); desenhar();
   if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) { svg.classList.add('entra'); setTimeout(function () { svg.classList.remove('entra'); }, 1900); }
