@@ -36,6 +36,10 @@ const dia = (iso?: string) => (iso || '').slice(0, 10);
 export const somaDias = (d: string, n: number) => new Date(Date.parse(d.slice(0, 10) + 'T12:00:00Z') + n * 864e5).toISOString().slice(0, 10);
 const recente = (data: string | undefined, hoje: string, dias: number) => { if (!data) return false; const d = data.length === 7 ? data + '-01' : data.length === 4 ? data + '-01-01' : data; return d >= somaDias(hoje, -dias); };
 
+/** Setores fora do radar comercial (bets estão proibidas no Brasil). Valem para o que a varredura diária gravar. */
+export const FORA_DO_RADAR = /apostas|\bbets?\b|bet365|betano|superbet|betnacional|cassino/i;
+export const foraDoRadar = (r: Pick<Registro, 'nome' | 'setor'>) => FORA_DO_RADAR.test(`${r.setor || ''} ${r.nome}`);
+
 /** Nível de quem decide, para pessoas do Big Data. */
 export const nivelDe = (r: Registro): Nivel | undefined => (r.tipo === 'pessoa' ? nivelDoCargo(r.cargo || '') : undefined);
 
@@ -140,8 +144,8 @@ export function contasGanhas(regs: Registro[], desde: string): Map<string, { age
 }
 
 /** As janelas de oportunidade do momento: conta que acabou de trocar, decisor que acabou de chegar, veículo em movimento. */
-export function janelas(regs: Registro[], hoje: string): Janela[] {
-  const out: Janela[] = [], pessoasEm = (emp: string) => regs.filter((p) => p.tipo === 'pessoa' && chaveN(p.empresa) === chaveN(emp) && nivelDe(p) === 'decide');
+export function janelas(todos: Registro[], hoje: string): Janela[] {
+  const regs = todos.filter((r) => !foraDoRadar(r)), out: Janela[] = [], pessoasEm = (emp: string) => regs.filter((p) => p.tipo === 'pessoa' && chaveN(p.empresa) === chaveN(emp) && nivelDe(p) === 'decide');
   for (const r of regs) {
     if (r.tipo === 'anunciante' && r.agencias?.length && recente(r.data, hoje, 150)) {
       const ag = r.agencias.length > 1 ? r.agencias.slice(0, -1).join(', ') + ' e ' + r.agencias[r.agencias.length - 1] : r.agencias[0], gente = r.agencias.flatMap(pessoasEm);

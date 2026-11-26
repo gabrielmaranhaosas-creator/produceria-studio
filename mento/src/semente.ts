@@ -3,8 +3,8 @@
 // direto, sem banco, a página usa esta mesma base. Cargos de notícias antigas podem ter mudado: a data vai junto.
 import type { Registro } from './crm';
 import { PISTAS } from './publico';
-import { CONTAS_2026, BETS_2026, PESSOAS_2026, EMPRESAS_2026 } from './semente-2026';
-import { agenciasDasContas } from './crm';
+import { CONTAS_2026, PESSOAS_2026, EMPRESAS_2026 } from './semente-2026';
+import { agenciasDasContas, foraDoRadar } from './crm';
 
 const MM_ANUNC = 'https://www.meioemensagem.com.br/dropsaea/ranking-dos-20-maiores-anunciantes-brasil';
 const CENP = 'https://www.meioemensagem.com.br/comunicacao/cenp-africa-lidera-ranking-de-compra-de-midia-em-2025';
@@ -68,5 +68,6 @@ const BASE: Registro[] = [
 
 /** A base inteira: a primeira coleta, a varredura de novembro e as agências que entram pelas contas. Sem repetição. */
 const unicos = (l: Registro[]) => { const v = new Set<string>(); return l.filter((x) => !v.has(x.id) && !!v.add(x.id)); };
-const JUNTOS = unicos([...BASE, ...CONTAS_2026.filter((c) => c.nome !== 'Midea Carrier'), ...BETS_2026, ...PESSOAS_2026, ...EMPRESAS_2026]);
+// bets estão proibidas no Brasil: ficam fora da base e do radar
+const JUNTOS = unicos([...BASE, ...CONTAS_2026.filter((c) => c.nome !== 'Midea Carrier'), ...PESSOAS_2026, ...EMPRESAS_2026]).filter((r) => !foraDoRadar(r));
 export const SEMENTE: Registro[] = [...JUNTOS, ...agenciasDasContas(JUNTOS)];

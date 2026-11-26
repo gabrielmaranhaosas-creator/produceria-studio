@@ -1,6 +1,6 @@
 // Telas do comercial: Painel, Big Data, Funil e Agenda. Leem e gravam pela Loja (banco compartilhado do artefato ou
 // navegador) e avisam a rede quando o Big Data muda.
-import { TIPOS, ETAPAS, ABERTAS, CANAIS, nota, nivelDe, oportunidadeDe, proximaPelaCadencia, agenda, numeros, csv, janelas, contasGanhas, type Registro, type Oportunidade, type Atividade, type Etapa, type Canal, type TipoRegistro, type Leitura } from './crm';
+import { TIPOS, ETAPAS, ABERTAS, CANAIS, nota, nivelDe, oportunidadeDe, proximaPelaCadencia, agenda, numeros, csv, janelas, contasGanhas, foraDoRadar, type Registro, type Oportunidade, type Atividade, type Etapa, type Canal, type TipoRegistro, type Leitura } from './crm';
 import { mensagemErro, type Loja } from './dados';
 
 const esc = (s: unknown) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!);
@@ -177,7 +177,7 @@ export function montarCrm(c: Contexto) {
 
   let baixar: (nome: string, dados: string) => Promise<void> = async () => {};
   const offs = [
-    c.loja.ouvir<Registro>('bd', (l) => { bd = l; carregado.bd = true; c.aoMudarBd(bd); tudo(); }, aviso),
+    c.loja.ouvir<Registro>('bd', (l) => { bd = l.filter((r) => !foraDoRadar(r)); carregado.bd = true; c.aoMudarBd(bd); tudo(); }, aviso),
     c.loja.ouvir<Oportunidade>('funil', (l) => { ops = l; carregado.funil = true; tudo(); }, aviso),
     c.loja.ouvir<Atividade>('atividades', (l) => { ats = l; funil(); }, aviso),
     c.loja.ouvir<Leitura>('leituras', (l) => { leituras = l; painel(); }, aviso),

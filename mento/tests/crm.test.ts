@@ -67,3 +67,12 @@ describe('Inteligência', () => {
     expect(J[0].peso).toBeGreaterThanOrEqual(J[J.length - 1].peso);
   });
 });
+
+describe('Fora do radar', () => {
+  it('bets ficam fora da base e das janelas, mesmo que a varredura grave uma', async () => {
+    const { janelas, foraDoRadar } = await import('../src/crm');
+    expect(SEMENTE.filter((r) => foraDoRadar(r))).toEqual([]);
+    const bet: Registro = { id: 'an-x', tipo: 'anunciante', nome: 'Betano', setor: 'Apostas esportivas', agencias: ['X'], sinal: 'Conta nova', data: '2026-11' };
+    expect(janelas([bet], H)).toEqual([]);
+  });
+});
