@@ -8,7 +8,10 @@ import inter400 from './fonte/inter-400.woff2.b64';
 import inter500 from './fonte/inter-500.woff2.b64';
 import logo from './logo.svg';
 import { EXEMPLO } from './exemplo-dados';
-import { EQUIPE_PUBLICA, PISTAS, LIGACOES_PUBLICAS } from './publico';
+import { EQUIPE_PUBLICA } from './publico';
+import { paraRede, type Registro } from './crm';
+import { abrirLoja } from './dados';
+import { montarCrm, HTML_CRM } from './crm-ui';
 
 const esc = (s: unknown) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!);
 const fmt = (n: number) => n.toLocaleString('pt-BR');
@@ -21,15 +24,27 @@ document.head.insertAdjacentHTML('beforeend', `<style>${face('Saira Stencil', sa
 /** O logo exato da MENTO (vetorizado do arquivo oficial), com o ℗ no canto. */
 const LOGO = logo.replace('<svg ', '<svg role="img" aria-label="MENTO" ');
 const raiz = document.getElementById('app')!;
-raiz.innerHTML = `<div class="mt">
-<header class="hero">
- <p class="eb"><i></i>Estratégia. Mídia. Pessoas. · reação em cadeia</p>
- <h1 class="marca">${LOGO}</h1>
- <p class="h2">Conexões que <em>movem marcas.</em></p>
- <p class="lead">Cada pessoa da equipe baixa o arquivo de dados do próprio LinkedIn e entrega aqui. A página junta as redes, põe a MENTO no centro e abre a reação: <b>MENTO → equipe → quem cada um conhece e por onde passou → as empresas onde essas pessoas estão hoje</b>. Cada ponto ganha uma nota de oportunidade e o caminho até a MENTO.</p>
- <p class="priv"><b>Privado por construção.</b> Os arquivos são lidos neste navegador e não são enviados a lugar nenhum. Só o perfil, os cargos e as conexões são lidos; mensagens e o resto do arquivo, nunca.</p>
-</header>
-<section class="passo" aria-labelledby="t1"><h2 class="t" id="t1"><span>01</span>Os dados de cada pessoa</h2>
+const VISTAS: [string, string][] = [['painel', 'Painel'], ['bigdata', 'Big Data'], ['rede', 'Rede'], ['funil', 'Funil'], ['agenda', 'Agenda'], ['equipe', 'Equipe']];
+raiz.innerHTML = `<div class="mt app">
+<header class="topo"><a href="#painel" class="lg" aria-label="MENTO · Painel">${LOGO}</a><nav class="nav" id="nav" aria-label="Seções">${VISTAS.map(([k, t]) => `<a href="#${k}" data-v="${k}"${k === 'funil' ? ' id="navFn"' : ''}>${t}</a>`).join('')}</nav><span class="modo" id="modo"></span></header>
+<p class="msg aviso-topo" id="crmMsg" role="status" hidden></p>
+${HTML_CRM(EQUIPE_PUBLICA.map((p) => p.nome.split(' ')[0]))}
+<section class="vista" data-vista="rede" aria-labelledby="t2" hidden>
+ <p class="lead">A reação em cadeia: <b>MENTO → equipe → quem cada um conhece e por onde passou → quem decide lá → quem anuncia</b>. Alimentada pelo Big Data e pelos arquivos de LinkedIn da equipe.</p>
+ <div id="res">
+ <section class="passo" aria-labelledby="t2"><h2 class="t" id="t2">O tamanho da rede</h2><ul class="kpis" id="kpis"></ul></section>
+ <section class="passo" aria-labelledby="t3"><h2 class="t" id="t3">Em comum</h2><p class="nota">Quem as duas pessoas conhecem e as empresas onde as duas têm gente: a conversa pode vir de qualquer uma, e a outra reforça.</p><div class="dois" id="comum"></div></section>
+ <section class="passo" aria-labelledby="t4"><h2 class="t" id="t4">Reação em cadeia</h2><p class="nota">Volta por volta, os pontos mais fortes. A nota soma quem decide a contratação, quem é conhecido pelas duas pessoas, quantos conhecidos há na mesma empresa e onde a equipe já trabalhou.</p><div class="rc" id="rc" tabindex="0" role="region" aria-label="Voltas da reação, rola de lado"></div></section>
+ <section class="passo" aria-labelledby="t5"><h2 class="t" id="t5">Multiverso</h2><p class="nota">A rede inteira. Clique num ponto para acender o caminho até a MENTO; role para aproximar; arraste para andar.</p>
+  <div class="mv"><div class="palco"><div class="ferr"><input type="search" id="q" placeholder="Buscar pessoa ou empresa" autocomplete="off"><div class="seg" role="group" aria-label="Mostrar"><button type="button" data-f="tudo" aria-pressed="true">Tudo</button><button type="button" data-f="decide" aria-pressed="false">Só quem decide</button><button type="button" data-f="comum" aria-pressed="false">Em comum</button></div></div><svg id="svg" viewBox="-560 -560 1120 1120" role="group" aria-label="Multiverso da MENTO"></svg><div class="zoom"><button type="button" data-z="1.4" aria-label="Aproximar">+</button><button type="button" data-z="0.7" aria-label="Afastar">−</button><button type="button" data-z="0" aria-label="Ver tudo">⌂</button></div></div><aside class="dossie" id="dossie" aria-live="polite"></aside></div>
+  <div class="acoes"><button type="button" class="btn sec" data-svg>Baixar o mapa (SVG)</button></div></section>
+ <section class="passo" aria-labelledby="t6"><h2 class="t" id="t6">Radar · por onde começar</h2>
+  <div class="seg" id="rf" role="group" aria-label="Filtrar o radar"><button type="button" data-r="tudo" aria-pressed="true">Tudo</button><button type="button" data-r="contato" aria-pressed="false">Pessoas</button><button type="button" data-r="empresa" aria-pressed="false">Empresas</button><button type="button" data-r="decide" aria-pressed="false">Quem decide</button><button type="button" data-r="comum" aria-pressed="false">Em comum</button></div>
+  <ol class="radar" id="radar"></ol><div class="acoes"><button type="button" class="lnk" id="mais" hidden>Mostrar mais</button><button type="button" class="btn" data-csv>Baixar o radar (planilha)</button></div></section>
+</div>
+</section>
+<section class="vista" data-vista="equipe" aria-labelledby="t1" hidden>
+ <section class="passo" aria-labelledby="t1"><h2 class="t" id="t1">Equipe e dados do LinkedIn</h2>
  <details class="como"><summary>Como cada pessoa baixa o arquivo do LinkedIn (5 minutos)</summary><ol>
   <li>No LinkedIn, clique em <b>Eu</b> → <b>Configurações e privacidade</b> → <b>Privacidade de dados</b> → <b>Obter uma cópia dos seus dados</b>.</li>
   <li>Escolha <b>Quero um pacote de dados específico</b> e marque <b>Conexões</b>, <b>Cargos</b> e <b>Perfil</b>. Clique em <b>Solicitar arquivo</b> e confirme a senha.</li>
@@ -39,24 +54,15 @@ raiz.innerHTML = `<div class="mt">
  <div class="acoes"><button type="button" class="btn" data-rodar>Rodar a reação em cadeia</button><button type="button" class="btn sec" data-exemplo>Ver com dados de exemplo</button><label class="chk"><input type="checkbox" id="pub" checked> Incluir a pesquisa pública</label><label class="chk"><input type="checkbox" id="lembrar"> Lembrar neste navegador</label><button type="button" class="lnk" data-limpar>Apagar tudo</button></div>
  <p class="msg" id="msg" aria-live="polite"></p>
 </section>
-<div id="res" hidden>
- <section class="passo" aria-labelledby="t2"><h2 class="t" id="t2"><span>02</span>O tamanho da rede</h2><ul class="kpis" id="kpis"></ul></section>
- <section class="passo" aria-labelledby="t3"><h2 class="t" id="t3"><span>03</span>Em comum</h2><p class="nota">Quem as duas pessoas conhecem e as empresas onde as duas têm gente: a conversa pode vir de qualquer uma, e a outra reforça.</p><div class="dois" id="comum"></div></section>
- <section class="passo" aria-labelledby="t4"><h2 class="t" id="t4"><span>04</span>Reação em cadeia</h2><p class="nota">Volta por volta, os pontos mais fortes. A nota soma quem decide a contratação, quem é conhecido pelas duas pessoas, quantos conhecidos há na mesma empresa e onde a equipe já trabalhou.</p><div class="rc" id="rc" tabindex="0" role="region" aria-label="Voltas da reação, rola de lado"></div></section>
- <section class="passo" aria-labelledby="t5"><h2 class="t" id="t5"><span>05</span>Multiverso</h2><p class="nota">A rede inteira. Clique num ponto para acender o caminho até a MENTO; role para aproximar; arraste para andar.</p>
-  <div class="mv"><div class="palco"><div class="ferr"><input type="search" id="q" placeholder="Buscar pessoa ou empresa" autocomplete="off"><div class="seg" role="group" aria-label="Mostrar"><button type="button" data-f="tudo" aria-pressed="true">Tudo</button><button type="button" data-f="decide" aria-pressed="false">Só quem decide</button><button type="button" data-f="comum" aria-pressed="false">Em comum</button></div></div><svg id="svg" viewBox="-560 -560 1120 1120" role="group" aria-label="Multiverso da MENTO"></svg><div class="zoom"><button type="button" data-z="1.4" aria-label="Aproximar">+</button><button type="button" data-z="0.7" aria-label="Afastar">−</button><button type="button" data-z="0" aria-label="Ver tudo">⌂</button></div></div><aside class="dossie" id="dossie" aria-live="polite"></aside></div>
-  <div class="acoes"><button type="button" class="btn sec" data-svg>Baixar o mapa (SVG)</button></div></section>
- <section class="passo" aria-labelledby="t6"><h2 class="t" id="t6"><span>06</span>Radar · por onde começar</h2>
-  <div class="seg" id="rf" role="group" aria-label="Filtrar o radar"><button type="button" data-r="tudo" aria-pressed="true">Tudo</button><button type="button" data-r="contato" aria-pressed="false">Pessoas</button><button type="button" data-r="empresa" aria-pressed="false">Empresas</button><button type="button" data-r="decide" aria-pressed="false">Quem decide</button><button type="button" data-r="comum" aria-pressed="false">Em comum</button></div>
-  <ol class="radar" id="radar"></ol><div class="acoes"><button type="button" class="lnk" id="mais" hidden>Mostrar mais</button><button type="button" class="btn" data-csv>Baixar o radar (planilha)</button></div></section>
-</div>
-<footer class="rod">MENTO · Conexões que movem marcas. Rede montada só com os dados que cada pessoa entregou.</footer>
+</section>
+<footer class="rod">MENTO · Conexões que movem marcas. Big Data com fonte pública; conexões só com os arquivos que cada pessoa entregou.</footer>
 </div>`;
 const $ = <T extends Element = HTMLElement>(s: string) => raiz.querySelector(s) as T;
 
 interface Slot { nome: string; pessoa: Pessoa | null }
 const publicos = (): Slot[] => EQUIPE_PUBLICA.map((p) => ({ nome: p.nome, pessoa: JSON.parse(JSON.stringify(p)) as Pessoa }));
 let slots: Slot[] = publicos();
+let bdAtual: Registro[] = [];
 let R: Rede | null = null, M: Multiverso | null = null, Q: Reacao | null = null, sel = '', filtro = 'tudo', rf = 'tudo', lim = 20;
 try { const g = JSON.parse(localStorage.getItem(GUARDA) || 'null'); if (g?.slots) { slots = g.slots; $<HTMLInputElement>('#lembrar').checked = true; } } catch { /* sem armazenamento */ }
 const guardar = () => { try { if ($<HTMLInputElement>('#lembrar').checked) localStorage.setItem(GUARDA, JSON.stringify({ slots })); else localStorage.removeItem(GUARDA); } catch { /* sem espaço ou sem armazenamento */ } };
@@ -93,8 +99,8 @@ function rodar(rolar = true) {
   const equipe = slots.map((s) => s.pessoa).filter((p): p is Pessoa => !!p);
   if (!equipe.length) { msg('Carregue o arquivo de pelo menos uma pessoa.'); return; }
   const pub = $<HTMLInputElement>('#pub').checked;
-  R = montarRede(equipe, pub ? { pistas: PISTAS, ligacoes: LIGACOES_PUBLICAS } : {}); M = multiverso(R); Q = reacao(R); sel = ''; lim = 20;
-  $('#res').hidden = false; resultado(); if (rolar) $('#res').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  R = montarRede(equipe, pub ? paraRede(bdAtual) : {}); M = multiverso(R); Q = reacao(R); sel = ''; lim = 20;
+  resultado(); if (rolar) location.hash = '#rede';
   const semConexoes = equipe.filter((p) => !p.conexoes.length).map((p) => p.nome.split(' ')[0]);
   msg(semConexoes.length ? `Rede montada com a pesquisa pública. Falta a lista de conexões de ${semConexoes.join(' e ')}: arraste o .zip do LinkedIn (com Conexões marcado) no quadro de cada um.` : '');
 }
@@ -175,7 +181,7 @@ function dossie() {
   ${n.quem.length && n.tipo !== 'equipe' ? `<p class="sub">Quem conhece: <b>${esc(quemDe(n))}</b></p>` : ''}
   ${c.length > 1 ? `<span class="lab">Caminho</span><p class="cam">${c.map(chip).join('<em>→</em>')}</p>` : ''}
   ${n.tipo === 'empresa' ? `<span class="lab">Quem está lá</span>${lista((R!.adj.get(n.id) || []).map((a) => no(a.b)).filter((x) => x.tipo === 'contato').sort((a, b) => b.nota - a.nota).slice(0, 8))}` : ''}
-  ${n.url && /^https:/.test(n.url) ? `<p><a href="${esc(n.url)}" target="_blank" rel="noopener">Perfil no LinkedIn ↗</a></p>` : ''}${n.fonte && /^https:/.test(n.fonte) && n.fonte !== n.url ? `<p class="sub">Fonte: <a href="${esc(n.fonte)}" target="_blank" rel="noopener">${esc(n.fonte.replace(/^https:\/\/(www\.)?/, '').split('/')[0])} ↗</a></p>` : ''}${n.email ? `<p class="sub">${esc(n.email)}</p>` : ''}`;
+  ${n.url && /^https:/.test(n.url) ? `<p><a href="${esc(n.url)}" target="_blank" rel="noopener">Perfil no LinkedIn ↗</a></p>` : ''}${n.fonte && /^https:/.test(n.fonte) && n.fonte !== n.url ? `<p class="sub">Fonte: <a href="${esc(n.fonte)}" target="_blank" rel="noopener">${esc(n.fonte.replace(/^https:\/\/(www\.)?/, '').split('/')[0])} ↗</a></p>` : ''}${n.email ? `<p class="sub">${esc(n.email)}</p>` : ''}${n.tipo === 'contato' || n.tipo === 'empresa' ? `<div class="acoes"><button type="button" class="btn sec" data-funil-rede="${esc(n.id)}">Levar ao funil</button></div>` : ''}`;
 }
 function escolher(id: string) { sel = sel === id ? '' : id; desenharMv(); dossie(); }
 
@@ -189,7 +195,7 @@ function listaRadar() {
 function desenharRadar() {
   const L = listaRadar(), nome = (id: string) => no(id).nome;
   $('#radar').innerHTML = L.slice(0, lim).map((n) => `<li><b class="f">${n.nota}</b><div><button type="button" class="nm" data-ir="${esc(n.id)}">${esc(n.nome)}</button> <span class="k">${esc(n.tipo === 'contato' ? [n.sub, n.empresa].filter(Boolean).join(' · ') : n.sub)}</span>
-  <p class="cam">${caminho(M!, n.id).map((id) => `<span class="chip t-${no(id).tipo}">${esc(curto(nome(id), 28))}</span>`).join('<em>→</em>')}</p><p class="nota">${esc(n.fatos.slice(0, 3).join(' · '))}</p></div></li>`).join('') || '<li><div class="nota">Nada nesse filtro.</div></li>';
+  <p class="cam">${caminho(M!, n.id).map((id) => `<span class="chip t-${no(id).tipo}">${esc(curto(nome(id), 28))}</span>`).join('<em>→</em>')}</p><p class="nota">${esc(n.fatos.slice(0, 3).join(' · '))}</p><button type="button" class="acao" data-funil-rede="${esc(n.id)}">Levar ao funil</button></div></li>`).join('') || '<li><div class="nota">Nada nesse filtro.</div></li>';
   const m = $('#mais'); m.hidden = L.length <= lim; m.textContent = `Mostrar mais ${Math.min(20, L.length - lim)} (${fmt(L.length - lim)} restantes)`;
 }
 
@@ -226,7 +232,8 @@ raiz.addEventListener('click', (ev) => {
   if (!b) return;
   if (b.hasAttribute('data-rodar')) { rodar(); return; }
   if (b.hasAttribute('data-exemplo')) { slots = EXEMPLO().map((p) => ({ nome: p.nome, pessoa: p })); desenharSlots(); msg('Dados de exemplo (pessoas fictícias). Troque pelos arquivos reais e rode de novo.'); rodar(); return; }
-  if (b.hasAttribute('data-limpar')) { slots = publicos(); try { localStorage.removeItem(GUARDA); } catch { /* */ } $<HTMLInputElement>('#lembrar').checked = false; R = null; $('#res').hidden = true; desenharSlots(); msg('Tudo apagado deste navegador.'); return; }
+  if (b.hasAttribute('data-limpar')) { slots = publicos(); try { localStorage.removeItem(GUARDA); } catch { /* */ } $<HTMLInputElement>('#lembrar').checked = false; desenharSlots(); rodar(false); msg('Tudo apagado deste navegador.'); return; }
+  if (b.dataset.funilRede && R && crm) { const n = R.nos.get(b.dataset.funilRede); if (n) void crm.levarAoFunil({ id: '', nome: n.nome, tipo: n.tipo === 'contato' ? 'pessoa' : n.anunciante ? 'anunciante' : n.agencia ? 'agencia' : n.veiculo ? 'veiculo' : 'anunciante', cargo: n.tipo === 'contato' ? n.sub : '', empresa: n.empresa, fonte: n.fonte }, 'Rede'); return; }
   if (b.dataset.ir) { escolher(b.dataset.ir); if (!b.closest('#svg') && !b.closest('#dossie')) $('.mv').scrollIntoView({ behavior: 'smooth', block: 'center' }); return; }
   if (b.dataset.f) { filtro = b.dataset.f; b.parentElement!.querySelectorAll('button').forEach((x) => x.setAttribute('aria-pressed', String(x === b))); desenharMv(); return; }
   if (b.dataset.r) { rf = b.dataset.r; lim = 20; b.parentElement!.querySelectorAll('button').forEach((x) => x.setAttribute('aria-pressed', String(x === b))); desenharRadar(); return; }
@@ -255,4 +262,23 @@ svg().addEventListener('keydown', (ev) => { const c = (ev.target as Element).clo
 
 const SVG_CSS = `.anel{fill:none;stroke:#2a2a2a;stroke-dasharray:2 6}.anel-t{fill:#777;font:10px sans-serif;letter-spacing:.12em;text-transform:uppercase;text-anchor:middle}.fio{stroke:#2b2b2b;stroke-width:.6}.fio.on{stroke:#0BCF55;stroke-width:2}.p{fill:#777}.p.t-zero,.p.t-equipe{fill:#0BCF55}.p.t-empresa{fill:#fff}.p.ag{fill:none;stroke:#fff}.p.dec{fill:#fff}.p.com{stroke:#0BCF55;stroke-width:1.5}.p.on{fill:#0BCF55}.rot{fill:#fff;font:11px Inter,sans-serif;paint-order:stroke;stroke:#000;stroke-width:3px}.rot.t-zero{font:500 22px 'Saira Stencil',sans-serif}`;
 desenharSlots();
+function rota() {
+  const v = location.hash.slice(1), ok = VISTAS.some(([k]) => k === v) ? v : 'painel';
+  raiz.querySelectorAll<HTMLElement>('.vista').forEach((x) => { x.hidden = x.dataset.vista !== ok; });
+  raiz.querySelectorAll<HTMLElement>('#nav a').forEach((a) => { if (a.dataset.v === ok) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current'); });
+  if (ok === 'rede' && R) desenharMv();
+}
+window.addEventListener('hashchange', rota); rota();
+let crm: ReturnType<typeof montarCrm> | null = null;
+void abrirLoja().then((loja) => {
+  $('#modo').textContent = loja.compartilhada ? 'Dados compartilhados da equipe' : 'Dados neste navegador';
+  crm = montarCrm({
+    raiz, loja,
+    equipe: () => slots.map((x) => x.pessoa?.nome.split(' ')[0]).filter((x): x is string => !!x),
+    trajetoria: () => new Set(slots.flatMap((x) => x.pessoa?.posicoes || []).map((p) => p.empresa.toLowerCase().trim()).filter((e) => e && !/\bmento\b/.test(e))),
+    aoMudarBd: (regs) => { bdAtual = regs; rodar(false); },
+    verNaRede: (nome) => { location.hash = '#rede'; setTimeout(() => buscar(nome), 50); },
+  });
+  crm.definirBaixar((nome, dados) => baixar(nome, dados, 'text/csv;charset=utf-8'));
+});
 rodar(false);
