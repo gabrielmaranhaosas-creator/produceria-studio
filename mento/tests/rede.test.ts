@@ -58,8 +58,25 @@ describe('Rede da MENTO', () => {
     expect(Q.geracoes[1]).toHaveLength(2);
     expect(caminho(M, 'e:itau unibanco').map((id) => R.nos.get(id)!.nome)).toEqual(['MENTO', expect.any(String), 'Juliana Prado', 'Itaú Unibanco']);
     const csv = csvRadar(R, M);
-    expect(csv.split('\r\n')[0]).toBe('﻿Nota;Tipo;Nome;Cargo;Empresa;Quem conhece;Caminho;Por que;LinkedIn;E-mail');
+    expect(csv.split('\r\n')[0]).toBe('﻿Nota;Tipo;Nome;Cargo;Empresa;Quem conhece;Caminho;Por que;LinkedIn;E-mail;Fonte pública');
     expect(csv).toContain('rafael@exemplo.com');
     expect(csv).not.toContain('segredo');
+  });
+});
+
+describe('Rede pública da MENTO (pesquisa na web aberta)', () => {
+  it('MENTO → Pet → casas da trajetória → quem decide lá e quem anuncia, cada um com fonte', async () => {
+    const { EQUIPE_PUBLICA, PISTAS, LIGACOES_PUBLICAS } = await import('../src/publico');
+    const R = montarRede(EQUIPE_PUBLICA, { pistas: PISTAS, ligacoes: LIGACOES_PUBLICAS, hoje: '2026-11-26' }), M = multiverso(R);
+    expect(M.voltas[1].sort()).toEqual(['m:1', 'm:2']);
+    expect(M.voltas[2]).toEqual(expect.arrayContaining(['e:band', 'e:a e networks', 'e:amc networks international']));
+    const rog = [...R.nos.values()].find((n) => n.nome === 'Rogério Domingues')!;
+    expect(rog.fatos).toEqual(expect.arrayContaining(['Decide a contratação', 'Porta pelo Pet: ex-colega na Band', 'Fonte pública']));
+    expect(caminho(M, rog.id).map((id) => R.nos.get(id)!.nome)).toEqual(['MENTO', 'Pet Fernandes', 'Band', 'Rogério Domingues']);
+    const mobil = R.nos.get('e:mobil')!;
+    expect(mobil.anunciante).toBe(true);
+    expect(mobil.fatos).toContain('Anuncia na Band (onde Pet já trabalhou)');
+    expect(R.nos.get('e:band')!.veiculo).toBe(true);
+    expect(csvRadar(R, M)).toContain('meioemensagem.com.br');
   });
 });

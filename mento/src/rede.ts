@@ -5,12 +5,15 @@
  * cadeia abre, volta por volta, os pontos mais fortes. Nada vem de fora: só o que as duas pessoas exportaram.
  */
 import type { Pessoa } from './exportacao';
+import type { Pista, LigacaoPublica } from './publico';
 
 export type Tipo = 'zero' | 'equipe' | 'contato' | 'empresa';
 export type Nivel = 'decide' | 'influencia' | 'outro';
 export interface No {
   id: string; tipo: Tipo; nome: string; sub: string; nota: number; fatos: string[];
-  empresa?: string; nivel?: Nivel; url?: string; email?: string; agencia?: boolean;
+  empresa?: string; nivel?: Nivel; url?: string; email?: string; agencia?: boolean; veiculo?: boolean; anunciante?: boolean;
+  /** link da fonte pública (pesquisa na web aberta), quando o ponto veio dela */
+  fonte?: string;
   /** ids da equipe que conhecem (contato) ou que têm ligação (empresa) */
   quem: string[];
 }
@@ -27,7 +30,7 @@ const AGENCIA = /\b(ag[eê]ncia|publicidade|propaganda|comunica[cç][aã]o|creat
 
 const DECIDE = /\b(cmo|ceo|coo|cfo|founder|fundador|co-?fundador|s[oó]ci[oa]|owner|propriet[aá]ri[oa]|presidente|president|vp|vice[- ]presidente|diretor[a]?|director|head|gerente|manager|superintendente|chief)\b/i;
 const AREA = /\b(marketing|mkt|marca|brand|m[ií]dia|media|comunica[cç][aã]o|communications?|growth|trade|publicidade|advertising|e-?commerce|digital|conte[uú]do|content|patroc[ií]nio|sponsorship|compras|procurement|comercial|neg[oó]cios|business)\b/i;
-const TOPO = /\b(cmo|ceo|founder|fundador|co-?fundador|s[oó]ci[oa]|owner|propriet[aá]ri[oa]|presidente|president|chief)\b/i;
+const TOPO = /\b(evp|svp|cmo|ceo|founder|fundador|co-?fundador|s[oó]ci[oa]|owner|propriet[aá]ri[oa]|presidente|president|chief)\b/i;
 const INFLUENCIA = /\b(coordenador[a]?|coordinator|supervisor[a]?|especialista|specialist|analista s[eê]nior|senior|s[eê]nior|planejamento|planner|planning|brand manager|product marketing|key account|executiv[oa] de contas?|account)\b/i;
 
 /** Quem decide a contratação de agência/mídia, pelo cargo. */
@@ -41,7 +44,10 @@ export function nivelDoCargo(cargo: string): Nivel {
 const antes = (hoje: string, dias: number) => new Date(Date.parse(hoje) - dias * 864e5).toISOString().slice(0, 10);
 const primeiro = (n: string) => n.split(' ')[0] || n;
 
-export function montarRede(equipe: Pessoa[], o: { hoje?: string; casa?: string } = {}): Rede {
+/** Veículo de mídia (TV, rádio, jornal, canais): parceiro de venda da MENTO, não concorrente. */
+const VEICULO = /\b(networks?|band|bandeirantes|tv|r[aá]dio|fm|globo|sbt|record|destak|jornal|revista|canal|channel|history|lifetime|cnn|bandnews|omega m[ií]dia|uber advertising)\b/i;
+
+export function montarRede(equipe: Pessoa[], o: { hoje?: string; casa?: string; pistas?: Pista[]; ligacoes?: LigacaoPublica[] } = {}): Rede {
   const hoje = o.hoje || new Date().toISOString().slice(0, 10), umAno = antes(hoje, 365);
   const nos = new Map<string, No>(), adj = new Map<string, Aresta[]>();
   const add = (n: No) => { if (!nos.has(n.id)) { nos.set(n.id, n); adj.set(n.id, []); } return nos.get(n.id)!; };
@@ -51,7 +57,8 @@ export function montarRede(equipe: Pessoa[], o: { hoje?: string; casa?: string }
   };
   const empresa = (nome: string) => {
     const k = chaveEmpresa(nome); if (!k || CASA.test(nome)) return undefined;
-    return add({ id: 'e:' + k, tipo: 'empresa', nome: nome.trim(), sub: AGENCIA.test(nome) ? 'Agência ou casa de comunicação' : 'Empresa', nota: 0, fatos: [], agencia: AGENCIA.test(nome), quem: [] });
+    const vei = VEICULO.test(nome), ag = !vei && AGENCIA.test(nome);
+    return add({ id: 'e:' + k, tipo: 'empresa', nome: nome.trim(), sub: vei ? 'Veículo de mídia' : ag ? 'Agência ou casa de comunicação' : 'Empresa', nota: 0, fatos: [], agencia: ag, veiculo: vei, quem: [] });
   };
   add({ id: ZERO, tipo: 'zero', nome: o.casa || 'MENTO', sub: 'ponto zero', nota: 0, fatos: [], quem: [] });
   for (const p of equipe) {
@@ -75,6 +82,19 @@ export function montarRede(equipe: Pessoa[], o: { hoje?: string; casa?: string }
       const e = empresa(c.empresa); if (e) { ligar(cid, e.id, c.cargo || 'trabalha em'); }
     }
   }
+  // pesquisa pública: quem decide ou vende nas casas (sem ligação direta com a equipe) e quem anuncia onde
+  for (const p of o.pistas || []) {
+    const e = empresa(p.empresa); if (!e) continue;
+    const cid = 'c:' + (p.url ? p.url.toLowerCase().replace(/^https?:\/\/(www\.)?/, '').replace(/\/+$/, '') : 'pub-' + norm(p.nome));
+    if (nos.has(cid)) { nos.get(cid)!.fonte ||= p.fonte; continue; }
+    add({ id: cid, tipo: 'contato', nome: p.nome, sub: p.cargo, nota: 0, fatos: [], empresa: p.empresa, nivel: nivelDoCargo(p.cargo), url: p.url, fonte: p.fonte, quem: [] });
+    ligar(cid, e.id, p.cargo + (p.data ? ` (fonte de ${p.data})` : ''), p.data);
+  }
+  for (const l of o.ligacoes || []) {
+    const a = empresa(l.a), b = empresa(l.b); if (!a || !b) continue;
+    if (l.tipoB === 'anunciante') { b.anunciante = true; b.veiculo = false; b.agencia = false; b.sub = 'Anunciante'; }
+    b.fonte ||= l.fonte; ligar(a.id, b.id, l.rotulo, l.data);
+  }
   // notas
   const nomeDe = (id: string) => primeiro(nos.get(id)?.nome || '');
   for (const n of nos.values()) {
@@ -88,22 +108,31 @@ export function montarRede(equipe: Pessoa[], o: { hoje?: string; casa?: string }
       const e = viz.find((a) => a.b.startsWith('e:')), en = e && nos.get(e.b);
       if (en) {
         const colegas = adj.get(en.id)!.filter((a) => a.b.startsWith('c:')).length - 1;
-        if (colegas > 0) { s += Math.min(15, colegas * 3); F.push(`Mais ${colegas} conhecido(s) na ${en.nome}`); }
-        if (en.quem.length) { s += 10; F.push(`${en.quem.map(nomeDe).join(' e ')} já trabalhou na ${en.nome}`); }
+        if (colegas > 0) { s += Math.min(15, colegas * 3); F.push(`Mais ${colegas} ${n.fonte && !n.quem.length ? 'mapeado(s)' : 'conhecido(s)'} na ${en.nome}`); }
+        if (en.quem.length) { s += n.fonte && !n.quem.length ? 15 : 10; F.push(n.fonte && !n.quem.length ? `Porta pelo ${en.quem.map(nomeDe).join(' e ')}: ex-colega na ${en.nome}` : `${en.quem.map(nomeDe).join(' e ')} já trabalhou na ${en.nome}`); }
         if (en.agencia) { s -= 10; F.push('Agência: parceira ou concorrente'); }
+        if (en.veiculo) F.push('Veículo de mídia: parceiro de venda da MENTO');
       }
     } else if (n.tipo === 'empresa') {
       const cs = viz.filter((a) => a.b.startsWith('c:')).map((a) => nos.get(a.b)!);
       const dec = cs.filter((c) => c.nivel === 'decide').length, inf = cs.filter((c) => c.nivel === 'influencia').length;
       const por = new Set(cs.flatMap((c) => c.quem));
       s = 10 + Math.min(30, cs.length * 3) + Math.min(30, dec * 10) + Math.min(10, inf * 3);
-      if (cs.length) F.push(`${cs.length} conhecido(s) lá dentro`);
+      if (cs.length) { const pub = cs.filter((c) => c.fonte && !c.quem.length).length; F.push(pub === cs.length ? `${cs.length} pessoa(s) mapeada(s) lá dentro` : `${cs.length} conhecido(s) lá dentro`); }
       if (dec) F.push(`${dec} decide(m) a contratação`);
       if (por.size > 1) { s += 15; F.push(`As duas pessoas conhecem gente lá (${[...por].map(nomeDe).join(' e ')})`); }
       if (n.quem.length) { s += 10; F.push(`${n.quem.map(nomeDe).join(' e ')} já trabalhou lá`); }
       if (n.agencia) { s -= 15; F.push('Agência: parceira ou concorrente'); }
+      if (n.veiculo) F.push('Veículo de mídia: parceiro de venda da MENTO');
+      if (n.anunciante) {
+        const onde = viz.filter((a) => nos.get(a.b)?.veiculo).map((a) => nos.get(a.b)!);
+        s += 20 + onde.filter((v) => v.quem.length).length * 15;
+        F.push('Anunciante: contrata mídia');
+        for (const v of onde) F.push(`Anuncia na ${v.nome}${v.quem.length ? ` (onde ${v.quem.map(nomeDe).join(' e ')} já trabalhou)` : ''}`);
+      }
       n.quem = [...new Set([...n.quem, ...por])];
     }
+    if (n.fonte) F.push('Fonte pública');
     if (n.tipo === 'contato' || n.tipo === 'empresa') { n.nota = Math.max(0, Math.min(100, s)); n.fatos = F; }
   }
   return { nos, adj, equipe };
@@ -175,8 +204,8 @@ const celula = (v: unknown) => { const s = String(v ?? ''); return /[";\n]/.test
 /** A planilha do radar (ponto e vírgula, para o Excel em português). */
 export function csvRadar(R: Rede, M: Multiverso, lista = radar(R)): string {
   const nome = (id: string) => R.nos.get(id)?.nome || '';
-  const L = [['Nota', 'Tipo', 'Nome', 'Cargo', 'Empresa', 'Quem conhece', 'Caminho', 'Por que', 'LinkedIn', 'E-mail']];
+  const L = [['Nota', 'Tipo', 'Nome', 'Cargo', 'Empresa', 'Quem conhece', 'Caminho', 'Por que', 'LinkedIn', 'E-mail', 'Fonte pública']];
   for (const n of lista) L.push([String(n.nota), n.tipo === 'contato' ? 'Pessoa' : 'Empresa', n.nome, n.tipo === 'contato' ? n.sub : '', n.tipo === 'contato' ? n.empresa || '' : n.nome,
-    n.quem.map(nome).join(', '), caminho(M, n.id).map(nome).join(' → '), n.fatos.join(' · '), n.url || '', n.email || '']);
+    n.quem.map(nome).join(', '), caminho(M, n.id).map(nome).join(' → '), n.fatos.join(' · '), n.url || '', n.email || '', n.fonte || '']);
   return '﻿' + L.map((l) => l.map(celula).join(';')).join('\r\n');
 }

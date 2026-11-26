@@ -8,6 +8,7 @@ import inter400 from './fonte/inter-400.woff2.b64';
 import inter500 from './fonte/inter-500.woff2.b64';
 import logo from './logo.svg';
 import { EXEMPLO } from './exemplo-dados';
+import { EQUIPE_PUBLICA, PISTAS, LIGACOES_PUBLICAS } from './publico';
 
 const esc = (s: unknown) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!);
 const fmt = (n: number) => n.toLocaleString('pt-BR');
@@ -35,7 +36,7 @@ raiz.innerHTML = `<div class="mt">
   <li>O LinkedIn manda um e-mail em cerca de 10 minutos. Baixe o <b>.zip</b> e entregue à MENTO (ou arraste aqui, no quadro da pessoa).</li>
  </ol><p class="nota">É o caminho oficial do LinkedIn: ninguém precisa passar a senha a ninguém, e a pessoa decide o que entrega. O .zip inteiro pode vir; aqui só três arquivos são lidos.</p></details>
  <div class="slots" id="slots"></div>
- <div class="acoes"><button type="button" class="btn" data-rodar>Rodar a reação em cadeia</button><button type="button" class="btn sec" data-exemplo>Ver com dados de exemplo</button><label class="chk"><input type="checkbox" id="lembrar"> Lembrar neste navegador</label><button type="button" class="lnk" data-limpar>Apagar tudo</button></div>
+ <div class="acoes"><button type="button" class="btn" data-rodar>Rodar a reação em cadeia</button><button type="button" class="btn sec" data-exemplo>Ver com dados de exemplo</button><label class="chk"><input type="checkbox" id="pub" checked> Incluir a pesquisa pública</label><label class="chk"><input type="checkbox" id="lembrar"> Lembrar neste navegador</label><button type="button" class="lnk" data-limpar>Apagar tudo</button></div>
  <p class="msg" id="msg" aria-live="polite"></p>
 </section>
 <div id="res" hidden>
@@ -54,7 +55,8 @@ raiz.innerHTML = `<div class="mt">
 const $ = <T extends Element = HTMLElement>(s: string) => raiz.querySelector(s) as T;
 
 interface Slot { nome: string; pessoa: Pessoa | null }
-let slots: Slot[] = [{ nome: '', pessoa: null }, { nome: '', pessoa: null }];
+const publicos = (): Slot[] => EQUIPE_PUBLICA.map((p) => ({ nome: p.nome, pessoa: JSON.parse(JSON.stringify(p)) as Pessoa }));
+let slots: Slot[] = publicos();
 let R: Rede | null = null, M: Multiverso | null = null, Q: Reacao | null = null, sel = '', filtro = 'tudo', rf = 'tudo', lim = 20;
 try { const g = JSON.parse(localStorage.getItem(GUARDA) || 'null'); if (g?.slots) { slots = g.slots; $<HTMLInputElement>('#lembrar').checked = true; } } catch { /* sem armazenamento */ }
 const guardar = () => { try { if ($<HTMLInputElement>('#lembrar').checked) localStorage.setItem(GUARDA, JSON.stringify({ slots })); else localStorage.removeItem(GUARDA); } catch { /* sem espaço ou sem armazenamento */ } };
@@ -78,7 +80,8 @@ async function carregar(i: number, files: FileList | File[]) {
     if (!Object.keys(arq).length) { msg(`Pessoa ${i + 1}: não achei Connections.csv, Positions.csv nem Profile.csv nesse arquivo.`); return; }
     const antes = slots[i].pessoa, nova = pessoaDosArquivos(String(i + 1), arq);
     // CSVs soltos somam aos que já estavam
-    const p: Pessoa = antes && !lista.some((x) => /\.zip$/i.test(x.nome)) ? { ...antes, nome: nova.nome || antes.nome, titulo: nova.titulo || antes.titulo, posicoes: nova.posicoes.length ? nova.posicoes : antes.posicoes, conexoes: nova.conexoes.length ? nova.conexoes : antes.conexoes, arquivos: [...new Set([...antes.arquivos, ...nova.arquivos])].sort() } : nova;
+    // o arquivo soma ao que já estava (a trajetória pública fica quando o arquivo não traz Positions.csv)
+    const p: Pessoa = antes ? { ...antes, nome: nova.nome || antes.nome, titulo: nova.titulo || antes.titulo, posicoes: nova.posicoes.length ? nova.posicoes : antes.posicoes, conexoes: nova.conexoes.length ? nova.conexoes : antes.conexoes, arquivos: [...new Set([...antes.arquivos, ...nova.arquivos])].sort() } : nova;
     slots[i] = { nome: p.nome, pessoa: p }; guardar(); desenharSlots();
     msg(`${p.nome || 'Pessoa ' + (i + 1)}: ${pl(p.conexoes.length, 'conexão lida', 'conexões lidas')} e ${pl(p.posicoes.length, 'cargo', 'cargos')}.`);
   } catch (e) { msg(`Pessoa ${i + 1}: ${(e as Error).message || 'não deu para ler o arquivo.'}`); }
@@ -86,12 +89,14 @@ async function carregar(i: number, files: FileList | File[]) {
 const msg = (t: string) => { $('#msg').textContent = t; };
 
 /* ── a rede ── */
-function rodar() {
+function rodar(rolar = true) {
   const equipe = slots.map((s) => s.pessoa).filter((p): p is Pessoa => !!p);
   if (!equipe.length) { msg('Carregue o arquivo de pelo menos uma pessoa.'); return; }
-  R = montarRede(equipe); M = multiverso(R); Q = reacao(R); sel = ''; lim = 20;
-  $('#res').hidden = false; resultado(); $('#res').scrollIntoView({ behavior: 'smooth', block: 'start' });
-  msg(equipe.length < 2 ? 'Rodou com uma pessoa. Carregue a segunda para ver o que as duas têm em comum.' : '');
+  const pub = $<HTMLInputElement>('#pub').checked;
+  R = montarRede(equipe, pub ? { pistas: PISTAS, ligacoes: LIGACOES_PUBLICAS } : {}); M = multiverso(R); Q = reacao(R); sel = ''; lim = 20;
+  $('#res').hidden = false; resultado(); if (rolar) $('#res').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  const semConexoes = equipe.filter((p) => !p.conexoes.length).map((p) => p.nome.split(' ')[0]);
+  msg(semConexoes.length ? `Rede montada com a pesquisa pública. Falta a lista de conexões de ${semConexoes.join(' e ')}: arraste o .zip do LinkedIn (com Conexões marcado) no quadro de cada um.` : '');
 }
 const no = (id: string) => R!.nos.get(id)!;
 const chip = (id: string) => { const n = R!.nos.get(id); return n ? `<button type="button" class="chip t-${n.tipo}" data-ir="${esc(id)}">${esc(curto(n.nome, 30))}</button>` : ''; };
@@ -170,7 +175,7 @@ function dossie() {
   ${n.quem.length && n.tipo !== 'equipe' ? `<p class="sub">Quem conhece: <b>${esc(quemDe(n))}</b></p>` : ''}
   ${c.length > 1 ? `<span class="lab">Caminho</span><p class="cam">${c.map(chip).join('<em>→</em>')}</p>` : ''}
   ${n.tipo === 'empresa' ? `<span class="lab">Quem está lá</span>${lista((R!.adj.get(n.id) || []).map((a) => no(a.b)).filter((x) => x.tipo === 'contato').sort((a, b) => b.nota - a.nota).slice(0, 8))}` : ''}
-  ${n.url ? `<p><a href="${esc(n.url)}" target="_blank" rel="noopener">Perfil no LinkedIn ↗</a></p>` : ''}${n.email ? `<p class="sub">${esc(n.email)}</p>` : ''}`;
+  ${n.url && /^https:/.test(n.url) ? `<p><a href="${esc(n.url)}" target="_blank" rel="noopener">Perfil no LinkedIn ↗</a></p>` : ''}${n.fonte && /^https:/.test(n.fonte) && n.fonte !== n.url ? `<p class="sub">Fonte: <a href="${esc(n.fonte)}" target="_blank" rel="noopener">${esc(n.fonte.replace(/^https:\/\/(www\.)?/, '').split('/')[0])} ↗</a></p>` : ''}${n.email ? `<p class="sub">${esc(n.email)}</p>` : ''}`;
 }
 function escolher(id: string) { sel = sel === id ? '' : id; desenharMv(); dossie(); }
 
@@ -183,7 +188,7 @@ function listaRadar() {
 }
 function desenharRadar() {
   const L = listaRadar(), nome = (id: string) => no(id).nome;
-  $('#radar').innerHTML = L.slice(0, lim).map((n) => `<li><b class="f">${n.nota}</b><div><button type="button" class="nm" data-ir="${esc(n.id)}">${esc(n.nome)}</button> <span class="k">${esc(n.tipo === 'contato' ? [n.sub, n.empresa].filter(Boolean).join(' · ') : n.agencia ? 'Agência' : 'Empresa')}</span>
+  $('#radar').innerHTML = L.slice(0, lim).map((n) => `<li><b class="f">${n.nota}</b><div><button type="button" class="nm" data-ir="${esc(n.id)}">${esc(n.nome)}</button> <span class="k">${esc(n.tipo === 'contato' ? [n.sub, n.empresa].filter(Boolean).join(' · ') : n.sub)}</span>
   <p class="cam">${caminho(M!, n.id).map((id) => `<span class="chip t-${no(id).tipo}">${esc(curto(nome(id), 28))}</span>`).join('<em>→</em>')}</p><p class="nota">${esc(n.fatos.slice(0, 3).join(' · '))}</p></div></li>`).join('') || '<li><div class="nota">Nada nesse filtro.</div></li>';
   const m = $('#mais'); m.hidden = L.length <= lim; m.textContent = `Mostrar mais ${Math.min(20, L.length - lim)} (${fmt(L.length - lim)} restantes)`;
 }
@@ -210,6 +215,7 @@ raiz.addEventListener('change', (ev) => {
   const t = ev.target as HTMLInputElement;
   if (t.dataset.arq && t.files?.length) void carregar(Number(t.dataset.arq), t.files);
   if (t.id === 'lembrar') guardar();
+  if (t.id === 'pub' && R) rodar(false);
 });
 raiz.addEventListener('input', (ev) => { const t = ev.target as HTMLInputElement; if (t.dataset.nome) { const s = slots[Number(t.dataset.nome)]; if (s.pessoa) { s.pessoa.nome = t.value; guardar(); } } if (t.id === 'q') buscar(t.value); });
 raiz.addEventListener('dragover', (ev) => { const d = (ev.target as HTMLElement).closest('[data-drop]'); if (d) { ev.preventDefault(); d.classList.add('sobre'); } });
@@ -220,7 +226,7 @@ raiz.addEventListener('click', (ev) => {
   if (!b) return;
   if (b.hasAttribute('data-rodar')) { rodar(); return; }
   if (b.hasAttribute('data-exemplo')) { slots = EXEMPLO().map((p) => ({ nome: p.nome, pessoa: p })); desenharSlots(); msg('Dados de exemplo (pessoas fictícias). Troque pelos arquivos reais e rode de novo.'); rodar(); return; }
-  if (b.hasAttribute('data-limpar')) { slots = [{ nome: '', pessoa: null }, { nome: '', pessoa: null }]; try { localStorage.removeItem(GUARDA); } catch { /* */ } $<HTMLInputElement>('#lembrar').checked = false; R = null; $('#res').hidden = true; desenharSlots(); msg('Tudo apagado deste navegador.'); return; }
+  if (b.hasAttribute('data-limpar')) { slots = publicos(); try { localStorage.removeItem(GUARDA); } catch { /* */ } $<HTMLInputElement>('#lembrar').checked = false; R = null; $('#res').hidden = true; desenharSlots(); msg('Tudo apagado deste navegador.'); return; }
   if (b.dataset.ir) { escolher(b.dataset.ir); if (!b.closest('#svg') && !b.closest('#dossie')) $('.mv').scrollIntoView({ behavior: 'smooth', block: 'center' }); return; }
   if (b.dataset.f) { filtro = b.dataset.f; b.parentElement!.querySelectorAll('button').forEach((x) => x.setAttribute('aria-pressed', String(x === b))); desenharMv(); return; }
   if (b.dataset.r) { rf = b.dataset.r; lim = 20; b.parentElement!.querySelectorAll('button').forEach((x) => x.setAttribute('aria-pressed', String(x === b))); desenharRadar(); return; }
@@ -249,4 +255,4 @@ svg().addEventListener('keydown', (ev) => { const c = (ev.target as Element).clo
 
 const SVG_CSS = `.anel{fill:none;stroke:#2a2a2a;stroke-dasharray:2 6}.anel-t{fill:#777;font:10px sans-serif;letter-spacing:.12em;text-transform:uppercase;text-anchor:middle}.fio{stroke:#2b2b2b;stroke-width:.6}.fio.on{stroke:#0BCF55;stroke-width:2}.p{fill:#777}.p.t-zero,.p.t-equipe{fill:#0BCF55}.p.t-empresa{fill:#fff}.p.ag{fill:none;stroke:#fff}.p.dec{fill:#fff}.p.com{stroke:#0BCF55;stroke-width:1.5}.p.on{fill:#0BCF55}.rot{fill:#fff;font:11px Inter,sans-serif;paint-order:stroke;stroke:#000;stroke-width:3px}.rot.t-zero{font:500 22px 'Saira Stencil',sans-serif}`;
 desenharSlots();
-if (slots.some((s) => s.pessoa)) msg('Os arquivos da última visita estão aqui (você marcou "Lembrar neste navegador").');
+rodar(false);
