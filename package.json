@@ -9,7 +9,8 @@
     "test": "vitest run",
     "test:cerebro": "python3 -B -m unittest discover -s jobs/cerebro && python3 -B -m unittest discover -s jobs/vencedores -p 'test_*.py' && python3 -B -m unittest discover -s jobs/pca -p 'test_*.py'",
     "typecheck": "tsc --noEmit",
-    "check": "npm run typecheck && npm test && npm run test:cerebro && npm run build"
+    "check": "npm run typecheck && npm test && npm run test:cerebro && npm run build && npm run build:mento",
+    "build:mento": "node mento/montar.mjs"
   },
   "devDependencies": {
     "happy-dom": "15.11.7",

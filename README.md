@@ -16,6 +16,7 @@ compartilhado pela equipe.
 | `scripts/montar.mjs` | Junta legado + módulos em `dist/index.html`, pronto para publicar |
 | `jobs/` | Scripts Python usados pelas tarefas agendadas (cérebro de licitações, nota da captação, vencedores) |
 | `rotinas/` | Catálogo das tarefas agendadas do Claude que alimentam o Studio |
+| `mento/` | **Produto separado do Studio**: reação em cadeia e multiverso da MENTO a partir dos arquivos de dados do LinkedIn da equipe (ver `mento/README.md`) |
 | `docs/` | Arquitetura, modelo de dados e plano de migração |
 
 ## Comandos
