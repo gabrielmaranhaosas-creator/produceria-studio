@@ -10,6 +10,7 @@ import logo from './logo.svg';
 import { EXEMPLO } from './exemplo-dados';
 import { EQUIPE_PUBLICA } from './publico';
 import { paraRede, type Registro } from './crm';
+import { montarArvore } from './arvore';
 import { abrirLoja } from './dados';
 import { montarCrm, HTML_CRM } from './crm-ui';
 import { montarUx } from './ux';
@@ -37,9 +38,11 @@ ${HTML_CRM(EQUIPE_PUBLICA.map((p) => p.nome.split(' ')[0]))}
  <div id="res">
  <section class="passo" aria-labelledby="t2"><h2 class="t" id="t2">O tamanho da rede</h2><ul class="kpis" id="kpis"></ul></section>
  <section class="passo" aria-labelledby="t3"><h2 class="t" id="t3">Em comum</h2><p class="nota">Quem as duas pessoas conhecem e as empresas onde as duas têm gente: a conversa pode vir de qualquer uma, e a outra reforça.</p><div class="dois" id="comum"></div></section>
- <section class="passo" aria-labelledby="t4"><h2 class="t" id="t4">Reação em cadeia</h2><p class="nota">Volta por volta, os pontos mais fortes. A nota soma quem decide a contratação, quem é conhecido pelas duas pessoas, quantos conhecidos há na mesma empresa e onde a equipe já trabalhou.</p><div class="rc" id="rc" tabindex="0" role="region" aria-label="Voltas da reação, rola de lado"></div></section>
+ <section class="passo" aria-labelledby="t4"><h2 class="t" id="t4">Reação em cadeia</h2><p class="nota">Da MENTO para fora, galho por galho, em tamanho de leitura. Clique num cartão para ver o dossiê e acender o caminho; clique no número para abrir o galho. Setas do teclado andam pela árvore, Enter abre o dossiê, espaço abre e fecha.</p>
+  <div class="av-ferr"><button type="button" class="btn sec" data-av-melhores>Abrir os melhores caminhos</button><button type="button" class="btn sec" data-av-recolher>Recolher tudo</button><span class="nota" id="avConta"></span></div>
+  <div class="av-grade"><div class="av-vp" id="rc" tabindex="-1"></div><aside class="dossie av-info" id="avInfo" aria-live="polite"></aside></div></section>
  <section class="passo" aria-labelledby="t5"><h2 class="t" id="t5">Multiverso</h2><p class="nota">A rede inteira. Clique num ponto para acender o caminho até a MENTO; role para aproximar; arraste para andar.</p>
-  <div class="mv"><div class="palco"><div class="ferr"><input type="search" id="q" placeholder="Buscar pessoa ou empresa" autocomplete="off"><div class="seg" role="group" aria-label="Mostrar"><button type="button" data-f="tudo" aria-pressed="true">Tudo</button><button type="button" data-f="decide" aria-pressed="false">Só quem decide</button><button type="button" data-f="comum" aria-pressed="false">Em comum</button></div></div><svg id="svg" viewBox="-560 -560 1120 1120" role="group" aria-label="Multiverso da MENTO"></svg><div class="leg" id="leg" role="group" aria-label="Legenda e filtro do mapa"></div><div class="zoom"><button type="button" data-z="1.4" aria-label="Aproximar">+</button><button type="button" data-z="0.7" aria-label="Afastar">−</button><button type="button" data-z="0" aria-label="Ver tudo">⌂</button></div></div><aside class="dossie" id="dossie" aria-live="polite"></aside></div>
+  <div class="mv"><div class="palco"><div class="ferr"><input type="search" id="q" placeholder="Buscar pessoa ou empresa" autocomplete="off"><div class="seg" role="group" aria-label="Mostrar"><button type="button" data-f="tudo" aria-pressed="true">Tudo</button><button type="button" data-f="decide" aria-pressed="false">Só quem decide</button><button type="button" data-f="comum" aria-pressed="false">Em comum</button></div><button type="button" class="acao" id="btFora" aria-pressed="false" hidden>Mostrar sem ponte</button></div><svg id="svg" viewBox="-560 -560 1120 1120" role="group" aria-label="Multiverso da MENTO"></svg><div class="leg" id="leg" role="group" aria-label="Legenda e filtro do mapa"></div><div class="zoom"><button type="button" data-z="1.4" aria-label="Aproximar">+</button><button type="button" data-z="0.7" aria-label="Afastar">−</button><button type="button" data-z="0" aria-label="Ver tudo">⌂</button></div></div><aside class="dossie" id="dossie" aria-live="polite"></aside></div>
   <div class="acoes"><button type="button" class="btn sec" data-svg>Baixar o mapa (SVG)</button></div></section>
  <section class="passo" aria-labelledby="t6"><h2 class="t" id="t6">Radar · por onde começar</h2>
   <div class="seg" id="rf" role="group" aria-label="Filtrar o radar"><button type="button" data-r="tudo" aria-pressed="true">Tudo</button><button type="button" data-r="contato" aria-pressed="false">Pessoas</button><button type="button" data-r="empresa" aria-pressed="false">Empresas</button><button type="button" data-r="decide" aria-pressed="false">Quem decide</button><button type="button" data-r="comum" aria-pressed="false">Em comum</button></div>
@@ -117,11 +120,7 @@ function resultado() {
     .map(([v, t, d], i) => `<li${i ? '' : ' class="on"'}><b>${fmt(Number(v))}</b><span>${esc(t)}</span><small>${esc(d)}</small></li>`).join('');
   const empC = emp.filter((e) => e.quem.length > 1).sort((a, b) => b.nota - a.nota);
   $('#comum').innerHTML = `<div><h3 class="st">Pessoas <span class="n">${fmt(comum.length)}</span></h3>${lista(comum.slice(0, 12))}</div><div><h3 class="st">Empresas <span class="n">${fmt(empC.length)}</span></h3>${lista(empC.slice(0, 12))}</div>`;
-  const NOMES = ['Ponto zero', 'Equipe', 'Quem conhecem e onde passaram', 'Empresas que se abrem', 'Quem mais está nessas empresas'];
-  $('#rc').innerHTML = Q!.geracoes.map((col, g) => `<div class="col"><h3 class="ct">${esc(NOMES[g] || g + 'ª volta')}<span>${fmt(col.length)}${Q!.ocultos[g] ? ` de ${fmt(col.length + Q!.ocultos[g])}` : ''}</span></h3>${col.map((x) => {
-    const n = no(x.id), pai = x.pais[0];
-    return `<button type="button" class="card t-${n.tipo}" data-ir="${esc(n.id)}"><span class="k">${n.tipo === 'zero' ? 'Ponto zero' : n.tipo === 'equipe' ? 'Equipe' : n.tipo === 'empresa' ? (n.agencia ? 'Agência' : 'Empresa') : n.nivel === 'decide' ? 'Decide' : 'Pessoa'}</span>${n.tipo === 'zero' ? `<span class="lz">${LOGO}</span>` : `<b>${esc(n.nome)}</b>`}${n.tipo === 'contato' ? `<span class="m">${esc(curto([n.sub, n.empresa].filter(Boolean).join(' · '), 64))}</span>` : n.tipo === 'empresa' ? `<span class="m">${esc(n.fatos[0] || '')}</span>` : ''}${g > 1 && pai ? `<span class="de">via ${esc(curto(no(pai.id).nome, 26))}${x.pais.length > 1 ? ` e mais ${x.pais.length - 1}` : ''}</span>` : ''}${g > 1 ? `<span class="f">${x.forca}</span>` : ''}</button>`;
-  }).join('')}</div>`).join('');
+  arv.desenhar(); contarAv();
   desenharMv(); dossie(); desenharRadar();
 }
 const lista = (L: No[]) => L.length ? `<ul class="li">${L.map((n) => `<li><button type="button" data-ir="${esc(n.id)}"><b>${esc(n.nome)}</b><span>${esc(curto(n.tipo === 'contato' ? [n.sub, n.empresa].filter(Boolean).join(' · ') : n.fatos[0] || '', 70))}</span></button><em>${n.nota}</em></li>`).join('')}</ul>` : '<p class="nota">Nada em comum ainda.</p>';
@@ -130,7 +129,9 @@ const lista = (L: No[]) => L.length ? `<ul class="li">${L.map((n) => `<li><butto
 /** Raio de cada volta: equipe perto do centro, as voltas seguintes para fora, e o anel "sem ponte ainda" por último. */
 const raioDe = (g: number) => [0, 120, 300, 450, 580, 690, 790][g] ?? 790 + (g - 6) * 90;
 const pos = new Map<string, { x: number; y: number; r: number; a: number }>();
-let RAIOS: number[] = [], RFORA = 0, VB0 = 560;
+let RAIOS: number[] = [], RFORA = 0, VB0 = 560, mostrarFora = false, kDesenho = 1;
+/** Unidades do desenho por pixel da tela: com ela, pontos e nomes guardam um tamanho mínimo legível em qualquer zoom. */
+const escalaK = () => { const w = svg().getBoundingClientRect().width; return w > 0 ? vb.w / w : 1; };
 function layout() {
   pos.clear(); const m = M!, r = R!;
   pos.set(ZERO, { x: 0, y: 0, r: 22, a: 0 });
@@ -155,7 +156,7 @@ function layout() {
     }
   }
   // sem ponte ainda: um anel próprio, por fora, agrupado por ligação entre si (anunciante perto da agência)
-  const F = m.fora; RFORA = F.length ? raioDe(m.voltas.length) + 40 : 0;
+  const F = mostrarFora ? m.fora : []; RFORA = F.length ? raioDe(m.voltas.length) + 40 : 0;
   if (F.length) {
     const fset = new Set(F), ordem: string[] = [], feito = new Set<string>();
     for (const id of F) { if (feito.has(id)) continue; const fila = [id]; feito.add(id); while (fila.length) { const x = fila.shift()!; ordem.push(x); for (const a of r.adj.get(x) || []) if (fset.has(a.b) && !feito.has(a.b)) { feito.add(a.b); fila.push(a.b); } } }
@@ -167,7 +168,8 @@ function layout() {
 let vb = { x: -560, y: -560, w: 1120 };
 const vbInicial = () => ({ x: -VB0, y: -VB0, w: VB0 * 2 });
 const svg = () => $<SVGSVGElement>('#svg');
-const aplicarVb = () => svg().setAttribute('viewBox', `${vb.x} ${vb.y} ${vb.w} ${vb.w}`);
+let tZoom = 0;
+const aplicarVb = () => { svg().setAttribute('viewBox', `${vb.x} ${vb.y} ${vb.w} ${vb.w}`); svg().style.setProperty('--k', escalaK().toFixed(3)); clearTimeout(tZoom); tZoom = window.setTimeout(() => { const k = escalaK(); if (R && Math.abs(k / kDesenho - 1) > 0.12) desenharMv(); }, 140); };
 function visivel(n: No) { return filtro === 'tudo' || n.tipo === 'zero' || n.tipo === 'equipe' || (filtro === 'decide' ? (n.tipo === 'contato' ? n.nivel === 'decide' : n.fatos.some((f) => /decide/.test(f))) : n.quem.length > 1); }
 /** O tipo visual de cada ponto (ícone + cor): quem é, sem depender só da cor. */
 type Tipo = 'zero' | 'equipe' | 'anunciante' | 'agencia' | 'veiculo' | 'decide' | 'pessoa' | 'empresa';
@@ -189,7 +191,8 @@ const ICONE: Partial<Record<Tipo, string>> = { anunciante: 'i-anunciante', agenc
 /** Fio curvo: a curva puxa para o centro, como uma teia. */
 const curva = (a: { x: number; y: number }, b: { x: number; y: number }) => { const mx = (a.x + b.x) / 2 * 0.86, my = (a.y + b.y) / 2 * 0.86; return `M${a.x.toFixed(1)} ${a.y.toFixed(1)}Q${mx.toFixed(1)} ${my.toFixed(1)} ${b.x.toFixed(1)} ${b.y.toFixed(1)}`; };
 function desenharMv() {
-  const antes = VB0; layout(); const r = R!, m = M!, aceso = new Set(sel ? caminho(m, sel) : []);
+  if (sel && M!.fora.includes(sel) && !mostrarFora) mostrarFora = true;
+  const antes = VB0; layout(); const r = R!, m = M!, aceso = new Set(sel ? caminho(m, sel) : []); kDesenho = escalaK(); const K = kDesenho;
   if (antes !== VB0 && !sel) { vb = vbInicial(); aplicarVb(); }
   const foraSet = new Set(m.fora), mostra = (n: No) => visivel(n) && !ocultos.has(tipoDe(n));
   const top = new Set([...r.nos.values()].filter((n) => n.tipo !== 'zero' && n.tipo !== 'equipe' && mostra(n)).sort((a, b) => b.nota - a.nota).slice(0, 28).map((n) => n.id));
@@ -207,7 +210,7 @@ function desenharMv() {
   }
   for (const [id, p] of pos) {
     const n = r.nos.get(id)!; if (!mostra(n)) continue;
-    const t = tipoDe(n), on = aceso.has(id), R0 = n.tipo === 'zero' ? 34 : n.tipo === 'equipe' ? 15 : t === 'pessoa' && !top.has(id) && !on ? p.r : Math.max(p.r * 1.35, 6);
+    const t = tipoDe(n), on = aceso.has(id), miudo = t === 'pessoa' && !top.has(id) && !on, R0 = n.tipo === 'zero' ? Math.max(34, 22 * K) : n.tipo === 'equipe' ? Math.max(15, 11 * K) : miudo ? Math.max(p.r, 2.5 * K) : Math.max(p.r * 1.35, 6, 7 * K);
     const cls = `no t-${t}${foraSet.has(id) ? ' longe' : ''}${n.quem.length > 1 ? ' com' : ''}${on ? ' on' : ''}${id === sel ? ' sel' : ''}`;
     const rot = `${esc(n.nome)}${n.tipo === 'zero' ? '' : ', ' + (LEGENDA.find(([k]) => k === t)?.[1].replace(/s$/, '') || 'Equipe')}${n.sub && n.tipo !== 'zero' && n.tipo !== 'empresa' ? ', ' + esc(n.sub) : ''}`;
     let g = `<g class="${cls}" transform="translate(${p.x.toFixed(1)} ${p.y.toFixed(1)})" data-ir="${esc(id)}" role="button" aria-label="${rot}" tabindex="${n.tipo === 'zero' || n.tipo === 'equipe' || top.has(id) ? 0 : -1}"><title>${rot}</title>`;
@@ -220,15 +223,16 @@ function desenharMv() {
     }
     pts += g + '</g>';
     if (n.tipo !== 'zero' && (n.tipo === 'equipe' || top.has(id) || on)) {
-      const dist = R0 + 7, dx = Math.cos(p.a) * dist, dy = Math.sin(p.a) * dist + 4, ali = Math.abs(Math.cos(p.a)) < 0.3 ? 'middle' : Math.cos(p.a) > 0 ? 'start' : 'end';
+      const dist = R0 + 7 * K, dx = Math.cos(p.a) * dist, dy = Math.sin(p.a) * dist + 4, ali = Math.abs(Math.cos(p.a)) < 0.3 ? 'middle' : Math.cos(p.a) > 0 ? 'start' : 'end';
       rots += `<text x="${(p.x + dx).toFixed(1)}" y="${(p.y + dy).toFixed(1)}" text-anchor="${ali}" class="rot t-${t}${on ? ' on' : ''}">${esc(curto(n.tipo === 'equipe' ? n.nome.split(' ')[0] : n.nome, 26))}</text>`;
     }
   }
   const NOMEV = ['', 'equipe', 'conhecidos e trajetória', 'onde estão hoje'];
-  const aneis = RAIOS.map((rr, g) => (g && rr ? `<circle r="${rr}" class="anel"/><text y="${-rr - 8}" class="anel-t">${NOMEV[g] || g + 'ª volta'} · ${fmt((m.voltas[g] || []).length)}</text>` : '')).join('')
-    + (RFORA ? `<circle r="${RFORA}" class="anel fora"/><text y="${-RFORA - 26}" class="anel-t">sem ponte ainda · ${fmt(m.fora.length)}</text>` : '');
+  const aneis = RAIOS.map((rr, g) => (g && rr ? `<circle r="${rr}" class="anel"/><text y="${-rr - 8 * K}" class="anel-t">${NOMEV[g] || g + 'ª volta'} · ${fmt((m.voltas[g] || []).length)}</text>` : '')).join('')
+    + (RFORA ? `<circle r="${RFORA}" class="anel fora"/><text y="${-RFORA - 26 * K}" class="anel-t">sem ponte ainda · ${fmt(m.fora.length)}</text>` : '');
   svg().innerHTML = `${ICONES}<g>${aneis}</g><g>${fios}</g><g filter="url(#brilho)">${acesos}</g><g>${pts}</g><g>${rots}</g>`;
   legenda();
+  const bf = document.getElementById('btFora'); if (bf) { bf.hidden = !m.fora.length; bf.setAttribute('aria-pressed', String(mostrarFora)); bf.textContent = `${mostrarFora ? 'Esconder' : 'Mostrar'} sem ponte (${fmt(m.fora.length)})`; }
 }
 /** A legenda do mapa: ícone, nome e quantos; cada item liga e desliga o tipo no desenho. */
 function legenda() {
@@ -237,7 +241,7 @@ function legenda() {
   el.innerHTML = LEGENDA.filter(([t]) => conta.get(t)).map(([t, rot]) => `<button type="button" class="lg-i t-${t}" data-leg="${t}" aria-pressed="${!ocultos.has(t)}" title="Mostrar ou esconder: ${rot}"><svg viewBox="-12 -12 24 24" aria-hidden="true"><circle r="11.5" class="disc"/>${ICONE[t] ? `<use href="#${ICONE[t]}" x="-7.5" y="-7.5" width="15" height="15" class="ic"/>` : ''}</svg><span>${rot}</span><b>${fmt(conta.get(t) || 0)}</b></button>`).join('');
 }
 function dossie() {
-  const el = $('#dossie'); if (!sel || !R) { el.innerHTML = `<span class="lab">Dossiê</span><p class="nota">Clique num ponto do mapa, do radar ou da reação para ver quem é, por que importa e o caminho até a MENTO.</p>`; return; }
+  const el = { set innerHTML(h: string) { $('#dossie').innerHTML = h; $('#avInfo').innerHTML = h; } }; if (!sel || !R) { el.innerHTML = `<span class="lab">Dossiê</span><p class="nota">Clique num ponto do mapa, do radar ou da reação para ver quem é, por que importa e o caminho até a MENTO.</p>`; return; }
   const n = no(sel), c = caminho(M!, sel);
   el.innerHTML = `<span class="lab">${esc(n.tipo === 'contato' ? (n.nivel === 'decide' ? 'Pessoa · decide' : 'Pessoa') : n.tipo === 'empresa' ? (n.agencia ? 'Agência' : 'Empresa') : n.tipo === 'equipe' ? 'Equipe' : 'Ponto zero')}</span><h3>${esc(n.nome)}</h3>
   ${n.tipo === 'contato' ? `<p class="sub">${esc([n.sub, n.empresa].filter(Boolean).join(' · '))}</p>` : n.sub && n.tipo !== 'zero' ? `<p class="sub">${esc(n.sub)}</p>` : ''}
@@ -248,7 +252,10 @@ function dossie() {
   ${n.tipo === 'empresa' ? `<span class="lab">Quem está lá</span>${lista((R!.adj.get(n.id) || []).map((a) => no(a.b)).filter((x) => x.tipo === 'contato').sort((a, b) => b.nota - a.nota).slice(0, 8))}` : ''}
   ${n.url && /^https:/.test(n.url) ? `<p><a href="${esc(n.url)}" target="_blank" rel="noopener">Perfil no LinkedIn ↗</a></p>` : ''}${n.fonte && /^https:/.test(n.fonte) && n.fonte !== n.url ? `<p class="sub">Fonte: <a href="${esc(n.fonte)}" target="_blank" rel="noopener">${esc(n.fonte.replace(/^https:\/\/(www\.)?/, '').split('/')[0])} ↗</a></p>` : ''}${n.email ? `<p class="sub">${esc(n.email)}</p>` : ''}${n.tipo === 'contato' || n.tipo === 'empresa' ? `<div class="acoes"><button type="button" class="btn sec" data-funil-rede="${esc(n.id)}">Levar ao funil</button></div>` : ''}`;
 }
-function escolher(id: string) { sel = sel === id ? '' : id; desenharMv(); dossie(); }
+function escolher(id: string, daArvore = false) { sel = daArvore ? id : sel === id ? '' : id; desenharMv(); dossie(); arv.desenhar(); if (daArvore) arvFoco(id); }
+const arvFoco = (id: string) => { const c = document.querySelector<HTMLElement>(`#rc [data-av="${CSS.escape(id)}"]`); c?.focus({ preventScroll: true }); };
+const arv = montarArvore($('#rc'), () => (R && M ? { R, M } : null), { aoEscolher: (id) => escolher(id, true), sel: () => sel, icones: "", ocultos: () => ocultos as Set<string> });
+function contarAv() { const n = document.querySelectorAll('#rc [role=treeitem]').length; $('#avConta').textContent = R ? `${fmt(n)} cartões abertos de ${fmt(R.nos.size - M!.fora.length)} na rede` : ''; }
 
 /* ── 06 · radar ── */
 function listaRadar() {
@@ -298,7 +305,11 @@ raiz.addEventListener('click', (ev) => {
   if (b.hasAttribute('data-rodar')) { rodar(); return; }
   if (b.hasAttribute('data-exemplo')) { slots = EXEMPLO().map((p) => ({ nome: p.nome, pessoa: p })); desenharSlots(); msg('Dados de exemplo (pessoas fictícias). Troque pelos arquivos reais e rode de novo.'); rodar(); return; }
   if (b.hasAttribute('data-limpar')) { slots = publicos(); try { localStorage.removeItem(GUARDA); } catch { /* */ } $<HTMLInputElement>('#lembrar').checked = false; desenharSlots(); rodar(false); msg('Tudo apagado deste navegador.'); return; }
-  if (b.dataset.leg) { const t = b.dataset.leg as Tipo; if (!ocultos.delete(t)) ocultos.add(t); desenharMv(); return; }
+  if (b.id === 'btFora') { mostrarFora = !mostrarFora; if (!mostrarFora && sel && M?.fora.includes(sel)) { sel = ''; dossie(); } layout(); vb = vbInicial(); aplicarVb(); desenharMv(); return; }
+  if (b.hasAttribute('data-av-melhores')) { arv.melhores(); contarAv(); return; }
+  if (b.hasAttribute('data-av-recolher')) { arv.recolher(); contarAv(); return; }
+  if (b.closest('#rc')) { contarAv(); return; }
+  if (b.dataset.leg) { const t = b.dataset.leg as Tipo; if (!ocultos.delete(t)) ocultos.add(t); desenharMv(); arv.desenhar(); contarAv(); return; }
   if (b.dataset.funilRede && R && crm) { const n = R.nos.get(b.dataset.funilRede); if (n) void crm.levarAoFunil({ id: '', nome: n.nome, tipo: n.tipo === 'contato' ? 'pessoa' : n.anunciante ? 'anunciante' : n.agencia ? 'agencia' : n.veiculo ? 'veiculo' : 'anunciante', cargo: n.tipo === 'contato' ? n.sub : '', empresa: n.empresa, fonte: n.fonte }, 'Rede'); return; }
   if (b.dataset.ir) { escolher(b.dataset.ir); if (!b.closest('#svg') && !b.closest('#dossie')) $('.mv').scrollIntoView({ behavior: 'smooth', block: 'center' }); return; }
   if (b.dataset.f) { filtro = b.dataset.f; b.parentElement!.querySelectorAll('button').forEach((x) => x.setAttribute('aria-pressed', String(x === b))); desenharMv(); return; }
